@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+api/bin/
+api/obj/
+
+# Build output
+client/dist/
+*.user
+
+# Local settings & secrets
+api/local.settings.json
+.env
+.env.local
+*.publishsettings
+deploy.zip
+publish/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vs/
+
+# Azure
+.azure/
+
+# Re-include SQL scripts (a global gitignore excludes sql/)
+!sql/
+!sql/**

@@ -1,0 +1,15 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "SqlConnectionString": "Server=tcp:sqlgkhw25ijhyzzy.database.windows.net,1433;Database=webportfolio;Encrypt=True;TrustServerCertificate=False;",
+    "BlobAccountUrl": "https://<your-storage-account>.blob.core.windows.net",
+    "BlobContainerName": "photos",
+    "OpenAiEndpoint": "https://<your-openai-resource>.openai.azure.com/",
+    "OpenAiDeployment": "gpt-4o-mini"
+  },
+  "Host": {
+    "CORS": "*"
+  }
+}

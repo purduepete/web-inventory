@@ -1,0 +1,165 @@
+@description('Base name used to derive resource names.')
+param namePrefix string
+
+param location string
+param swaLocation string
+param openAiLocation string
+param sqlServerName string
+param sqlDatabaseName string
+
+var suffix = uniqueString(resourceGroup().id)
+var storageName = toLower('st${namePrefix}${substring(suffix, 0, 8)}')
+var functionAppName = '${namePrefix}-api-${substring(suffix, 0, 6)}'
+var planName = '${namePrefix}-plan'
+var openAiName = '${namePrefix}-openai-${substring(suffix, 0, 6)}'
+var swaName = '${namePrefix}-web'
+var aiName = '${namePrefix}-ai'
+
+// ---------------------------------------------------------------- Storage
+resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: storageName
+  location: location
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
+  properties: {
+    allowBlobPublicAccess: false
+    minimumTlsVersion: 'TLS1_2'
+  }
+}
+
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+  parent: storage
+  name: 'default'
+}
+
+resource photosContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'photos'
+  properties: { publicAccess: 'None' }
+}
+
+// ---------------------------------------------------------------- App Insights
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: aiName
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+  }
+}
+
+// ---------------------------------------------------------------- Azure OpenAI
+resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
+  name: openAiName
+  location: openAiLocation
+  kind: 'OpenAI'
+  sku: { name: 'S0' }
+  properties: {
+    customSubDomainName: openAiName
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+resource gpt4oMini 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+  parent: openAi
+  name: 'gpt-4o-mini'
+  sku: {
+    name: 'GlobalStandard'
+    capacity: 10
+  }
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: 'gpt-4o-mini'
+      version: '2024-07-18'
+    }
+  }
+}
+
+// ---------------------------------------------------------------- Function App (consumption)
+resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
+  name: planName
+  location: location
+  sku: { name: 'Y1', tier: 'Dynamic' }
+  properties: { reserved: true }
+}
+
+resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+  name: functionAppName
+  location: location
+  kind: 'functionapp,linux'
+  identity: { type: 'SystemAssigned' }
+  properties: {
+    serverFarmId: plan.id
+    httpsOnly: true
+    siteConfig: {
+      linuxFxVersion: 'DOTNET-ISOLATED|8.0'
+      ftpsState: 'Disabled'
+      minTlsVersion: '1.2'
+      cors: {
+        allowedOrigins: [ 'https://${swaName}.azurestaticapps.net', 'http://localhost:5173' ]
+      }
+      appSettings: [
+        { name: 'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}' }
+        { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
+        { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'dotnet-isolated' }
+        { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }
+        { name: 'SqlConnectionString', value: 'Server=tcp:${sqlServerName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDatabaseName};Encrypt=True;TrustServerCertificate=False;' }
+        { name: 'BlobAccountUrl', value: storage.properties.primaryEndpoints.blob }
+        { name: 'BlobContainerName', value: 'photos' }
+        { name: 'OpenAiEndpoint', value: openAi.properties.endpoint }
+        { name: 'OpenAiDeployment', value: 'gpt-4o-mini' }
+      ]
+    }
+  }
+}
+
+// ---------------------------------------------------------------- Static Web App (Free)
+resource swa 'Microsoft.Web/staticSites@2023-12-01' = {
+  name: swaName
+  location: swaLocation
+  sku: { name: 'Free', tier: 'Free' }
+  properties: {}
+}
+
+// Link the standalone Function App as the SWA's API backend.
+resource swaBackend 'Microsoft.Web/staticSites/linkedBackends@2023-12-01' = {
+  parent: swa
+  name: 'api'
+  properties: {
+    backendResourceId: functionApp.id
+    region: location
+  }
+}
+
+// ---------------------------------------------------------------- Role assignments
+var blobDataContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+var openAiUser = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')
+
+resource blobRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, functionApp.id, blobDataContributor)
+  scope: storage
+  properties: {
+    roleDefinitionId: blobDataContributor
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource openAiRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(openAi.id, functionApp.id, openAiUser)
+  scope: openAi
+  properties: {
+    roleDefinitionId: openAiUser
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+output staticWebAppName string = swa.name
+output functionAppName string = functionApp.name
+output functionPrincipalId string = functionApp.identity.principalId
+output storageAccountName string = storage.name
+output openAiEndpoint string = openAi.properties.endpoint
+output sqlConnectionString string = 'Server=tcp:${sqlServerName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDatabaseName};Encrypt=True;TrustServerCertificate=False;'
