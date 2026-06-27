@@ -114,7 +114,8 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}' }
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
         { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'dotnet-isolated' }
-        { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
+        // NOTE: On Linux Consumption, WEBSITE_RUN_FROM_PACKAGE must be a blob SAS URL,
+        // which the deployment (functions-action) sets automatically. Do not hardcode '1'.
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }
         { name: 'SqlConnectionString', value: 'Server=tcp:${sqlServerName}${environment().suffixes.sqlServerHostname},1433;Database=${sqlDatabaseName};Encrypt=True;TrustServerCertificate=False;' }
         { name: 'BlobAccountUrl', value: storage.properties.primaryEndpoints.blob }

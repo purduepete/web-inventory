@@ -1,15 +1,18 @@
 namespace WebInventory.Api.Models;
 
-public record Container(
-    Guid Id,
-    int Number,
-    string Name,
-    string? Location,
-    string? Notes,
-    Guid QrToken,
-    DateTime CreatedAt,
-    DateTime UpdatedAt)
+// NOTE: Uses a parameterless constructor with init/settable properties (not a
+// positional record) so Dapper can materialize varying projections — including
+// the ListContainers query, which returns an extra computed ItemCount column.
+public record Container
 {
+    public Guid Id { get; init; }
+    public int Number { get; init; }
+    public string Name { get; init; } = "";
+    public string? Location { get; init; }
+    public string? Notes { get; init; }
+    public Guid QrToken { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
     public int ItemCount { get; set; }
 }
 
