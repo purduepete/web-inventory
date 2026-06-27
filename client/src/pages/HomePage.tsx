@@ -68,7 +68,7 @@ export default function HomePage() {
             <h2>
                 {loading ? 'Searching…' : searched ? `${results.length} result${results.length === 1 ? '' : 's'}` : ''}
             </h2>
-            <div className="stack">
+            <div className="stack card-grid">
                 {results.map((it) => (
                     <Link key={it.id} to={`/containers/${it.containerId}`} className="card">
                         <div className="spread">

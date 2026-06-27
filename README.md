@@ -13,7 +13,7 @@ photo grid. Works offline and syncs when reconnected.
 | Client  | React + TypeScript + Vite, PWA (`vite-plugin-pwa`), Dexie (offline), html5-qrcode, qrcode |
 | API     | C# .NET 8 isolated Azure Functions, Dapper                                                |
 | Hosting | Azure Static Web Apps (Standard) + linked Function App (Consumption)                      |
-| Auth    | Static Web Apps built-in auth (Microsoft Entra), `member` role gating              |
+| Auth    | Static Web Apps built-in auth (Microsoft Entra), `member` role gating                     |
 | Data    | Existing Azure SQL `webportfolio` DB, new `inv` schema                                    |
 | Images  | New Azure Storage account (Blob), managed identity                                        |
 | AI      | New Azure OpenAI resource, `gpt-5-mini` deployment                                        |

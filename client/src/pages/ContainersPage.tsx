@@ -39,7 +39,7 @@ export default function ContainersPage() {
                 </Link>
             </div>
             {loading && <div className="center">Loading…</div>}
-            <div className="stack">
+            <div className="stack card-grid">
                 {containers.map((c) => (
                     <Link key={c.id} to={`/containers/${c.id}`} className="card">
                         <div className="spread">

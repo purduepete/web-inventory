@@ -1,16 +1,17 @@
 :root {
-    /* ---------- Dark (default) — Midnight Blue palette ---------- */
-    --bg: #0a0e1a;
-    --card: #0f1524;
-    --card2: #151c2d;
-    --border: #1e2739;
-    --text: #e9eef6;
-    --muted: #7d8a9e;
-    --accent: #4d8dff;
-    --green: #33d685;
-    --red: #ff5d5d;
-    --amber: #ffb648;
-    --proj: #a06bff;
+    /* ---------- Dark (default) — Tokyo Night palette ---------- */
+    --bg: #1a1b26;
+    --card: #1f2335;
+    --card2: #24283b;
+    --border: #2f3449;
+    --text: #c0caf5;
+    --muted: #7982a9;
+    --accent: #7aa2f7;
+    --green: #9ece6a;
+    --red: #f7768e;
+    --amber: #e0af68;
+    --proj: #bb9af7;
+    --on-accent: #1a1b26;
     --font: 'Roboto Flex', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
@@ -27,6 +28,8 @@
     --red: #cf222e;
     --amber: #9a6700;
     --proj: #8250df;
+    --on-accent: #ffffff;
+    --tab-active-bg: color-mix(in srgb, var(--accent) 12%, var(--card));
     color-scheme: light;
 }
 
@@ -44,6 +47,8 @@
         --red: #cf222e;
         --amber: #9a6700;
         --proj: #8250df;
+        --on-accent: #ffffff;
+        --tab-active-bg: color-mix(in srgb, var(--accent) 12%, var(--card));
         color-scheme: light;
     }
 }
@@ -59,8 +64,8 @@
 
     --accent-2: var(--proj);
     --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
-    --accent-grad: linear-gradient(135deg, var(--accent) 0%, var(--proj) 100%);
-    --on-accent: #ffffff;
+    --tab-active-bg: var(--accent-soft);
+    --accent-grad: var(--accent);
 
     --danger: var(--red);
     --danger-soft: color-mix(in srgb, var(--red) 15%, transparent);
@@ -76,7 +81,7 @@
     --radius: 0;
     --radius-lg: 0;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 8px 24px rgba(0, 0, 0, 0.2);
-    --shadow-accent: 0 8px 22px color-mix(in srgb, var(--accent) 34%, transparent);
+    --shadow-accent: none;
     color-scheme: dark;
 }
 
@@ -131,7 +136,7 @@ body {
     height: 30px;
     border-radius: var(--radius);
     background: var(--accent-grad);
-    color: #fff;
+    color: var(--on-accent);
     box-shadow: var(--shadow-accent);
 }
 
@@ -209,7 +214,10 @@ body {
     color: var(--muted);
     text-decoration: none;
     border-radius: var(--radius);
-    transition: color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+    transition:
+        color 0.18s ease,
+        background 0.18s ease,
+        transform 0.18s ease;
 }
 .tab svg {
     transition: transform 0.18s ease;
@@ -219,11 +227,68 @@ body {
 }
 .tab.active {
     color: var(--text);
-    background: var(--accent-soft);
+    background: var(--tab-active-bg);
 }
 .tab.active svg {
-    color: var(--accent-2);
+    color: var(--accent);
     transform: translateY(-1px);
+}
+
+/* ---------- Large screens (iPad 13" / desktop): left sidebar rail ---------- */
+@media (min-width: 1024px) {
+    .app {
+        padding-left: 240px;
+    }
+
+    /* Bottom tab bar becomes a full-height left rail */
+    .tabbar {
+        top: 0;
+        bottom: 0;
+        right: auto;
+        width: 240px;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 6px;
+        padding: calc(env(safe-area-inset-top) + 18px) 12px 18px;
+        border-top: none;
+        border-right: 1px solid var(--border);
+    }
+    .tab {
+        flex: 0 0 auto;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 14px;
+        width: 100%;
+        padding: 13px 16px;
+        font-size: 17px;
+    }
+    .tab svg {
+        width: 24px;
+        height: 24px;
+    }
+    .tab:hover {
+        color: var(--text);
+        background: var(--surface-2);
+    }
+    .tab.active svg {
+        transform: none;
+    }
+
+    /* Wider, roomier content column */
+    .content {
+        max-width: 1080px;
+        padding: 28px 32px;
+    }
+
+    /* Card lists flow into multiple columns */
+    .stack.card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 14px;
+    }
+    .card-grid .card {
+        margin-top: 0;
+    }
 }
 
 /* ---------- Inputs ---------- */
@@ -243,7 +308,10 @@ select {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     margin-top: 6px;
-    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
 }
 input::placeholder,
 textarea::placeholder {
@@ -280,7 +348,11 @@ button {
     font-weight: 600;
     letter-spacing: -0.01em;
     box-shadow: var(--shadow-accent);
-    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease, background 0.15s ease;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        filter 0.15s ease,
+        background 0.15s ease;
 }
 button:hover {
     filter: brightness(1.06);
@@ -363,7 +435,10 @@ h2 {
     color: var(--text);
     display: block;
     box-shadow: var(--shadow);
-    transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+    transition:
+        transform 0.16s ease,
+        border-color 0.16s ease,
+        background 0.16s ease;
 }
 a.card:hover {
     border-color: var(--border-strong);
@@ -393,7 +468,10 @@ a.card:active {
     font-size: 12px;
     font-weight: 600;
     margin: 3px 5px 3px 0;
-    transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+    transition:
+        background 0.16s ease,
+        color 0.16s ease,
+        border-color 0.16s ease;
 }
 .pill.selectable {
     cursor: pointer;
