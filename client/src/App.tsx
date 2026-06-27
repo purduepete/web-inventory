@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { api } from './api';
 import { pendingCount, syncNow } from './db';
 import { Icon } from './Icon';
 
 export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
     const [pending, setPending] = useState(0);
-    const [isAdmin, setIsAdmin] = useState(false);
     const [theme, setTheme] = useState<'light' | 'dark' | null>(
         () => (localStorage.getItem('theme') as 'light' | 'dark' | null) ?? null,
     );
@@ -16,16 +14,14 @@ export default function App() {
         const root = document.documentElement;
         if (theme) root.setAttribute('data-theme', theme);
         else root.removeAttribute('data-theme');
-        const effective =
-            theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const effective = theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         document
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute('content', effective === 'light' ? '#f5f7fb' : '#0b0e16');
     }, [theme]);
 
     function toggleTheme() {
-        const effective =
-            theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const effective = theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         const next = effective === 'dark' ? 'light' : 'dark';
         localStorage.setItem('theme', next);
         setTheme(next);
@@ -33,13 +29,7 @@ export default function App() {
 
     const effectiveTheme =
         theme ??
-        (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
-            ? 'dark'
-            : 'light');
-
-    useEffect(() => {
-        void api.getMe().then((me) => setIsAdmin(me.isAdmin));
-    }, []);
+        (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
     useEffect(() => {
         const refresh = () => void pendingCount().then(setPending);
@@ -103,12 +93,6 @@ export default function App() {
                     <Icon name="plus" />
                     Add
                 </NavLink>
-                {isAdmin && (
-                    <NavLink to="/admin" className="tab">
-                        <Icon name="users" />
-                        Members
-                    </NavLink>
-                )}
             </nav>
         </div>
     );

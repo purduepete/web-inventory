@@ -13,7 +13,7 @@ photo grid. Works offline and syncs when reconnected.
 | Client  | React + TypeScript + Vite, PWA (`vite-plugin-pwa`), Dexie (offline), html5-qrcode, qrcode |
 | API     | C# .NET 8 isolated Azure Functions, Dapper                                                |
 | Hosting | Azure Static Web Apps (Standard) + linked Function App (Consumption)                      |
-| Auth    | Static Web Apps built-in auth (Microsoft Entra), custom roles (`member`/`admin`)          |
+| Auth    | Static Web Apps built-in auth (Microsoft Entra), `member` role gating              |
 | Data    | Existing Azure SQL `webportfolio` DB, new `inv` schema                                    |
 | Images  | New Azure Storage account (Blob), managed identity                                        |
 | AI      | New Azure OpenAI resource, `gpt-5-mini` deployment                                        |
@@ -64,10 +64,6 @@ Contributor** and **Cognitive Services OpenAI User**.
 ```powershell
 sqlcmd -S "sqlgkhw25ijhyzzy.database.windows.net" -d "webportfolio" `
   --authentication-method=ActiveDirectoryDefault -i sql/001_schema.sql
-
-# Users & roles table + seed the first admin (jimb@jimlertech.com):
-sqlcmd -S "sqlgkhw25ijhyzzy.database.windows.net" -d "webportfolio" `
-  --authentication-method=ActiveDirectoryDefault -i sql/003_app_users.sql
 ```
 
 ### Grant the Function App access to SQL
@@ -91,13 +87,19 @@ Two workflows deploy on push to `main`:
 
 ## Household access
 
-Auth uses Microsoft Entra login. Routes require the `member` role, which is assigned by a
-custom roles function (`/api/GetRoles`, wired via `auth.rolesSource` in
-`staticwebapp.config.json`) that looks each signed-in identity up in the `inv.AppUser`
-table. The seeded **admin** (`jimb@jimlertech.com`) manages access in-app from the
-**Members** tab: invite someone by their Microsoft email and they get access the first time
-they sign in with that account. Admins can also promote/demote members or revoke access.
-No email is sent — share the site URL however you like.
+Auth uses Static Web Apps' built-in Microsoft Entra login, and every route requires the
+`member` role. To give someone access, add them as a guest (external) user in the Entra
+tenant, then grant them the `member` role via the SWA invitation flow:
+
+```powershell
+az staticwebapp users invite --name webinv-web --resource-group webinv-rg `
+  --authentication-provider aad --user-details "person@example.com" `
+  --domain "polite-mushroom-086a4b20f.7.azurestaticapps.net" `
+  --roles member --invitation-expiration-in-hours 168 --query invitationUrl -o tsv
+```
+
+Share the returned single-use link; the person opens it while signed in with that account
+and is granted the `member` role.
 
 Google login can be added later on the SWA Standard tier via a custom OIDC provider.
 

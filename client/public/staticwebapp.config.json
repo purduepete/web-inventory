@@ -6,10 +6,6 @@
     },
     "routes": [
         {
-            "route": "/api/admin/*",
-            "allowedRoles": ["admin"]
-        },
-        {
             "route": "/api/*",
             "allowedRoles": ["member"]
         },

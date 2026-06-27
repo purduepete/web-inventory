@@ -1,12 +1,9 @@
 import type {
-    AppUser,
-    AuthInfo,
     Container,
     ContainerWithContents,
     CreateContainerInput,
     DetectedItem,
     Item,
-    Role,
     SaveItemInput,
 } from './types';
 
@@ -90,31 +87,4 @@ export const api = {
         }
         return res.json();
     },
-
-    // ---- auth & admin ----
-
-    // Reads the Static Web Apps identity endpoint to learn the current user and
-    // their roles. Returns an unauthenticated shape if not signed in.
-    getMe: async (): Promise<AuthInfo> => {
-        try {
-            const res = await fetch('/.auth/me');
-            if (!res.ok) return { email: null, roles: [], isAdmin: false };
-            const data = await res.json();
-            const cp = data?.clientPrincipal;
-            const roles: string[] = cp?.userRoles ?? [];
-            return { email: cp?.userDetails ?? null, roles, isAdmin: roles.includes('admin') };
-        } catch {
-            return { email: null, roles: [], isAdmin: false };
-        }
-    },
-
-    listUsers: () => http<AppUser[]>('/admin/users'),
-
-    inviteUser: (email: string, role: Role) =>
-        http<AppUser>('/admin/users', { method: 'POST', body: JSON.stringify({ email, role }) }),
-
-    setUserRole: (id: string, role: Role) =>
-        http<AppUser>(`/admin/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
-
-    removeUser: (id: string) => http<void>(`/admin/users/${id}`, { method: 'DELETE' }),
 };

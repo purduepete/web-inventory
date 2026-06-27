@@ -20,7 +20,6 @@ var host = new HostBuilder()
 
         services.AddSingleton<Database>();
         services.AddSingleton<InventoryRepository>();
-        services.AddSingleton<AppUsersRepository>();
         services.AddSingleton<BlobService>();
         services.AddSingleton<VisionService>();
     })
