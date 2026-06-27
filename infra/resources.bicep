@@ -14,6 +14,7 @@ var planName = '${namePrefix}-plan'
 var openAiName = '${namePrefix}-openai-${substring(suffix, 0, 6)}'
 var swaName = '${namePrefix}-web'
 var aiName = '${namePrefix}-ai'
+var logName = '${namePrefix}-logs'
 
 // ---------------------------------------------------------------- Storage
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
@@ -39,12 +40,22 @@ resource photosContainer 'Microsoft.Storage/storageAccounts/blobServices/contain
 }
 
 // ---------------------------------------------------------------- App Insights
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: logName
+  location: location
+  properties: {
+    sku: { name: 'PerGB2018' }
+    retentionInDays: 30
+  }
+}
+
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: aiName
   location: location
   kind: 'web'
   properties: {
     Application_Type: 'web'
+    WorkspaceResourceId: logAnalytics.id
   }
 }
 
@@ -119,7 +130,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 resource swa 'Microsoft.Web/staticSites@2023-12-01' = {
   name: swaName
   location: swaLocation
-  sku: { name: 'Free', tier: 'Free' }
+  sku: { name: 'Standard', tier: 'Standard' }
   properties: {}
 }
 

@@ -18,7 +18,7 @@ param sqlServerName string = 'sqlgkhw25ijhyzzy'
 @description('Existing SQL database name.')
 param sqlDatabaseName string = 'webportfolio'
 
-var rgName = 'rg-${namePrefix}'
+var rgName = '${namePrefix}-rg'
 
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: rgName

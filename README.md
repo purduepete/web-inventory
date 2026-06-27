@@ -12,7 +12,7 @@ photo grid. Works offline and syncs when reconnected.
 | ------- | ----------------------------------------------------------------------------------------- |
 | Client  | React + TypeScript + Vite, PWA (`vite-plugin-pwa`), Dexie (offline), html5-qrcode, qrcode |
 | API     | C# .NET 8 isolated Azure Functions, Dapper                                                |
-| Hosting | Azure Static Web Apps (Free) + linked Function App (Consumption)                          |
+| Hosting | Azure Static Web Apps (Standard) + linked Function App (Consumption)                      |
 | Auth    | Static Web Apps built-in auth (Microsoft Entra), `member` role gating                     |
 | Data    | Existing Azure SQL `webportfolio` DB, new `inv` schema                                    |
 | Images  | New Azure Storage account (Blob), managed identity                                        |
@@ -95,4 +95,4 @@ Google login can be added later on the SWA Standard tier via a custom OIDC provi
 
 - Photos are downscaled client-side (max 1024px) before upload + AI.
 - Vision calls use `gpt-5-mini` at `low` image detail.
-- Function App + Static Web App run on Consumption/Free tiers.
+- Function App runs on Consumption; Static Web App on Standard (linked backends require it).
