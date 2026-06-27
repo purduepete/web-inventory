@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { cacheContainers, db } from '../db';
+import { Icon } from '../Icon';
 import type { Container } from '../types';
 
 export default function ContainersPage() {
@@ -32,7 +33,9 @@ export default function ContainersPage() {
             <div className="spread">
                 <h1>Containers</h1>
                 <Link to="/containers/new">
-                    <button className="small">+ New</button>
+                    <button className="small">
+                        <Icon name="plus" size={16} /> New
+                    </button>
                 </Link>
             </div>
             {loading && <div className="center">Loading…</div>}

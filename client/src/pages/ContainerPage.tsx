@@ -4,6 +4,7 @@ import { api } from '../api';
 import { enqueue, enqueuePhoto, syncNow } from '../db';
 import { downscaleImage } from '../image';
 import { makeQrDataUrl, printLabel } from '../qr';
+import { Icon } from '../Icon';
 import type { Container, ContainerWithContents, DetectedItem, Item } from '../types';
 
 export default function ContainerPage({ byToken = false }: { byToken?: boolean }) {
@@ -100,7 +101,9 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             {/* AI suggestion review */}
             {suggestions && suggestions.length > 0 && (
                 <div className="card" style={{ marginTop: 14 }}>
-                    <h2 style={{ marginTop: 0 }}>Detected items — confirm to add</h2>
+                    <h2 style={{ margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Icon name="sparkles" size={18} /> Detected items — confirm to add
+                    </h2>
                     {suggestions.map((s, i) => (
                         <div key={i} className="item-row">
                             <div className="grow">
@@ -108,7 +111,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                 {s.description && <div className="muted">{s.description}</div>}
                             </div>
                             <button className="small" onClick={() => confirmSuggestion(s, true)}>
-                                Add
+                                <Icon name="check" size={16} /> Add
                             </button>
                             <button className="small ghost" onClick={() => confirmSuggestion(s, false)}>
                                 Skip
@@ -120,7 +123,8 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
 
             <div className="row" style={{ marginTop: 14 }}>
                 <button onClick={() => fileRef.current?.click()} disabled={busy}>
-                    {busy ? 'Analyzing…' : '📷 Photo → detect items'}
+                    <Icon name="camera" size={18} />
+                    {busy ? 'Analyzing…' : 'Photo → detect items'}
                 </button>
                 <input
                     ref={fileRef}
@@ -155,7 +159,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                         className="small"
                         onClick={() => printLabel({ number: container.number, name: container.name, qrDataUrl: qr })}
                     >
-                        🖨️ Print label
+                        <Icon name="printer" size={16} /> Print label
                     </button>
                     <span className="muted">Scan to open this container.</span>
                 </div>
@@ -171,10 +175,10 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                         nav('/containers');
                     }}
                 >
-                    Delete container
+                    <Icon name="trash" size={16} /> Delete container
                 </button>
                 <button className="ghost small" onClick={() => void syncNow().then(() => flash('Synced.'))}>
-                    Sync now
+                    <Icon name="sync" size={16} /> Sync now
                 </button>
             </div>
 
@@ -315,8 +319,8 @@ function ItemRow({
                     </option>
                 ))}
             </select>
-            <button className="danger small" onClick={remove}>
-                ✕
+            <button className="danger small icon-btn" onClick={remove} title="Remove">
+                <Icon name="close" size={16} />
             </button>
         </div>
     );

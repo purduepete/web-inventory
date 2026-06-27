@@ -1,10 +1,39 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { pendingCount, syncNow } from './db';
+import { Icon } from './Icon';
 
 export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
     const [pending, setPending] = useState(0);
+    const [theme, setTheme] = useState<'light' | 'dark' | null>(
+        () => (localStorage.getItem('theme') as 'light' | 'dark' | null) ?? null,
+    );
+
+    useEffect(() => {
+        const root = document.documentElement;
+        if (theme) root.setAttribute('data-theme', theme);
+        else root.removeAttribute('data-theme');
+        const effective =
+            theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute('content', effective === 'light' ? '#f5f7fb' : '#0b0e16');
+    }, [theme]);
+
+    function toggleTheme() {
+        const effective =
+            theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = effective === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('theme', next);
+        setTheme(next);
+    }
+
+    const effectiveTheme =
+        theme ??
+        (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light');
 
     useEffect(() => {
         const refresh = () => void pendingCount().then(setPending);
@@ -27,9 +56,24 @@ export default function App() {
     return (
         <div className="app">
             <header className="topbar">
-                <span className="brand">📦 Inventory</span>
-                {!online && <span className="badge offline">Offline</span>}
-                {pending > 0 && <span className="badge pending">{pending} to sync</span>}
+                <span className="brand">
+                    <span className="brand-mark">
+                        <Icon name="box" size={18} />
+                    </span>
+                    Inventory
+                </span>
+                <div className="topbar-actions">
+                    {!online && <span className="badge offline">Offline</span>}
+                    {pending > 0 && <span className="badge pending">{pending} to sync</span>}
+                    <button
+                        className="theme-toggle"
+                        onClick={toggleTheme}
+                        title={effectiveTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                        aria-label="Toggle color theme"
+                    >
+                        <Icon name={effectiveTheme === 'dark' ? 'sun' : 'moon'} size={18} />
+                    </button>
+                </div>
             </header>
 
             <main className="content">
@@ -38,16 +82,20 @@ export default function App() {
 
             <nav className="tabbar">
                 <NavLink to="/" end className="tab">
-                    <span>🔎</span>Search
+                    <Icon name="search" />
+                    Search
                 </NavLink>
                 <NavLink to="/containers" className="tab">
-                    <span>📦</span>Containers
+                    <Icon name="boxes" />
+                    Containers
                 </NavLink>
                 <NavLink to="/scan" className="tab">
-                    <span>📷</span>Scan
+                    <Icon name="scan" />
+                    Scan
                 </NavLink>
                 <NavLink to="/containers/new" className="tab">
-                    <span>➕</span>Add
+                    <Icon name="plus" />
+                    Add
                 </NavLink>
             </nav>
         </div>

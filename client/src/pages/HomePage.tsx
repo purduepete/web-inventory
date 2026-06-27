@@ -46,14 +46,9 @@ export default function HomePage() {
                 onChange={(e) => setQ(e.target.value)}
             />
             {tags.length > 0 && (
-                <div style={{ marginTop: 10 }}>
+                <div style={{ marginTop: 12 }}>
                     <span
-                        className="pill"
-                        style={{
-                            cursor: 'pointer',
-                            background: !tag ? 'var(--accent)' : undefined,
-                            color: !tag ? '#05213d' : undefined,
-                        }}
+                        className={`pill selectable${!tag ? ' active' : ''}`}
                         onClick={() => setTag('')}
                     >
                         All
@@ -61,12 +56,7 @@ export default function HomePage() {
                     {tags.map((t) => (
                         <span
                             key={t}
-                            className="pill"
-                            style={{
-                                cursor: 'pointer',
-                                background: tag === t ? 'var(--accent)' : undefined,
-                                color: tag === t ? '#05213d' : undefined,
-                            }}
+                            className={`pill selectable${tag === t ? ' active' : ''}`}
                             onClick={() => setTag(tag === t ? '' : t)}
                         >
                             {t}
@@ -99,7 +89,7 @@ export default function HomePage() {
                 {!searched && (
                     <div className="center">
                         Search across every container, or{' '}
-                        <Link to="/containers" style={{ color: 'var(--accent)' }}>
+                        <Link to="/containers" className="link">
                             browse containers
                         </Link>
                         .

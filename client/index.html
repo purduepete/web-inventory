@@ -7,10 +7,29 @@
             name="viewport"
             content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"
         />
-        <meta name="theme-color" content="#1f2933" />
+        <meta name="theme-color" content="#0b0e16" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
         <title>Web Inventory</title>
+        <script>
+            // Apply saved theme before paint to avoid a flash of the wrong theme.
+            (function () {
+                try {
+                    var t = localStorage.getItem('theme');
+                    if (t === 'light' || t === 'dark') {
+                        document.documentElement.setAttribute('data-theme', t);
+                        var meta = document.querySelector('meta[name="theme-color"]');
+                        if (meta) meta.setAttribute('content', t === 'light' ? '#f5f7fb' : '#0b0e16');
+                    }
+                } catch (e) {}
+            })();
+        </script>
     </head>
     <body>
         <div id="root"></div>
