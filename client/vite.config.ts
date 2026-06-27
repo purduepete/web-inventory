@@ -26,8 +26,13 @@ export default defineConfig({
                 ],
             },
             workbox: {
-                // Never cache API calls; they must hit the network (queued offline via Dexie).
-                navigateFallbackDenylist: [/^\/api/],
+                // Let the network/platform handle anything that isn't an app route:
+                // - /api/*            → Functions backend (queued offline via Dexie)
+                // - /.auth/*, /.swa/* → Static Web Apps auth + platform endpoints
+                // - /login, /logout   → our rewrites to /.auth (see staticwebapp.config.json)
+                // Without these, the service worker's navigation fallback serves the
+                // cached app shell for the auth handshake, breaking login (intermittent 403s).
+                navigateFallbackDenylist: [/^\/api/, /^\/\.auth/, /^\/\.swa/, /^\/login/, /^\/logout/],
                 runtimeCaching: [
                     {
                         urlPattern: ({ url }) => url.pathname.startsWith('/api'),
