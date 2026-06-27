@@ -1,101 +1,83 @@
 :root {
-    /* ---------- Dark theme (default) ---------- */
-    /* Surfaces — deep slate with subtle blue undertone */
-    --bg: #0b0e16;
-    --bg-grad: radial-gradient(1200px 600px at 50% -10%, #161d2e 0%, #0b0e16 60%);
-    --surface: #141a28;
-    --surface-2: #1d2538;
-    --surface-3: #28324a;
-    --border: rgba(148, 163, 184, 0.14);
-    --border-strong: rgba(148, 163, 184, 0.28);
-    --glass: rgba(11, 14, 22, 0.72);
-    --glass-strong: rgba(11, 14, 22, 0.82);
-
-    /* Text */
-    --text: #eef2f8;
-    --muted: #93a1b8;
-
-    /* Brand — indigo→violet */
-    --accent: #6366f1;
-    --accent-2: #8b5cf6;
-    --accent-soft: rgba(99, 102, 241, 0.16);
-    --accent-grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    --on-accent: #ffffff;
-
-    --danger: #f43f5e;
-    --danger-soft: rgba(244, 63, 94, 0.14);
-    --danger-text: #fda4af;
-    --ok: #34d399;
-
-    --radius: 0;
-    --radius-lg: 0;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.28);
-    --shadow-accent: 0 8px 22px rgba(99, 102, 241, 0.35);
-    color-scheme: dark;
+    /* ---------- Dark (default) — Midnight Blue palette ---------- */
+    --bg: #0a0e1a;
+    --card: #0f1524;
+    --card2: #151c2d;
+    --border: #1e2739;
+    --text: #e9eef6;
+    --muted: #7d8a9e;
+    --accent: #4d8dff;
+    --green: #33d685;
+    --red: #ff5d5d;
+    --amber: #ffb648;
+    --proj: #a06bff;
+    --font: 'Roboto Flex', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-/* ---------- Light theme ---------- */
-/* Variables shared by an explicit light choice and a light system preference. */
+/* ---------- Light — Paper palette ---------- */
 :root[data-theme='light'] {
-    --bg: #f5f7fb;
-    --bg-grad: radial-gradient(1200px 600px at 50% -10%, #e9edf8 0%, #f5f7fb 55%);
-    --surface: #ffffff;
-    --surface-2: #f1f3f9;
-    --surface-3: #e5e9f2;
-    --border: rgba(15, 23, 42, 0.1);
-    --border-strong: rgba(15, 23, 42, 0.18);
-    --glass: rgba(255, 255, 255, 0.72);
-    --glass-strong: rgba(255, 255, 255, 0.85);
-
-    --text: #1a2233;
-    --muted: #5b6678;
-
-    --accent: #5b5ef0;
-    --accent-2: #7c4ddb;
-    --accent-soft: rgba(99, 102, 241, 0.12);
-    --accent-grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    --on-accent: #ffffff;
-
-    --danger: #e11d48;
-    --danger-soft: rgba(225, 29, 72, 0.1);
-    --danger-text: #be123c;
-    --ok: #059669;
-
-    --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 28px rgba(15, 23, 42, 0.1);
-    --shadow-accent: 0 8px 22px rgba(99, 102, 241, 0.28);
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --card2: #eef1f5;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #656d76;
+    --accent: #0969da;
+    --green: #1a7f37;
+    --red: #cf222e;
+    --amber: #9a6700;
+    --proj: #8250df;
     color-scheme: light;
 }
 
 /* Follow the OS when the user hasn't explicitly chosen a theme. */
 @media (prefers-color-scheme: light) {
     :root:not([data-theme='dark']) {
-        --bg: #f5f7fb;
-        --bg-grad: radial-gradient(1200px 600px at 50% -10%, #e9edf8 0%, #f5f7fb 55%);
-        --surface: #ffffff;
-        --surface-2: #f1f3f9;
-        --surface-3: #e5e9f2;
-        --border: rgba(15, 23, 42, 0.1);
-        --border-strong: rgba(15, 23, 42, 0.18);
-        --glass: rgba(255, 255, 255, 0.72);
-        --glass-strong: rgba(255, 255, 255, 0.85);
-
-        --text: #1a2233;
-        --muted: #5b6678;
-
-        --accent: #5b5ef0;
-        --accent-2: #7c4ddb;
-        --accent-soft: rgba(99, 102, 241, 0.12);
-        --on-accent: #ffffff;
-
-        --danger: #e11d48;
-        --danger-soft: rgba(225, 29, 72, 0.1);
-        --danger-text: #be123c;
-        --ok: #059669;
-
-        --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 28px rgba(15, 23, 42, 0.1);
-        --shadow-accent: 0 8px 22px rgba(99, 102, 241, 0.28);
+        --bg: #f6f8fa;
+        --card: #ffffff;
+        --card2: #eef1f5;
+        --border: #d0d7de;
+        --text: #1f2328;
+        --muted: #656d76;
+        --accent: #0969da;
+        --green: #1a7f37;
+        --red: #cf222e;
+        --amber: #9a6700;
+        --proj: #8250df;
         color-scheme: light;
     }
+}
+
+/* ---------- Semantic tokens derived from the active palette ---------- */
+:root {
+    --surface: var(--card);
+    --surface-2: var(--card2);
+    --surface-3: color-mix(in srgb, var(--card2), var(--text) 9%);
+    --border-strong: color-mix(in srgb, var(--border), var(--text) 24%);
+    --glass: color-mix(in srgb, var(--bg) 74%, transparent);
+    --glass-strong: color-mix(in srgb, var(--bg) 84%, transparent);
+
+    --accent-2: var(--proj);
+    --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+    --accent-grad: linear-gradient(135deg, var(--accent) 0%, var(--proj) 100%);
+    --on-accent: #ffffff;
+
+    --danger: var(--red);
+    --danger-soft: color-mix(in srgb, var(--red) 15%, transparent);
+    --danger-text: color-mix(in srgb, var(--red), var(--text) 20%);
+    --ok: var(--green);
+
+    --bg-grad: radial-gradient(
+        1100px 560px at 50% -12%,
+        color-mix(in srgb, var(--accent) 9%, var(--bg)) 0%,
+        var(--bg) 62%
+    );
+
+    --radius: 0;
+    --radius-lg: 0;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 8px 24px rgba(0, 0, 0, 0.2);
+    --shadow-accent: 0 8px 22px color-mix(in srgb, var(--accent) 34%, transparent);
+    color-scheme: dark;
 }
 
 * {
@@ -104,7 +86,7 @@
 
 body {
     margin: 0;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-family: var(--font);
     background: var(--bg);
     background-image: var(--bg-grad);
     background-attachment: fixed;
