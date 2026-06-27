@@ -54,3 +54,21 @@ export interface SaveItemInput {
     quantity: number;
     tags: string[];
 }
+
+export type Role = 'member' | 'admin';
+
+export interface AppUser {
+    id: string;
+    email: string;
+    role: Role;
+    displayName?: string | null;
+    invitedBy?: string | null;
+    createdAt: string;
+    lastLoginAt?: string | null;
+}
+
+export interface AuthInfo {
+    email: string | null;
+    roles: string[];
+    isAdmin: boolean;
+}

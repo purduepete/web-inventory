@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { api } from './api';
 import { pendingCount, syncNow } from './db';
 import { Icon } from './Icon';
 
 export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
     const [pending, setPending] = useState(0);
+    const [isAdmin, setIsAdmin] = useState(false);
     const [theme, setTheme] = useState<'light' | 'dark' | null>(
         () => (localStorage.getItem('theme') as 'light' | 'dark' | null) ?? null,
     );
@@ -34,6 +36,10 @@ export default function App() {
         (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
             ? 'dark'
             : 'light');
+
+    useEffect(() => {
+        void api.getMe().then((me) => setIsAdmin(me.isAdmin));
+    }, []);
 
     useEffect(() => {
         const refresh = () => void pendingCount().then(setPending);
@@ -97,6 +103,12 @@ export default function App() {
                     <Icon name="plus" />
                     Add
                 </NavLink>
+                {isAdmin && (
+                    <NavLink to="/admin" className="tab">
+                        <Icon name="users" />
+                        Members
+                    </NavLink>
+                )}
             </nav>
         </div>
     );

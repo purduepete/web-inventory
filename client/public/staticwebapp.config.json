@@ -4,7 +4,14 @@
         "rewrite": "/index.html",
         "exclude": ["/assets/*", "/*.{png,jpg,svg,webmanifest,ico}"]
     },
+    "auth": {
+        "rolesSource": "/api/GetRoles"
+    },
     "routes": [
+        {
+            "route": "/api/admin/*",
+            "allowedRoles": ["admin"]
+        },
         {
             "route": "/api/*",
             "allowedRoles": ["member"]
