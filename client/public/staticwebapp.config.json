@@ -1,38 +1,38 @@
 {
-  "$schema": "https://json.schemas.azureedge.net/static-web-apps/swa.config.schema.json",
-  "navigationFallback": {
-    "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/*.{png,jpg,svg,webmanifest,ico}"]
-  },
-  "routes": [
-    {
-      "route": "/api/*",
-      "allowedRoles": ["member"]
+    "$schema": "https://json.schemas.azureedge.net/static-web-apps/swa.config.schema.json",
+    "navigationFallback": {
+        "rewrite": "/index.html",
+        "exclude": ["/assets/*", "/*.{png,jpg,svg,webmanifest,ico}"]
     },
-    {
-      "route": "/login",
-      "rewrite": "/.auth/login/aad"
+    "routes": [
+        {
+            "route": "/api/*",
+            "allowedRoles": ["member"]
+        },
+        {
+            "route": "/login",
+            "rewrite": "/.auth/login/aad"
+        },
+        {
+            "route": "/logout",
+            "rewrite": "/.auth/logout"
+        },
+        {
+            "route": "/*",
+            "allowedRoles": ["member"]
+        }
+    ],
+    "responseOverrides": {
+        "401": {
+            "redirect": "/.auth/login/aad",
+            "statusCode": 302
+        }
     },
-    {
-      "route": "/logout",
-      "rewrite": "/.auth/logout"
+    "globalHeaders": {
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin"
     },
-    {
-      "route": "/*",
-      "allowedRoles": ["member"]
+    "mimeTypes": {
+        ".webmanifest": "application/manifest+json"
     }
-  ],
-  "responseOverrides": {
-    "401": {
-      "redirect": "/.auth/login/aad",
-      "statusCode": 302
-    }
-  },
-  "globalHeaders": {
-    "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "strict-origin-when-cross-origin"
-  },
-  "mimeTypes": {
-    ".webmanifest": "application/manifest+json"
-  }
 }

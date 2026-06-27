@@ -7,7 +7,7 @@ using WebInventory.Api.Models;
 namespace WebInventory.Api.Services;
 
 /// <summary>
-/// Sends a container photo to Azure OpenAI (gpt-4o-mini vision) and asks it to
+/// Sends a container photo to Azure OpenAI (gpt-5-mini vision) and asks it to
 /// list the discrete physical items it can see, returned as structured JSON.
 /// </summary>
 public sealed class VisionService
@@ -24,7 +24,7 @@ public sealed class VisionService
     public VisionService()
     {
         var endpoint = Environment.GetEnvironmentVariable("OpenAiEndpoint");
-        var deployment = Environment.GetEnvironmentVariable("OpenAiDeployment") ?? "gpt-4o-mini";
+        var deployment = Environment.GetEnvironmentVariable("OpenAiDeployment") ?? "gpt-5-mini";
         if (string.IsNullOrWhiteSpace(endpoint) || endpoint.Contains("<your-"))
         {
             _chat = null;
@@ -52,7 +52,6 @@ public sealed class VisionService
         var options = new ChatCompletionOptions
         {
             ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat(),
-            Temperature = 0.1f,
         };
 
         try

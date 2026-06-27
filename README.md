@@ -1,22 +1,22 @@
 # Web Inventory
 
 An installable PWA (iPhone-first) to inventory the contents of physical containers.
-Photograph a container's contents → Azure OpenAI (gpt-4o-mini vision) suggests items →
+Photograph a container's contents → Azure OpenAI (gpt-5-mini vision) suggests items →
 you confirm/edit → items are saved and fully editable over time. Containers get printable
 QR labels; scanning one opens the container. Find items via search, tags, browse, or a
 photo grid. Works offline and syncs when reconnected.
 
 ## Stack
 
-| Layer | Tech |
-| --- | --- |
-| Client | React + TypeScript + Vite, PWA (`vite-plugin-pwa`), Dexie (offline), html5-qrcode, qrcode |
-| API | C# .NET 8 isolated Azure Functions, Dapper |
-| Hosting | Azure Static Web Apps (Free) + linked Function App (Consumption) |
-| Auth | Static Web Apps built-in auth (Microsoft Entra), `member` role gating |
-| Data | Existing Azure SQL `webportfolio` DB, new `inv` schema |
-| Images | New Azure Storage account (Blob), managed identity |
-| AI | New Azure OpenAI resource, `gpt-4o-mini` deployment |
+| Layer   | Tech                                                                                      |
+| ------- | ----------------------------------------------------------------------------------------- |
+| Client  | React + TypeScript + Vite, PWA (`vite-plugin-pwa`), Dexie (offline), html5-qrcode, qrcode |
+| API     | C# .NET 8 isolated Azure Functions, Dapper                                                |
+| Hosting | Azure Static Web Apps (Free) + linked Function App (Consumption)                          |
+| Auth    | Static Web Apps built-in auth (Microsoft Entra), `member` role gating                     |
+| Data    | Existing Azure SQL `webportfolio` DB, new `inv` schema                                    |
+| Images  | New Azure Storage account (Blob), managed identity                                        |
+| AI      | New Azure OpenAI resource, `gpt-5-mini` deployment                                        |
 
 ## Layout
 
@@ -94,5 +94,5 @@ Google login can be added later on the SWA Standard tier via a custom OIDC provi
 ## Cost guardrails
 
 - Photos are downscaled client-side (max 1024px) before upload + AI.
-- Vision calls use `gpt-4o-mini` at `low` image detail.
+- Vision calls use `gpt-5-mini` at `low` image detail.
 - Function App + Static Web App run on Consumption/Free tiers.

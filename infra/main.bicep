@@ -9,7 +9,7 @@ param location string = 'eastus'
 @description('Location for the Static Web App (limited region set).')
 param swaLocation string = 'eastus2'
 
-@description('Azure OpenAI location that has gpt-4o-mini capacity.')
+@description('Azure OpenAI location that has gpt-5-mini capacity.')
 param openAiLocation string = 'eastus'
 
 @description('Existing SQL server name (without .database.windows.net).')

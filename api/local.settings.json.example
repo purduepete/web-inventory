@@ -7,7 +7,7 @@
     "BlobAccountUrl": "https://<your-storage-account>.blob.core.windows.net",
     "BlobContainerName": "photos",
     "OpenAiEndpoint": "https://<your-openai-resource>.openai.azure.com/",
-    "OpenAiDeployment": "gpt-4o-mini"
+    "OpenAiDeployment": "gpt-5-mini"
   },
   "Host": {
     "CORS": "*"

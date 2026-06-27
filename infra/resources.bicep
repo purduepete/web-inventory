@@ -60,9 +60,9 @@ resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
 }
 
-resource gpt4oMini 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+resource visionModel 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: openAi
-  name: 'gpt-4o-mini'
+  name: 'gpt-5-mini'
   sku: {
     name: 'GlobalStandard'
     capacity: 10
@@ -70,8 +70,8 @@ resource gpt4oMini 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01'
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'gpt-4o-mini'
-      version: '2024-07-18'
+      name: 'gpt-5-mini'
+      version: '2025-08-07'
     }
   }
 }
@@ -109,7 +109,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'BlobAccountUrl', value: storage.properties.primaryEndpoints.blob }
         { name: 'BlobContainerName', value: 'photos' }
         { name: 'OpenAiEndpoint', value: openAi.properties.endpoint }
-        { name: 'OpenAiDeployment', value: 'gpt-4o-mini' }
+        { name: 'OpenAiDeployment', value: 'gpt-5-mini' }
       ]
     }
   }
