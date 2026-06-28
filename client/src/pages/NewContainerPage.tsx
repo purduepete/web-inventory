@@ -76,6 +76,15 @@ export default function NewContainerPage() {
                 />
             </label>
             <label>
+                Owner (optional)
+                <Select
+                    value={ownerId}
+                    onChange={setOwnerId}
+                    ariaLabel="Owner"
+                    options={[{ value: '', label: '— none —' }, ...owners.map((o) => ({ value: o.id, label: o.name }))]}
+                />
+            </label>
+            <label>
                 Location (optional)
                 <Select
                     value={locationId}
@@ -89,15 +98,6 @@ export default function NewContainerPage() {
                         ...locations.map((l) => ({ value: l.id, label: l.name })),
                         { value: '__new__', label: '+ New location…' },
                     ]}
-                />
-            </label>
-            <label>
-                Owner (optional)
-                <Select
-                    value={ownerId}
-                    onChange={setOwnerId}
-                    ariaLabel="Owner"
-                    options={[{ value: '', label: '— none —' }, ...owners.map((o) => ({ value: o.id, label: o.name }))]}
                 />
             </label>
             <p className="muted" style={{ marginTop: -2 }}>
