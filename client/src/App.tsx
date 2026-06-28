@@ -6,6 +6,8 @@ import { Icon } from './Icon';
 export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
     const [pending, setPending] = useState(0);
+    const [syncing, setSyncing] = useState(false);
+    const [syncMsg, setSyncMsg] = useState<string | null>(null);
     const [theme, setTheme] = useState<'light' | 'dark' | null>(
         () => (localStorage.getItem('theme') as 'light' | 'dark' | null) ?? null,
     );
@@ -34,6 +36,9 @@ export default function App() {
     useEffect(() => {
         const refresh = () => void pendingCount().then(setPending);
         refresh();
+        // Attempt a sync on startup if we're already online with a queue —
+        // the 'online' event only fires on a transition, not at load.
+        if (navigator.onLine) void syncNow().then(refresh);
         const onOnline = () => {
             setOnline(true);
             void syncNow().then(refresh);
@@ -49,6 +54,29 @@ export default function App() {
         };
     }, []);
 
+    async function manualSync() {
+        if (syncing) return;
+        if (!navigator.onLine) {
+            setSyncMsg('Offline — will sync when reconnected.');
+            setTimeout(() => setSyncMsg(null), 2500);
+            return;
+        }
+        setSyncing(true);
+        try {
+            const { synced, failed } = await syncNow();
+            const remaining = await pendingCount();
+            setPending(remaining);
+            if (failed > 0) setSyncMsg('Sync failed — will retry.');
+            else if (synced > 0) setSyncMsg('Synced.');
+            else setSyncMsg(null);
+        } catch {
+            setSyncMsg('Sync failed — will retry.');
+        } finally {
+            setSyncing(false);
+            setTimeout(() => setSyncMsg(null), 2500);
+        }
+    }
+
     return (
         <div className="app">
             <header className="topbar">
@@ -60,7 +88,20 @@ export default function App() {
                 </span>
                 <div className="topbar-actions">
                     {!online && <span className="badge offline">Offline</span>}
-                    {pending > 0 && <span className="badge pending">{pending} to sync</span>}
+                    {syncMsg && <span className="badge pending">{syncMsg}</span>}
+                    {pending > 0 && !syncMsg && (
+                        <span
+                            className="badge pending"
+                            role="button"
+                            tabIndex={0}
+                            onClick={manualSync}
+                            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && manualSync()}
+                            title="Tap to sync now"
+                            style={{ cursor: 'pointer' }}
+                        >
+                            {syncing ? 'Syncing…' : `${pending} to sync`}
+                        </span>
+                    )}
                     <button
                         className="theme-toggle"
                         onClick={toggleTheme}
