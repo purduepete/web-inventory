@@ -1289,6 +1289,13 @@ a.card:active {
     border-top: 1px solid var(--border);
 }
 /* Add-item modal: qty + category on one row, and the photo preview. */
+.add-item-backdrop {
+    align-items: flex-start;
+    padding-top: 48px;
+}
+.add-item-backdrop .modal-actions {
+    justify-content: center;
+}
 .add-item-grid {
     display: flex;
     gap: 10px;

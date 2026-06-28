@@ -600,7 +600,7 @@ function AddItemModal({
     }
 
     return (
-        <div className="modal-backdrop" onMouseDown={() => onClose(false)}>
+        <div className="modal-backdrop add-item-backdrop" onMouseDown={() => onClose(false)}>
             <div
                 className="modal"
                 role="dialog"
@@ -746,11 +746,7 @@ function AddItemModal({
                                     </div>
                                 </div>
                             ) : (
-                                <button
-                                    type="button"
-                                    className="ghost"
-                                    onClick={() => fileRef.current?.click()}
-                                >
+                                <button type="button" className="ghost" onClick={() => fileRef.current?.click()}>
                                     <Icon name="camera" size={18} /> Take a picture
                                 </button>
                             )}
