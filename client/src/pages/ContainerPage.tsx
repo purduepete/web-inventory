@@ -332,28 +332,30 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                         <Icon name="sparkles" size={18} /> Detected items — confirm to add
                     </h2>
                     {suggestions.map((s, i) => (
-                        <div key={i} className="item-row">
+                        <div key={i} className="item-row sug-row">
                             <div className="grow">
                                 <strong>{s.name}</strong>
                                 {s.description && <div className="muted">{s.description}</div>}
                             </div>
-                            <Select
-                                value={suggestionCats.get(s) ?? ''}
-                                onChange={(v) => void pickSuggestionCategory(s, v)}
-                                ariaLabel="Category"
-                                auto
-                                options={[
-                                    { value: '', label: 'No category' },
-                                    ...categories.map((c) => ({ value: c.id, label: c.name })),
-                                    { value: '__new__', label: '+ New category…' },
-                                ]}
-                            />
-                            <button className="small" onClick={() => confirmSuggestion(s, true)}>
-                                <Icon name="check" size={16} /> Add
-                            </button>
-                            <button className="small ghost" onClick={() => confirmSuggestion(s, false)}>
-                                Skip
-                            </button>
+                            <div className="sug-actions">
+                                <Select
+                                    value={suggestionCats.get(s) ?? ''}
+                                    onChange={(v) => void pickSuggestionCategory(s, v)}
+                                    ariaLabel="Category"
+                                    auto
+                                    options={[
+                                        { value: '', label: 'No category' },
+                                        ...categories.map((c) => ({ value: c.id, label: c.name })),
+                                        { value: '__new__', label: '+ New category…' },
+                                    ]}
+                                />
+                                <button className="small" onClick={() => confirmSuggestion(s, true)}>
+                                    <Icon name="check" size={16} /> Add
+                                </button>
+                                <button className="small ghost" onClick={() => confirmSuggestion(s, false)}>
+                                    Skip
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>

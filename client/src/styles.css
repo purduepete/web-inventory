@@ -686,6 +686,7 @@ button:disabled,
     display: flex;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
 }
 .spread {
     display: flex;
@@ -987,6 +988,18 @@ a.card:active {
     color: var(--muted);
 }
 
+/* AI "detected items" review row: name on the left, controls on the right.
+   Stays inline on wide screens; stacks on phones (see media query below). */
+.sug-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+.sug-actions button {
+    flex: 0 0 auto;
+}
+
 /* On phones, stack an item's edit controls instead of cramming one row. */
 @media (max-width: 560px) {
     /* Phones: full-width photo buttons. */
@@ -1031,6 +1044,27 @@ a.card:active {
         flex: 1 1 100%;
         justify-content: flex-end;
         gap: 8px;
+    }
+
+    /* AI detected-items review: name on its own line, then the category
+       picker + Add/Skip flow onto a second line (no more squished names). */
+    .sug-row {
+        flex-wrap: wrap;
+        align-items: stretch;
+        row-gap: 10px;
+    }
+    .sug-row .grow {
+        flex: 1 1 100%;
+    }
+    .sug-actions {
+        flex: 1 1 100%;
+        flex-wrap: wrap;
+    }
+    .sug-actions .select {
+        flex: 1 1 auto;
+    }
+    .sug-actions .select .select-trigger {
+        width: 100%;
     }
 }
 
