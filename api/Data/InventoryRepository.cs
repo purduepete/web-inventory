@@ -240,6 +240,19 @@ public sealed class InventoryRepository
         return (await conn.QueryAsync<string>("SELECT Name FROM inv.Tag ORDER BY Name;")).AsList();
     }
 
+    /// <summary>
+    /// Distinct owner/location/category combinations that actually have an item, so the
+    /// search filters can cascade (picking an owner narrows the available locations, etc.).
+    /// </summary>
+    public async Task<IReadOnlyList<FacetRow>> ListFacetsAsync(CancellationToken ct)
+    {
+        await using var conn = await _db.OpenAsync(ct);
+        return (await conn.QueryAsync<FacetRow>(
+            @"SELECT DISTINCT c.OwnerId, c.LocationId, i.CategoryId
+              FROM inv.Container c
+              JOIN inv.Item i ON i.ContainerId = c.Id;")).AsList();
+    }
+
     public async Task AddPhotoAsync(Guid photoId, Guid containerId, string blobUrl, string thumbUrl, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);

@@ -28,4 +28,10 @@ public class SearchFunctions
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "tags")] HttpRequestData req,
         CancellationToken ct)
         => await req.Json(await _repo.ListTagsAsync(ct));
+
+    [Function("ListFacets")]
+    public async Task<HttpResponseData> Facets(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "facets")] HttpRequestData req,
+        CancellationToken ct)
+        => await req.Json(await _repo.ListFacetsAsync(ct));
 }

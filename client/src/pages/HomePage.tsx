@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { Icon } from '../Icon';
 import { Select } from '../Select';
 import { Spinner } from '../Spinner';
 import { getLookup, getTags } from '../lookups';
-import type { Item, Lookup } from '../types';
+import type { Facet, Item, Lookup } from '../types';
 
 const FILTER_KEY = 'webinv.search.filters';
 
@@ -31,6 +31,7 @@ export default function HomePage() {
     const [locations, setLocations] = useState<Lookup[]>([]);
     const [owners, setOwners] = useState<Lookup[]>([]);
     const [categories, setCategories] = useState<Lookup[]>([]);
+    const [facets, setFacets] = useState<Facet[]>([]);
     const [filters, setFilters] = useState<Filters>(loadFilters);
     const [results, setResults] = useState<Item[]>([]);
     const [loading, setLoading] = useState(false);
@@ -44,12 +45,51 @@ export default function HomePage() {
             getLookup('locations').then(setLocations),
             getLookup('owners').then(setOwners),
             getLookup('categories').then(setCategories),
+            api.listFacets().then(setFacets),
         ]).finally(() => setReady(true));
     }, []);
 
     useEffect(() => {
         localStorage.setItem(FILTER_KEY, JSON.stringify(filters));
     }, [filters]);
+
+    // Cascading filters: picking an owner narrows the available locations to those
+    // that own an item, which in turn narrows the categories. If no facet data is
+    // available we fall back to showing every lookup so search still works.
+    const cascade = facets.length > 0;
+
+    const allowedLocationIds = useMemo(() => {
+        const set = new Set<string>();
+        for (const f of facets) {
+            if (filters.ownerId && (f.ownerId ?? '') !== filters.ownerId) continue;
+            if (f.locationId) set.add(f.locationId);
+        }
+        return set;
+    }, [facets, filters.ownerId]);
+
+    const allowedCategoryIds = useMemo(() => {
+        const set = new Set<string>();
+        for (const f of facets) {
+            if (filters.ownerId && (f.ownerId ?? '') !== filters.ownerId) continue;
+            if (filters.locationId && (f.locationId ?? '') !== filters.locationId) continue;
+            if (f.categoryId) set.add(f.categoryId);
+        }
+        return set;
+    }, [facets, filters.ownerId, filters.locationId]);
+
+    const locationOptions = cascade ? locations.filter((l) => allowedLocationIds.has(l.id)) : locations;
+    const categoryOptions = cascade ? categories.filter((c) => allowedCategoryIds.has(c.id)) : categories;
+
+    // Drop any downstream selection that the current upstream choice no longer allows.
+    useEffect(() => {
+        if (!cascade) return;
+        setFilters((f) => {
+            let next = f;
+            if (f.locationId && !allowedLocationIds.has(f.locationId)) next = { ...next, locationId: '' };
+            if (f.categoryId && !allowedCategoryIds.has(f.categoryId)) next = { ...next, categoryId: '' };
+            return next === f ? f : next;
+        });
+    }, [cascade, allowedLocationIds, allowedCategoryIds]);
 
     const hasFilter = !!(filters.locationId || filters.ownerId || filters.categoryId);
     const activeFilterCount = (filters.ownerId ? 1 : 0) + (filters.locationId ? 1 : 0) + (filters.categoryId ? 1 : 0);
@@ -111,7 +151,7 @@ export default function HomePage() {
                             ariaLabel="Filter by location"
                             options={[
                                 { value: '', label: 'All locations' },
-                                ...locations.map((l) => ({ value: l.id, label: l.name })),
+                                ...locationOptions.map((l) => ({ value: l.id, label: l.name })),
                             ]}
                         />
                         <Select
@@ -120,7 +160,7 @@ export default function HomePage() {
                             ariaLabel="Filter by category"
                             options={[
                                 { value: '', label: 'All categories' },
-                                ...categories.map((c) => ({ value: c.id, label: c.name })),
+                                ...categoryOptions.map((c) => ({ value: c.id, label: c.name })),
                             ]}
                         />
                     </div>

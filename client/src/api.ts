@@ -3,6 +3,7 @@ import type {
     ContainerWithContents,
     CreateContainerInput,
     DetectedItem,
+    Facet,
     Item,
     Lookup,
     LookupKind,
@@ -88,6 +89,8 @@ export const api = {
     },
 
     listTags: () => http<string[]>('/tags'),
+
+    listFacets: () => http<Facet[]>('/facets'),
 
     listLookup: (kind: LookupKind) => http<Lookup[]>(`/lookups/${kind}`),
 

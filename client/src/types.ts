@@ -34,6 +34,12 @@ export interface Lookup {
 
 export type LookupKind = 'owners' | 'locations' | 'categories';
 
+export interface Facet {
+    ownerId?: string | null;
+    locationId?: string | null;
+    categoryId?: string | null;
+}
+
 export interface Photo {
     id: string;
     containerId: string;

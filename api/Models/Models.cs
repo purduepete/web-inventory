@@ -71,6 +71,13 @@ public sealed class PhotoBackfillRow
     public Guid ContainerId { get; set; }
     public string BlobUrl { get; set; } = "";
 }
+
+public sealed class FacetRow
+{
+    public Guid? OwnerId { get; set; }
+    public Guid? LocationId { get; set; }
+    public Guid? CategoryId { get; set; }
+}
 public record LookupInput(string Name);
 public record DetectedItem(string Name, string? Description, int Quantity);
 public record PhotoUploadResult(Guid PhotoId, List<DetectedItem> Detected);
