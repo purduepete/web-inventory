@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { pendingCount, syncNow } from './db';
 import { Icon } from './Icon';
+import { HelpDialog } from './HelpDialog';
 import { Spinner } from './Spinner';
 import { getClientPrincipal, redirectToLogin } from './auth';
 
@@ -17,6 +18,7 @@ export default function App() {
     const location = useLocation();
     const [reloadKey, setReloadKey] = useState(0);
     const [reloading, setReloading] = useState(false);
+    const [helpOpen, setHelpOpen] = useState(false);
     const [theme, setTheme] = useState<'light' | 'dark' | null>(
         () => (localStorage.getItem('theme') as 'light' | 'dark' | null) ?? null,
     );
@@ -168,6 +170,14 @@ export default function App() {
                     </button>
                     <button
                         className="theme-toggle"
+                        onClick={() => setHelpOpen(true)}
+                        title="Help & key concepts"
+                        aria-label="Help and key concepts"
+                    >
+                        <Icon name="help" size={18} />
+                    </button>
+                    <button
+                        className="theme-toggle"
                         onClick={toggleTheme}
                         title={effectiveTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
                         aria-label="Toggle color theme"
@@ -211,6 +221,8 @@ export default function App() {
                     Tags
                 </NavLink>
             </nav>
+
+            <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
         </div>
     );
 }

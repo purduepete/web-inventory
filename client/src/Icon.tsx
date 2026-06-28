@@ -21,7 +21,8 @@ export type IconName =
     | 'sliders'
     | 'tag'
     | 'user'
-    | 'pin';
+    | 'pin'
+    | 'help';
 
 const paths: Record<IconName, JSX.Element> = {
     search: (
@@ -175,6 +176,13 @@ const paths: Record<IconName, JSX.Element> = {
         <>
             <path d="M12 21s7-6.3 7-11a7 7 0 0 0-14 0c0 4.7 7 11 7 11Z" />
             <circle cx="12" cy="10" r="2.5" />
+        </>
+    ),
+    help: (
+        <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M9.1 9.2a3 3 0 0 1 5.8 1c0 2-3 2.7-3 4" />
+            <path d="M12 17.5h.01" />
         </>
     ),
 };
