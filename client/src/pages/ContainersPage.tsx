@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { cacheContainers, db } from '../db';
 import { Icon } from '../Icon';
+import { Spinner } from '../Spinner';
 import type { Container } from '../types';
 
 export default function ContainersPage() {
@@ -28,6 +29,8 @@ export default function ContainersPage() {
         };
     }, []);
 
+    if (loading) return <Spinner />;
+
     return (
         <div>
             <div className="spread">
@@ -38,7 +41,6 @@ export default function ContainersPage() {
                     </button>
                 </Link>
             </div>
-            {loading && <div className="center">Loading…</div>}
             <div className="stack card-grid">
                 {containers.map((c) => (
                     <Link key={c.id} to={`/containers/${c.id}`} className="card">
@@ -51,9 +53,7 @@ export default function ContainersPage() {
                         {c.location && <div className="muted">{c.location}</div>}
                     </Link>
                 ))}
-                {!loading && containers.length === 0 && (
-                    <div className="center">No containers yet. Create your first one.</div>
-                )}
+                {containers.length === 0 && <div className="center">No containers yet. Create your first one.</div>}
             </div>
         </div>
     );

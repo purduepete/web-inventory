@@ -15,20 +15,38 @@
     --font: 'Roboto Flex', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-/* ---------- Light — Paper palette ---------- */
+/* ---------- Light — Paper palette (single source of truth) ----------
+   The colour values live here once as --l-* tokens; the two selectors below
+   (explicit toggle + OS preference) only remap the active palette to them, so
+   the hex values never need to be kept in sync in two places. */
+:root {
+    --l-bg: #f6f8fa;
+    --l-card: #ffffff;
+    --l-card2: #eef1f5;
+    --l-border: #d0d7de;
+    --l-text: #1f2328;
+    --l-muted: #656d76;
+    --l-accent: #0969da;
+    --l-green: #1a7f37;
+    --l-red: #cf222e;
+    --l-amber: #9a6700;
+    --l-proj: #8250df;
+    --l-on-accent: #ffffff;
+}
+
 :root[data-theme='light'] {
-    --bg: #f6f8fa;
-    --card: #ffffff;
-    --card2: #eef1f5;
-    --border: #d0d7de;
-    --text: #1f2328;
-    --muted: #656d76;
-    --accent: #0969da;
-    --green: #1a7f37;
-    --red: #cf222e;
-    --amber: #9a6700;
-    --proj: #8250df;
-    --on-accent: #ffffff;
+    --bg: var(--l-bg);
+    --card: var(--l-card);
+    --card2: var(--l-card2);
+    --border: var(--l-border);
+    --text: var(--l-text);
+    --muted: var(--l-muted);
+    --accent: var(--l-accent);
+    --green: var(--l-green);
+    --red: var(--l-red);
+    --amber: var(--l-amber);
+    --proj: var(--l-proj);
+    --on-accent: var(--l-on-accent);
     --tab-active-bg: color-mix(in srgb, var(--accent) 12%, var(--card));
     color-scheme: light;
 }
@@ -36,18 +54,18 @@
 /* Follow the OS when the user hasn't explicitly chosen a theme. */
 @media (prefers-color-scheme: light) {
     :root:not([data-theme='dark']) {
-        --bg: #f6f8fa;
-        --card: #ffffff;
-        --card2: #eef1f5;
-        --border: #d0d7de;
-        --text: #1f2328;
-        --muted: #656d76;
-        --accent: #0969da;
-        --green: #1a7f37;
-        --red: #cf222e;
-        --amber: #9a6700;
-        --proj: #8250df;
-        --on-accent: #ffffff;
+        --bg: var(--l-bg);
+        --card: var(--l-card);
+        --card2: var(--l-card2);
+        --border: var(--l-border);
+        --text: var(--l-text);
+        --muted: var(--l-muted);
+        --accent: var(--l-accent);
+        --green: var(--l-green);
+        --red: var(--l-red);
+        --amber: var(--l-amber);
+        --proj: var(--l-proj);
+        --on-accent: var(--l-on-accent);
         --tab-active-bg: color-mix(in srgb, var(--accent) 12%, var(--card));
         color-scheme: light;
     }
@@ -187,6 +205,26 @@ body {
     margin: 0 auto;
 }
 
+/* ---------- Page transitions ---------- */
+.page {
+    animation: page-in 0.26s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes page-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .page {
+        animation: none;
+    }
+}
+
 /* ---------- Bottom tab bar ---------- */
 .tabbar {
     position: fixed;
@@ -234,6 +272,15 @@ body {
     transform: translateY(-1px);
 }
 
+/* Grouped tabs (e.g. Containers → Inventory, Add). On the mobile bottom bar
+   the group is transparent: children flow inline and the label is hidden. */
+.tab-group {
+    display: contents;
+}
+.tab-group-title {
+    display: none;
+}
+
 /* ---------- Large screens (iPad 13" / desktop): left sidebar rail ---------- */
 @media (min-width: 1024px) {
     .app {
@@ -274,19 +321,54 @@ body {
         transform: none;
     }
 
+    /* On the rail the group stacks: a small label heading above indented children */
+    .tab-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+    }
+    .tab-group-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        padding: 13px 16px 4px;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+    }
+    .tab-group-title svg {
+        width: 20px;
+        height: 20px;
+    }
+    .tab.subtab {
+        padding-left: 50px;
+        font-size: 16px;
+    }
+
     /* Wider, roomier content column */
     .content {
         max-width: 1080px;
         padding: 28px 32px;
     }
 
-    /* Card lists flow into multiple columns */
+    /* Card lists flow into multiple columns of a uniform, fixed width
+       (fixed tracks avoid sub-pixel rounding so every card is identical) */
     .stack.card-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fill, 300px);
+        justify-content: start;
         gap: 14px;
     }
     .card-grid .card {
+        margin-top: 0;
+    }
+    /* In a grid the adjacent-sibling margin must not apply, or every
+       card after the first gets pushed down and rows look uneven */
+    .card-grid .card + .card {
         margin-top: 0;
     }
 }
@@ -325,6 +407,147 @@ select:focus {
     box-shadow: 0 0 0 3px var(--accent-soft);
     background: var(--surface-2);
 }
+
+/* ---------- Custom select ---------- */
+.select {
+    position: relative;
+    width: 100%;
+    margin-top: 6px;
+}
+.select.auto {
+    width: auto;
+    display: inline-block;
+}
+.select-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
+}
+.select-trigger:hover {
+    border-color: var(--border-strong);
+}
+.select.open .select-trigger,
+.select-trigger:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    background: var(--surface-2);
+}
+.select-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.select-value.placeholder {
+    color: var(--muted);
+}
+.select-chevron {
+    flex: 0 0 auto;
+    color: var(--muted);
+    transform: rotate(90deg);
+    transition: transform 0.18s ease;
+}
+.select.open .select-chevron {
+    transform: rotate(-90deg);
+}
+.select-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    animation: select-pop 0.12s ease;
+}
+.select.auto .select-panel {
+    right: auto;
+    min-width: 100%;
+    white-space: nowrap;
+}
+@keyframes select-pop {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+.select-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 10px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+}
+.select-option-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.select-option .select-check {
+    margin-left: auto;
+    flex: 0 0 auto;
+    color: var(--accent);
+    opacity: 0;
+}
+.select-option.active {
+    background: var(--surface-2);
+}
+.select-option[aria-selected='true'] {
+    color: var(--accent);
+    font-weight: 600;
+}
+.select-option[aria-selected='true'] .select-check {
+    opacity: 1;
+}
+.select-option:disabled {
+    color: var(--muted);
+    cursor: default;
+}
+
+/* Context overrides so the custom select matches native select layout */
+.filter-row .select {
+    flex: 1 1 160px;
+    margin-top: 0;
+}
+.item-row .select {
+    margin-top: 0;
+}
+.item-row .select-trigger {
+    padding: 6px 10px;
+    font-size: 13px;
+}
+.header-editor label .select {
+    margin-top: 0;
+}
+
 label {
     display: block;
     margin-top: 16px;
@@ -340,14 +563,14 @@ button {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border: none;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
     border-radius: var(--radius);
     padding: 12px 18px;
-    background: var(--accent-grad);
-    color: var(--on-accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
     font-weight: 600;
     letter-spacing: -0.01em;
-    box-shadow: var(--shadow-accent);
+    box-shadow: none;
     transition:
         transform 0.15s ease,
         box-shadow 0.15s ease,
@@ -355,7 +578,9 @@ button {
         background 0.15s ease;
 }
 button:hover {
-    filter: brightness(1.06);
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+    filter: none;
 }
 button:active {
     transform: translateY(1px) scale(0.99);
@@ -371,9 +596,63 @@ button.ghost:hover {
     filter: none;
 }
 button.danger {
-    background: var(--danger);
+    background: color-mix(in srgb, var(--red) 14%, transparent);
+    color: var(--red);
+    border: 1px solid color-mix(in srgb, var(--red) 45%, transparent);
+    box-shadow: none;
+}
+button.danger:hover {
+    background: color-mix(in srgb, var(--red) 22%, transparent);
+    border-color: color-mix(in srgb, var(--red) 65%, transparent);
+}
+
+/* Light mode keeps solid (filled) buttons; the ghost/outline treatment is dark-only.
+   Custom-select trigger/options are excluded so they keep the input look. */
+:root[data-theme='light'] button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option) {
+    background: var(--accent-grad);
+    color: var(--on-accent);
+    border: none;
+    box-shadow: var(--shadow-accent);
+}
+:root[data-theme='light'] button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):hover {
+    background: var(--accent-grad);
+    border-color: transparent;
+    filter: brightness(1.06);
+}
+:root[data-theme='light'] button.danger {
+    background: var(--red);
     color: #fff;
-    box-shadow: 0 8px 22px rgba(244, 63, 94, 0.32);
+    border: none;
+    box-shadow: 0 4px 14px rgba(207, 34, 46, 0.26);
+}
+:root[data-theme='light'] button.danger:hover {
+    background: color-mix(in srgb, var(--red), #000 10%);
+    border-color: transparent;
+    filter: brightness(1.04);
+}
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme='dark']) button:not(.ghost):not(.danger) {
+        background: var(--accent-grad);
+        color: var(--on-accent);
+        border: none;
+        box-shadow: var(--shadow-accent);
+    }
+    :root:not([data-theme='dark']) button:not(.ghost):not(.danger):hover {
+        background: var(--accent-grad);
+        border-color: transparent;
+        filter: brightness(1.06);
+    }
+    :root:not([data-theme='dark']) button.danger {
+        background: var(--red);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 14px rgba(207, 34, 46, 0.26);
+    }
+    :root:not([data-theme='dark']) button.danger:hover {
+        background: color-mix(in srgb, var(--red), #000 10%);
+        border-color: transparent;
+        filter: brightness(1.04);
+    }
 }
 button.small {
     padding: 8px 12px;
@@ -386,8 +665,13 @@ button.icon-btn {
     height: 36px;
     border-radius: var(--radius);
 }
-button:disabled {
-    opacity: 0.5;
+button:disabled,
+:root[data-theme='light'] button:disabled:not(.ghost):not(.danger):not(.select-trigger):not(.select-option),
+:root:not([data-theme='dark']) button:disabled:not(.ghost):not(.danger):not(.select-trigger):not(.select-option) {
+    opacity: 1;
+    background: var(--surface-2);
+    color: var(--muted);
+    border: 1px solid var(--border);
     cursor: default;
     box-shadow: none;
     transform: none;
@@ -405,6 +689,18 @@ button:disabled {
     justify-content: space-between;
     align-items: center;
     gap: 10px;
+}
+/* Keep card title rows to a single line so a long title never makes
+   one card taller than its neighbours */
+.card .spread > strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.card .spread > .muted {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 .stack {
     display: flex;
@@ -476,20 +772,78 @@ a.card:active {
 .pill.selectable {
     cursor: pointer;
 }
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+}
+.filter-row select {
+    flex: 1 1 160px;
+    margin-top: 0;
+}
+.search-input {
+    position: relative;
+    margin-top: 12px;
+}
+.search-input input {
+    margin-top: 0;
+    padding-right: 44px;
+}
+.search-clear {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+}
+.search-clear:hover {
+    color: var(--text);
+}
 .pill.selectable:hover {
     border-color: var(--border-strong);
     color: var(--text);
 }
 .pill.active {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.pill.selectable.active:hover {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+    color: var(--accent);
+}
+
+/* Light mode keeps the active pill solid (filled); ghost treatment is dark-only. */
+:root[data-theme='light'] .pill.active,
+:root[data-theme='light'] .pill.selectable.active:hover {
     background: var(--accent-grad);
     color: var(--on-accent);
     border-color: transparent;
+}
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme='dark']) .pill.active,
+    :root:not([data-theme='dark']) .pill.selectable.active:hover {
+        background: var(--accent-grad);
+        color: var(--on-accent);
+        border-color: transparent;
+    }
 }
 
 /* ---------- Item rows ---------- */
 .item-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
     padding: 12px 0;
     border-bottom: 1px solid var(--border);
@@ -507,6 +861,110 @@ a.card:active {
     margin-top: 0;
 }
 
+/* Compact controls inside an item row (qty / move / delete). */
+.item-row .qty {
+    width: 48px;
+    padding: 6px 6px;
+    font-size: 13px;
+    align-self: flex-start;
+}
+.item-row select {
+    width: auto;
+    margin-top: 0;
+    padding: 6px 26px 6px 10px;
+    font-size: 13px;
+}
+.item-row button.icon-btn {
+    width: 30px;
+    height: 30px;
+    padding: 6px;
+    flex: 0 0 auto;
+}
+.item-row .item-name {
+    margin-top: 0;
+    padding: 6px 10px;
+    font-size: 14px;
+    font-weight: 600;
+}
+.item-row .item-desc {
+    margin-top: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 400;
+}
+.item-row .qty-view {
+    flex: 0 0 auto;
+    width: 34px;
+    justify-content: flex-start;
+    font-variant-numeric: tabular-nums;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+}
+.item-row .cat-col {
+    flex: 0 0 auto;
+    width: 96px;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+}
+.item-row .cat-pill {
+    max-width: 100%;
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+}
+
+/* Header meta (location / owner) + inline edit. */
+.title-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.title-row h1 {
+    margin: 0;
+}
+.meta-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+    margin-top: 4px;
+}
+.meta-line span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.icon-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.header-editor label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+}
+.header-editor label input,
+.header-editor label select {
+    margin-top: 0;
+    font-weight: 400;
+}
+
 /* ---------- Thumbnails ---------- */
 .thumbs {
     display: grid;
@@ -519,6 +977,30 @@ a.card:active {
     object-fit: cover;
     border-radius: var(--radius);
     border: 1px solid var(--border);
+}
+.thumb {
+    position: relative;
+}
+.thumb-del {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 5px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    background: color-mix(in srgb, var(--red) 88%, transparent);
+    color: #fff;
+    border: none;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+.thumb:hover .thumb-del,
+.thumb-del:focus-visible {
+    opacity: 1;
+}
+@media (hover: none) {
+    .thumb-del {
+        opacity: 1;
+    }
 }
 
 .fab-input {
@@ -533,6 +1015,33 @@ a.card:active {
     border-radius: var(--radius);
     padding: 10px;
     box-shadow: var(--shadow);
+}
+.container-head {
+    align-items: flex-start;
+    position: relative;
+    min-height: 72px;
+    margin-bottom: 4px;
+}
+.container-head > div:first-child {
+    padding-right: 156px;
+}
+.qr-head-block {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 132px;
+    padding-right: 0;
+    align-items: stretch;
+    gap: 8px;
+    flex: 0 0 auto;
+    margin-top: 4px;
+}
+.qr-head {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    padding: 7px;
+    flex: 0 0 auto;
 }
 
 /* ---------- Toast ---------- */
@@ -567,6 +1076,31 @@ a.card:active {
     padding: 48px 16px;
     color: var(--muted);
     line-height: 1.6;
+}
+.spinner-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 64px 16px;
+    color: var(--muted);
+}
+.spinner {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 3px solid var(--accent-soft);
+    border-top-color: var(--accent);
+    animation: spin 0.7s linear infinite;
+}
+.spinner-label {
+    font-size: 14px;
+}
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 .link {
     color: var(--accent-2);

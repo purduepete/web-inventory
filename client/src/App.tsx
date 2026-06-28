@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { pendingCount, syncNow } from './db';
 import { Icon } from './Icon';
 
@@ -8,6 +8,7 @@ export default function App() {
     const [pending, setPending] = useState(0);
     const [syncing, setSyncing] = useState(false);
     const [syncMsg, setSyncMsg] = useState<string | null>(null);
+    const location = useLocation();
     const [theme, setTheme] = useState<'light' | 'dark' | null>(
         () => (localStorage.getItem('theme') as 'light' | 'dark' | null) ?? null,
     );
@@ -46,11 +47,13 @@ export default function App() {
         const onOffline = () => setOnline(false);
         window.addEventListener('online', onOnline);
         window.addEventListener('offline', onOffline);
-        const t = setInterval(refresh, 4000);
+        // The queue layer fires 'pending-changed' on enqueue/sync, so we react to
+        // it directly instead of polling on a timer.
+        window.addEventListener('pending-changed', refresh);
         return () => {
             window.removeEventListener('online', onOnline);
             window.removeEventListener('offline', onOffline);
-            clearInterval(t);
+            window.removeEventListener('pending-changed', refresh);
         };
     }, []);
 
@@ -114,7 +117,9 @@ export default function App() {
             </header>
 
             <main className="content">
-                <Outlet />
+                <div className="page" key={location.pathname}>
+                    <Outlet />
+                </div>
             </main>
 
             <nav className="tabbar">
@@ -122,17 +127,27 @@ export default function App() {
                     <Icon name="search" />
                     Search
                 </NavLink>
-                <NavLink to="/containers" className="tab">
-                    <Icon name="boxes" />
-                    Containers
-                </NavLink>
+                <div className="tab-group">
+                    <div className="tab-group-title">
+                        <Icon name="boxes" />
+                        Containers
+                    </div>
+                    <NavLink to="/containers" end className="tab subtab">
+                        <Icon name="box" />
+                        Inventory
+                    </NavLink>
+                    <NavLink to="/containers/new" className="tab subtab">
+                        <Icon name="plus" />
+                        Add
+                    </NavLink>
+                </div>
                 <NavLink to="/scan" className="tab">
                     <Icon name="scan" />
                     Scan
                 </NavLink>
-                <NavLink to="/containers/new" className="tab">
-                    <Icon name="plus" />
-                    Add
+                <NavLink to="/manage" className="tab">
+                    <Icon name="tag" />
+                    Tags
                 </NavLink>
             </nav>
         </div>

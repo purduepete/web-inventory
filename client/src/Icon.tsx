@@ -16,7 +16,12 @@ export type IconName =
     | 'move'
     | 'chevron'
     | 'sun'
-    | 'moon';
+    | 'moon'
+    | 'pencil'
+    | 'sliders'
+    | 'tag'
+    | 'user'
+    | 'pin';
 
 const paths: Record<IconName, JSX.Element> = {
     search: (
@@ -133,6 +138,43 @@ const paths: Record<IconName, JSX.Element> = {
     moon: (
         <>
             <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+        </>
+    ),
+    pencil: (
+        <>
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+        </>
+    ),
+    sliders: (
+        <>
+            <path d="M4 21v-7" />
+            <path d="M4 10V3" />
+            <path d="M12 21v-9" />
+            <path d="M12 8V3" />
+            <path d="M20 21v-5" />
+            <path d="M20 12V3" />
+            <path d="M1 14h6" />
+            <path d="M9 8h6" />
+            <path d="M17 16h6" />
+        </>
+    ),
+    tag: (
+        <>
+            <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" />
+            <circle cx="7.5" cy="7.5" r="1.2" />
+        </>
+    ),
+    user: (
+        <>
+            <path d="M20 21a8 8 0 0 0-16 0" />
+            <circle cx="12" cy="7" r="4" />
+        </>
+    ),
+    pin: (
+        <>
+            <path d="M12 21s7-6.3 7-11a7 7 0 0 0-14 0c0 4.7 7 11 7 11Z" />
+            <circle cx="12" cy="10" r="2.5" />
         </>
     ),
 };

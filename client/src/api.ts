@@ -4,6 +4,8 @@ import type {
     CreateContainerInput,
     DetectedItem,
     Item,
+    Lookup,
+    LookupKind,
     SaveItemInput,
 } from './types';
 
@@ -64,14 +66,32 @@ export const api = {
 
     deleteItem: (itemId: string) => http<void>(`/items/${itemId}`, { method: 'DELETE' }),
 
-    searchItems: (q: string, tag?: string) => {
+    deletePhoto: (photoId: string) => http<void>(`/photos/${photoId}`, { method: 'DELETE' }),
+
+    searchItems: (
+        q: string,
+        filters?: { tag?: string; locationId?: string; ownerId?: string; categoryId?: string },
+    ) => {
         const params = new URLSearchParams();
         if (q) params.set('q', q);
-        if (tag) params.set('tag', tag);
+        if (filters?.tag) params.set('tag', filters.tag);
+        if (filters?.locationId) params.set('locationId', filters.locationId);
+        if (filters?.ownerId) params.set('ownerId', filters.ownerId);
+        if (filters?.categoryId) params.set('categoryId', filters.categoryId);
         return http<Item[]>(`/search?${params.toString()}`);
     },
 
     listTags: () => http<string[]>('/tags'),
+
+    listLookup: (kind: LookupKind) => http<Lookup[]>(`/lookups/${kind}`),
+
+    createLookup: (kind: LookupKind, name: string) =>
+        http<Lookup>(`/lookups/${kind}`, { method: 'POST', body: JSON.stringify({ name }) }),
+
+    renameLookup: (kind: LookupKind, id: string, name: string) =>
+        http<Lookup>(`/lookups/${kind}/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
+
+    deleteLookup: (kind: LookupKind, id: string) => http<void>(`/lookups/${kind}/${id}`, { method: 'DELETE' }),
 
     // Posts the (already downscaled) JPEG as the raw request body; the API stores
     // it in Blob Storage and runs AI detection, returning suggested items.

@@ -45,4 +45,13 @@ public class PhotoFunctions
         var detected = await _vision.DetectAsync(bytes, ct);
         return await req.Json(new PhotoUploadResult(photoId, detected), HttpStatusCode.Created);
     }
+
+    [Function("DeletePhoto")]
+    public async Task<HttpResponseData> Delete(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "photos/{id:guid}")] HttpRequestData req,
+        Guid id, CancellationToken ct)
+    {
+        var deleted = await _repo.DeletePhotoAsync(id, ct);
+        return req.Status(deleted ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
+    }
 }

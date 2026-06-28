@@ -1,14 +1,29 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { Select } from '../Select';
+import { getLookup } from '../lookups';
+import type { Lookup } from '../types';
 
 export default function NewContainerPage() {
     const nav = useNavigate();
     const [name, setName] = useState('');
-    const [location, setLocation] = useState('');
+    const [locationId, setLocationId] = useState('');
+    const [ownerId, setOwnerId] = useState('');
     const [notes, setNotes] = useState('');
+    const [locations, setLocations] = useState<Lookup[]>([]);
+    const [owners, setOwners] = useState<Lookup[]>([]);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        void getLookup('locations')
+            .then(setLocations)
+            .catch(() => {});
+        void getLookup('owners')
+            .then(setOwners)
+            .catch(() => {});
+    }, []);
 
     async function save() {
         if (!name.trim()) {
@@ -18,7 +33,12 @@ export default function NewContainerPage() {
         setSaving(true);
         setError(null);
         try {
-            const c = await api.createContainer({ name: name.trim(), location: location.trim(), notes: notes.trim() });
+            const c = await api.createContainer({
+                name: name.trim(),
+                locationId: locationId || null,
+                ownerId: ownerId || null,
+                notes: notes.trim(),
+            });
             nav(`/containers/${c.id}`);
         } catch {
             setError('Could not create container. You may be offline.');
@@ -40,12 +60,28 @@ export default function NewContainerPage() {
             </label>
             <label>
                 Location (optional)
-                <input
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g. Garage, top shelf"
+                <Select
+                    value={locationId}
+                    onChange={setLocationId}
+                    ariaLabel="Location"
+                    options={[
+                        { value: '', label: '— none —' },
+                        ...locations.map((l) => ({ value: l.id, label: l.name })),
+                    ]}
                 />
             </label>
+            <label>
+                Owner (optional)
+                <Select
+                    value={ownerId}
+                    onChange={setOwnerId}
+                    ariaLabel="Owner"
+                    options={[{ value: '', label: '— none —' }, ...owners.map((o) => ({ value: o.id, label: o.name }))]}
+                />
+            </label>
+            <p className="muted" style={{ marginTop: -2 }}>
+                Add locations and owners on the <Link to="/manage">Tags</Link> page.
+            </p>
             <label>
                 Notes (optional)
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />

@@ -18,7 +18,9 @@ public class SearchFunctions
         var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var q = query["q"];
         var tag = query["tag"];
-        return await req.Json(await _repo.SearchAsync(q, tag, ct));
+        Guid? ParseId(string key) => Guid.TryParse(query[key], out var id) ? id : null;
+        return await req.Json(await _repo.SearchAsync(
+            q, tag, ParseId("locationId"), ParseId("ownerId"), ParseId("categoryId"), ct));
     }
 
     [Function("ListTags")]

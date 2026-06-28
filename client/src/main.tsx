@@ -7,6 +7,7 @@ import ContainersPage from './pages/ContainersPage';
 import NewContainerPage from './pages/NewContainerPage';
 import ContainerPage from './pages/ContainerPage';
 import ScanPage from './pages/ScanPage';
+import ManagePage from './pages/ManagePage';
 import './styles.css';
 
 const router = createBrowserRouter([
@@ -20,6 +21,7 @@ const router = createBrowserRouter([
             { path: 'containers/:id', element: <ContainerPage /> },
             { path: 'c/:token', element: <ContainerPage byToken /> },
             { path: 'scan', element: <ScanPage /> },
+            { path: 'manage', element: <ManagePage /> },
         ],
     },
 ]);

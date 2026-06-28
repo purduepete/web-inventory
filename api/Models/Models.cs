@@ -8,7 +8,10 @@ public record Container
     public Guid Id { get; init; }
     public int Number { get; init; }
     public string Name { get; init; } = "";
+    public Guid? LocationId { get; init; }
     public string? Location { get; init; }
+    public Guid? OwnerId { get; init; }
+    public string? Owner { get; init; }
     public string? Notes { get; init; }
     public Guid QrToken { get; init; }
     public DateTime CreatedAt { get; init; }
@@ -16,17 +19,19 @@ public record Container
     public int ItemCount { get; set; }
 }
 
-public record Item(
-    Guid Id,
-    Guid ContainerId,
-    string Name,
-    string? Description,
-    int Quantity,
-    string Source,
-    DateTime CreatedAt,
-    DateTime UpdatedAt)
+public record Item
 {
+    public Guid Id { get; set; }
+    public Guid ContainerId { get; set; }
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public int Quantity { get; set; }
+    public string Source { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
     public List<string> Tags { get; set; } = new();
+    public Guid? CategoryId { get; set; }
+    public string? Category { get; set; }
 }
 
 public record Photo(
@@ -41,7 +46,10 @@ public record ContainerWithContents(
     Guid Id,
     int Number,
     string Name,
+    Guid? LocationId,
     string? Location,
+    Guid? OwnerId,
+    string? Owner,
     string? Notes,
     Guid QrToken,
     DateTime CreatedAt,
@@ -49,9 +57,12 @@ public record ContainerWithContents(
     List<Item> Items,
     List<Photo> Photos);
 
+public record Lookup(Guid Id, string Name);
+
 // ---- request DTOs ----
-public record CreateContainerInput(string Name, string? Location, string? Notes);
-public record SaveItemInput(string Name, string? Description, int Quantity, List<string>? Tags);
+public record CreateContainerInput(string Name, Guid? LocationId, Guid? OwnerId, string? Notes);
+public record SaveItemInput(string Name, string? Description, int Quantity, List<string>? Tags, Guid? CategoryId);
 public record MoveItemInput(Guid TargetContainerId);
+public record LookupInput(string Name);
 public record DetectedItem(string Name, string? Description, int Quantity);
 public record PhotoUploadResult(Guid PhotoId, List<DetectedItem> Detected);

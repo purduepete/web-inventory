@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 
 export default function ScanPage() {
     const nav = useNavigate();
@@ -14,14 +14,27 @@ export default function ScanPage() {
         const scanner = new Html5Qrcode(elId);
         scannerRef.current = scanner;
 
-        scanner
+        // Stop only when the camera is actually scanning/paused; stop() throws
+        // synchronously otherwise (e.g. before start resolves on StrictMode unmount).
+        const safeStop = async () => {
+            try {
+                const state = scanner.getState();
+                if (state === Html5QrcodeScannerState.SCANNING || state === Html5QrcodeScannerState.PAUSED) {
+                    await scanner.stop();
+                }
+            } catch {
+                /* already stopped or never started */
+            }
+        };
+
+        const startPromise = scanner
             .start(
                 { facingMode: 'environment' },
                 { fps: 10, qrbox: { width: 240, height: 240 } },
                 (decoded) => {
                     if (stopped) return;
                     stopped = true;
-                    void scanner.stop().catch(() => undefined);
+                    void safeStop();
                     routeTo(decoded);
                 },
                 () => undefined,
@@ -30,7 +43,8 @@ export default function ScanPage() {
 
         return () => {
             stopped = true;
-            scanner.stop().catch(() => undefined);
+            // Wait for start to settle so we never stop a half-initialized scanner.
+            void startPromise.then(safeStop);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

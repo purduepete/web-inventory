@@ -54,6 +54,22 @@ public sealed class BlobService
     }
 
     /// <summary>
+    /// Deletes the stored blob for a given blob URL. No-ops when storage is disabled
+    /// or the URL doesn't belong to this account (e.g. the local "about:blank" stub).
+    /// </summary>
+    public async Task DeleteAsync(string blobUrl, CancellationToken ct)
+    {
+        if (!_enabled || _service is null || string.IsNullOrWhiteSpace(blobUrl)
+            || !Uri.TryCreate(blobUrl, UriKind.Absolute, out var uri)
+            || !uri.Host.StartsWith(_service.AccountName + ".", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var builder = new BlobUriBuilder(uri);
+        var blob = _container.GetBlobClient(builder.BlobName);
+        await blob.DeleteIfExistsAsync(DeleteSnapshotsOption.IncludeSnapshots, cancellationToken: ct);
+    }
+
+    /// <summary>
     /// Returns a read-only, short-lived user-delegation SAS URL for a stored blob so
     /// the browser can load it without the container being publicly accessible.
     /// Non-account URLs (or when disabled) are returned unchanged.

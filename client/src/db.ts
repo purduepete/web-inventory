@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { api } from './api';
-import type { Container, Item, SaveItemInput } from './types';
+import type { Container, SaveItemInput } from './types';
 
 export type QueuedMutation =
     | { kind: 'addItem'; containerId: string; input: SaveItemInput }
@@ -25,15 +25,10 @@ export interface CachedContainer extends Container {
     cachedAt: number;
 }
 
-export interface CachedItem extends Item {
-    cachedAt: number;
-}
-
 class InventoryDb extends Dexie {
     queue!: Table<QueueRow, number>;
     pendingPhotos!: Table<PendingPhoto, number>;
     containers!: Table<CachedContainer, string>;
-    items!: Table<CachedItem, string>;
 
     constructor() {
         super('webinventory');
@@ -43,17 +38,30 @@ class InventoryDb extends Dexie {
             containers: 'id, number, updatedAt',
             items: 'id, containerId, updatedAt',
         });
+        // v2: drop the never-used `items` cache and the bogus `updatedAt` index
+        // (the model has no updatedAt field).
+        this.version(2).stores({
+            containers: 'id, number',
+            items: null,
+        });
     }
 }
 
 export const db = new InventoryDb();
 
+/** Let the UI (the topbar sync badge) react to queue changes without polling. */
+function notifyPending(): void {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('pending-changed'));
+}
+
 export async function enqueue(mutation: QueuedMutation): Promise<void> {
     await db.queue.add({ createdAt: Date.now(), mutation });
+    notifyPending();
 }
 
 export async function enqueuePhoto(containerId: string, blob: Blob): Promise<void> {
     await db.pendingPhotos.add({ containerId, blob, createdAt: Date.now() });
+    notifyPending();
 }
 
 export async function cacheContainers(containers: Container[]): Promise<void> {
@@ -95,6 +103,7 @@ export async function syncNow(): Promise<{ synced: number; failed: number }> {
         }
     } finally {
         syncing = false;
+        notifyPending();
     }
     return { synced, failed };
 }
@@ -119,8 +128,3 @@ async function applyMutation(m: QueuedMutation): Promise<void> {
 export async function pendingCount(): Promise<number> {
     return (await db.queue.count()) + (await db.pendingPhotos.count());
 }
-
-// Trigger a sync whenever the browser regains connectivity.
-window.addEventListener('online', () => {
-    void syncNow();
-});
