@@ -62,7 +62,7 @@ export default function ScanPage() {
 
     return (
         <div>
-            <h1>Scan a container QR code</h1>
+            <h1>Scan a containers QR code</h1>
             <div id="qr-reader" ref={ref} style={{ width: '100%', overflow: 'hidden' }} />
             {error && (
                 <div className="center" style={{ color: 'var(--danger)' }}>
