@@ -430,7 +430,7 @@ function ItemsEditor({
     onAddCategory: (name: string) => Promise<Lookup | null>;
     flash: (m: string) => void;
 }) {
-    const [newName, setNewName] = useState('');
+    const [adding, setAdding] = useState(false);
     const [others, setOthers] = useState<Container[]>([]);
     const othersLoaded = useRef(false);
 
@@ -445,20 +445,6 @@ function ItemsEditor({
                 othersLoaded.current = false;
             });
     }, [container.id]);
-
-    async function add() {
-        if (!newName.trim()) return;
-        const input = { name: newName.trim(), description: '', quantity: 1, tags: [] };
-        setNewName('');
-        try {
-            if (!navigator.onLine) await enqueue({ kind: 'addItem', containerId: container.id, input });
-            else await api.addItem(container.id, input);
-            await onChange();
-        } catch {
-            await enqueue({ kind: 'addItem', containerId: container.id, input });
-            flash('Saved offline.');
-        }
-    }
 
     return (
         <>
@@ -478,17 +464,318 @@ function ItemsEditor({
                 ))}
             </div>
             <div className="row" style={{ marginTop: 10 }}>
-                <input
-                    placeholder="Add an item…"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && add()}
-                />
-                <button className="small" onClick={add}>
-                    Add
+                <button className="small" onClick={() => setAdding(true)}>
+                    <Icon name="plus" size={16} /> Add an item
                 </button>
             </div>
+            {adding && (
+                <AddItemModal
+                    container={container}
+                    categories={categories}
+                    onAddCategory={onAddCategory}
+                    flash={flash}
+                    onClose={async (saved) => {
+                        setAdding(false);
+                        if (saved) await onChange();
+                    }}
+                />
+            )}
         </>
+    );
+}
+
+function AddItemModal({
+    container,
+    categories,
+    onAddCategory,
+    flash,
+    onClose,
+}: {
+    container: ContainerWithContents;
+    categories: Lookup[];
+    onAddCategory: (name: string) => Promise<Lookup | null>;
+    flash: (m: string) => void;
+    onClose: (saved: boolean) => void;
+}) {
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [quantity, setQuantity] = useState(1);
+    const [categoryId, setCategoryId] = useState('');
+    const [addingCat, setAddingCat] = useState(false);
+    const [newCat, setNewCat] = useState('');
+    const [photo, setPhoto] = useState<File | null>(null);
+    const [photoUrl, setPhotoUrl] = useState('');
+    const [saving, setSaving] = useState(false);
+    const fileRef = useRef<HTMLInputElement>(null);
+    const nameRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        nameRef.current?.focus();
+    }, []);
+
+    useEffect(() => {
+        function onKey(e: KeyboardEvent) {
+            if (e.key === 'Escape') onClose(false);
+        }
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    // Free the preview object URL when it changes / on unmount.
+    useEffect(
+        () => () => {
+            if (photoUrl) URL.revokeObjectURL(photoUrl);
+        },
+        [photoUrl],
+    );
+
+    function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        if (photoUrl) URL.revokeObjectURL(photoUrl);
+        setPhoto(file);
+        setPhotoUrl(URL.createObjectURL(file));
+    }
+
+    function clearPhoto() {
+        if (photoUrl) URL.revokeObjectURL(photoUrl);
+        setPhoto(null);
+        setPhotoUrl('');
+    }
+
+    async function confirmNewCategory() {
+        const n = newCat.trim();
+        if (!n) {
+            setAddingCat(false);
+            setNewCat('');
+            return;
+        }
+        const created = await onAddCategory(n);
+        if (created) {
+            setCategoryId(created.id);
+            setAddingCat(false);
+            setNewCat('');
+        } else {
+            flash('Could not add category.');
+        }
+    }
+
+    async function submit() {
+        if (!name.trim() || saving) return;
+        setSaving(true);
+        const input = {
+            name: name.trim(),
+            description: description.trim(),
+            quantity: quantity || 1,
+            tags: [],
+            categoryId: categoryId || null,
+        };
+        try {
+            if (!navigator.onLine) await enqueue({ kind: 'addItem', containerId: container.id, input });
+            else await api.addItem(container.id, input);
+        } catch {
+            await enqueue({ kind: 'addItem', containerId: container.id, input });
+            flash('Saved offline.');
+        }
+        // The optional photo is attached to the container (no AI analysis — the
+        // user is entering the item by hand).
+        if (photo) {
+            try {
+                const small = await downscaleImage(photo);
+                if (!navigator.onLine) await enqueuePhoto(container.id, small);
+                else await api.uploadPhoto(container.id, small, false);
+            } catch {
+                try {
+                    const small = await downscaleImage(photo);
+                    await enqueuePhoto(container.id, small);
+                    flash('Photo queued for upload.');
+                } catch {
+                    flash('Could not attach photo.');
+                }
+            }
+        }
+        setSaving(false);
+        onClose(true);
+    }
+
+    return (
+        <div className="modal-backdrop" onMouseDown={() => onClose(false)}>
+            <div
+                className="modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Add item"
+                onMouseDown={(e) => e.stopPropagation()}
+            >
+                <div className="modal-head">
+                    <h2 className="modal-title">Add item</h2>
+                    <button
+                        type="button"
+                        className="ghost small icon-btn"
+                        aria-label="Close"
+                        onClick={() => onClose(false)}
+                    >
+                        <Icon name="close" size={16} />
+                    </button>
+                </div>
+
+                <div className="modal-body">
+                    <form
+                        className="stack"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            void submit();
+                        }}
+                    >
+                        <div>
+                            <label className="modal-label" htmlFor="add-item-name">
+                                Name
+                            </label>
+                            <input
+                                id="add-item-name"
+                                ref={nameRef}
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Item name"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="modal-label" htmlFor="add-item-desc">
+                                Description
+                            </label>
+                            <textarea
+                                id="add-item-desc"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Optional details"
+                                rows={2}
+                            />
+                        </div>
+
+                        <div className="add-item-grid">
+                            <div className="add-item-qty">
+                                <label className="modal-label" htmlFor="add-item-qty">
+                                    Qty
+                                </label>
+                                <input
+                                    id="add-item-qty"
+                                    className="qty"
+                                    type="number"
+                                    min={1}
+                                    value={quantity}
+                                    onChange={(e) => setQuantity(Number(e.target.value))}
+                                />
+                            </div>
+                            <div className="grow">
+                                <label className="modal-label">Category</label>
+                                {addingCat ? (
+                                    <span className="new-cat-row">
+                                        <input
+                                            className="new-cat-input"
+                                            value={newCat}
+                                            autoFocus
+                                            placeholder="New category"
+                                            onChange={(e) => setNewCat(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    void confirmNewCategory();
+                                                } else if (e.key === 'Escape') {
+                                                    e.preventDefault();
+                                                    setAddingCat(false);
+                                                    setNewCat('');
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="small icon-btn"
+                                            onClick={() => void confirmNewCategory()}
+                                            title="Add category"
+                                        >
+                                            <Icon name="check" size={16} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="ghost small icon-btn"
+                                            onClick={() => {
+                                                setAddingCat(false);
+                                                setNewCat('');
+                                            }}
+                                            title="Cancel"
+                                        >
+                                            <Icon name="close" size={16} />
+                                        </button>
+                                    </span>
+                                ) : (
+                                    <Select
+                                        value={categoryId}
+                                        onChange={(v) => {
+                                            if (v === '__new__') setAddingCat(true);
+                                            else setCategoryId(v);
+                                        }}
+                                        ariaLabel="Category"
+                                        options={[
+                                            { value: '', label: 'No category' },
+                                            ...categories.map((c) => ({ value: c.id, label: c.name })),
+                                            { value: '__new__', label: '+ New category…' },
+                                        ]}
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="modal-label">Photo</label>
+                            {photoUrl ? (
+                                <div className="add-item-photo">
+                                    <img src={photoUrl} alt="item" />
+                                    <div className="row">
+                                        <button
+                                            type="button"
+                                            className="ghost small"
+                                            onClick={() => fileRef.current?.click()}
+                                        >
+                                            <Icon name="camera" size={16} /> Retake
+                                        </button>
+                                        <button type="button" className="ghost small" onClick={clearPhoto}>
+                                            <Icon name="close" size={16} /> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="ghost"
+                                    onClick={() => fileRef.current?.click()}
+                                >
+                                    <Icon name="camera" size={18} /> Take a picture
+                                </button>
+                            )}
+                            <input
+                                ref={fileRef}
+                                className="fab-input"
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={pickPhoto}
+                            />
+                        </div>
+                    </form>
+                </div>
+
+                <div className="modal-actions">
+                    <button type="button" className="ghost" onClick={() => onClose(false)}>
+                        Cancel
+                    </button>
+                    <button type="button" onClick={() => void submit()} disabled={!name.trim() || saving}>
+                        {saving ? 'Saving…' : 'Add item'}
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 }
 

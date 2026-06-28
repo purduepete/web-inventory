@@ -1288,6 +1288,25 @@ a.card:active {
     padding: 12px 16px;
     border-top: 1px solid var(--border);
 }
+/* Add-item modal: qty + category on one row, and the photo preview. */
+.add-item-grid {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+.add-item-qty .qty {
+    width: 72px;
+}
+.add-item-photo img {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+}
 @keyframes modal-fade {
     from {
         opacity: 0;
