@@ -80,12 +80,19 @@ export default function App() {
     useEffect(() => {
         const refresh = () => void pendingCount().then(setPending);
         refresh();
+        const autoSync = () => {
+            if (!navigator.onLine) return;
+            setSyncing(true);
+            void syncNow()
+                .then(refresh)
+                .finally(() => setSyncing(false));
+        };
         // Attempt a sync on startup if we're already online with a queue —
         // the 'online' event only fires on a transition, not at load.
-        if (navigator.onLine) void syncNow().then(refresh);
+        autoSync();
         const onOnline = () => {
             setOnline(true);
-            void syncNow().then(refresh);
+            autoSync();
         };
         const onOffline = () => setOnline(false);
         window.addEventListener('online', onOnline);
@@ -147,7 +154,8 @@ export default function App() {
                 <div className="topbar-actions">
                     {!online && <span className="badge offline">Offline</span>}
                     {syncMsg && <span className="badge pending">{syncMsg}</span>}
-                    {pending > 0 && !syncMsg && (
+                    {syncing && !syncMsg && <span className="badge pending">Syncing…</span>}
+                    {pending > 0 && !syncMsg && !syncing && (
                         <span
                             className="badge pending"
                             role="button"
@@ -157,7 +165,7 @@ export default function App() {
                             title="Tap to sync now"
                             style={{ cursor: 'pointer' }}
                         >
-                            {syncing ? 'Syncing…' : `${pending} to sync`}
+                            {`${pending} to sync`}
                         </span>
                     )}
                     <button
