@@ -33,14 +33,19 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
         return i < 0 ? 0 : i;
     };
 
-    // Close when clicking outside.
+    // Close when clicking/tapping outside. `touchstart` is needed for iOS Safari,
+    // where relying on the emulated `mousedown` alone is unreliable.
     useEffect(() => {
         if (!open) return;
-        const onDoc = (e: MouseEvent) => {
+        const onDoc = (e: Event) => {
             if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
         };
         document.addEventListener('mousedown', onDoc);
-        return () => document.removeEventListener('mousedown', onDoc);
+        document.addEventListener('touchstart', onDoc);
+        return () => {
+            document.removeEventListener('mousedown', onDoc);
+            document.removeEventListener('touchstart', onDoc);
+        };
     }, [open]);
 
     // When opening, highlight the current selection (or first enabled option).
@@ -174,6 +179,14 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
                             aria-selected={opt.value === value}
                             disabled={opt.disabled}
                             onMouseEnter={() => !opt.disabled && setActive(i)}
+                            // iOS Safari emulates mouse events and can swallow the click that
+                            // would select + close the dropdown. Commit on touchend and
+                            // preventDefault so the emulated click doesn't double-fire.
+                            onTouchEnd={(e) => {
+                                if (opt.disabled) return;
+                                e.preventDefault();
+                                commit(i);
+                            }}
                             onClick={() => commit(i)}
                         >
                             <span className="select-option-label">{opt.label}</span>
