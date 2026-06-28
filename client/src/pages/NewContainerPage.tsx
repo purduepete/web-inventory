@@ -18,6 +18,11 @@ export default function NewContainerPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Autofocus the name field only with a fine pointer (desktop). On touch
+    // devices (iPad/iPhone) autofocus pops the on-screen keyboard the moment you
+    // navigate here, which is jarring.
+    const autoFocusName = typeof window !== 'undefined' && !window.matchMedia('(pointer: coarse)').matches;
+
     // Create a new location ("room") inline without leaving the page.
     async function addLocation() {
         const room = (await prompt({ title: 'New location', label: 'Location name', confirmLabel: 'Add' }))?.trim();
@@ -72,7 +77,7 @@ export default function NewContainerPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Garage shelf bin"
-                    autoFocus
+                    autoFocus={autoFocusName}
                 />
             </label>
             <label>
