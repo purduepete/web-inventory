@@ -1267,48 +1267,27 @@ a.card:active {
     white-space: normal;
     overflow: visible;
 }
+.thumb {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
 .thumb-del {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    padding: 5px;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    background: color-mix(in srgb, var(--red) 88%, transparent);
+    margin-top: 6px;
+    width: 100%;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--red);
     color: #fff;
     border: none;
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+    box-shadow: none;
+    font-size: 0.8rem;
 }
 .thumb-del-label {
-    display: none;
-}
-.thumb:hover .thumb-del,
-.thumb-del:focus-visible {
-    opacity: 1;
-}
-/* On touch devices there's no hover, so a corner overlay invites accidental
-   taps (right next to the photo's own tap target). Move it to its own row
-   below the thumbnail instead, with a clear label. */
-@media (hover: none) {
-    .thumb {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-    .thumb-del {
-        position: static;
-        opacity: 1;
-        width: 100%;
-        padding: 8px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        box-shadow: none;
-    }
-    .thumb-del-label {
-        display: inline;
-    }
+    display: inline;
 }
 
 .fab-input {
