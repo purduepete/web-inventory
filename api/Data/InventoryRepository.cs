@@ -259,6 +259,23 @@ public sealed class InventoryRepository
         return rows > 0;
     }
 
+    /// <summary>Photos whose thumbnail still points at the full image (pre-thumbnail uploads).</summary>
+    public async Task<IReadOnlyList<PhotoBackfillRow>> ListPhotosNeedingThumbnailAsync(CancellationToken ct)
+    {
+        await using var conn = await _db.OpenAsync(ct);
+        return (await conn.QueryAsync<PhotoBackfillRow>(
+            @"SELECT Id, ContainerId, BlobUrl FROM inv.Photo
+              WHERE ThumbUrl = BlobUrl AND BlobUrl LIKE 'http%';")).AsList();
+    }
+
+    public async Task SetPhotoThumbAsync(Guid photoId, string thumbUrl, CancellationToken ct)
+    {
+        await using var conn = await _db.OpenAsync(ct);
+        await conn.ExecuteAsync(
+            "UPDATE inv.Photo SET ThumbUrl = @thumbUrl WHERE Id = @photoId;",
+            new { photoId, thumbUrl });
+    }
+
     public async Task<bool> DeletePhotoAsync(Guid photoId, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);

@@ -74,4 +74,32 @@ public class PhotoFunctions
         var moved = await _repo.MovePhotoAsync(id, input.TargetContainerId, ct);
         return req.Status(moved ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
     }
+
+    /// <summary>
+    /// One-time backfill: regenerates small thumbnails for photos uploaded before
+    /// thumbnails existed (where ThumbUrl still equals the full BlobUrl). Idempotent —
+    /// already-processed photos are skipped on subsequent runs.
+    /// </summary>
+    [Function("BackfillThumbnails")]
+    public async Task<HttpResponseData> BackfillThumbnails(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "admin/backfill-thumbnails")] HttpRequestData req,
+        CancellationToken ct)
+    {
+        var photos = await _repo.ListPhotosNeedingThumbnailAsync(ct);
+        int updated = 0, failed = 0;
+        foreach (var p in photos)
+        {
+            var thumbUrl = await _blob.RegenerateThumbnailAsync(p.ContainerId, p.Id, p.BlobUrl, ct);
+            if (thumbUrl is not null && thumbUrl != p.BlobUrl)
+            {
+                await _repo.SetPhotoThumbAsync(p.Id, thumbUrl, ct);
+                updated++;
+            }
+            else
+            {
+                failed++;
+            }
+        }
+        return await req.Json(new { total = photos.Count, updated, failed });
+    }
 }

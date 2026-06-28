@@ -55,6 +55,37 @@ public sealed class BlobService
         // Store a small thumbnail separately so the photo grid loads quickly instead
         // of downloading every full-size image. Falls back to the full image if the
         // bytes can't be decoded.
+        var thumbUrl = await TryCreateThumbnailAsync(containerId, photoId, bytes, ct);
+        return (fullUrl, thumbUrl ?? fullUrl);
+    }
+
+    /// <summary>
+    /// Regenerates the small thumbnail for an already-stored full image (used by the
+    /// one-time backfill of photos uploaded before thumbnails existed). Returns the
+    /// new thumbnail URL, or null if the source can't be read or decoded.
+    /// </summary>
+    public async Task<string?> RegenerateThumbnailAsync(
+        Guid containerId, Guid photoId, string fullBlobUrl, CancellationToken ct)
+    {
+        if (!_enabled || _service is null || string.IsNullOrWhiteSpace(fullBlobUrl)
+            || !Uri.TryCreate(fullBlobUrl, UriKind.Absolute, out var uri)
+            || !uri.Host.StartsWith(_service.AccountName + ".", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var src = _container.GetBlobClient(new BlobUriBuilder(uri).BlobName);
+        if (!await src.ExistsAsync(ct)) return null;
+
+        var resp = await src.DownloadContentAsync(ct);
+        return await TryCreateThumbnailAsync(containerId, photoId, resp.Value.Content.ToArray(), ct);
+    }
+
+    /// <summary>
+    /// Builds a ~320px JPEG thumbnail from the given image bytes and uploads it as a
+    /// separate blob. Returns the thumbnail URL, or null if the bytes can't be decoded.
+    /// </summary>
+    private async Task<string?> TryCreateThumbnailAsync(
+        Guid containerId, Guid photoId, byte[] bytes, CancellationToken ct)
+    {
         try
         {
             using var image = Image.Load(bytes);
@@ -72,11 +103,11 @@ public sealed class BlobService
             {
                 HttpHeaders = new BlobHttpHeaders { ContentType = "image/jpeg" },
             }, ct);
-            return (fullUrl, thumbBlob.Uri.ToString());
+            return thumbBlob.Uri.ToString();
         }
         catch
         {
-            return (fullUrl, fullUrl);
+            return null;
         }
     }
 

@@ -64,6 +64,13 @@ public record CreateContainerInput(string Name, Guid? LocationId, Guid? OwnerId,
 public record SaveItemInput(string Name, string? Description, int Quantity, List<string>? Tags, Guid? CategoryId);
 public record MoveItemInput(Guid TargetContainerId);
 public record MovePhotoInput(Guid TargetContainerId);
+
+public sealed class PhotoBackfillRow
+{
+    public Guid Id { get; set; }
+    public Guid ContainerId { get; set; }
+    public string BlobUrl { get; set; } = "";
+}
 public record LookupInput(string Name);
 public record DetectedItem(string Name, string? Description, int Quantity);
 public record PhotoUploadResult(Guid PhotoId, List<DetectedItem> Detected);
