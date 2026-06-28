@@ -7,7 +7,7 @@ import { makeQrDataUrl, printLabel } from '../qr';
 import { Icon } from '../Icon';
 import { Select } from '../Select';
 import { Spinner } from '../Spinner';
-import { useConfirm } from '../Dialog';
+import { useConfirm, usePrompt } from '../Dialog';
 import { getLookup, invalidateLookups } from '../lookups';
 import type { Container, ContainerWithContents, DetectedItem, Item, Lookup } from '../types';
 
@@ -21,6 +21,9 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     const [qr, setQr] = useState<string>('');
     const [toast, setToast] = useState<string | null>(null);
     const [suggestions, setSuggestions] = useState<DetectedItem[] | null>(null);
+    // Category chosen (in the detection review list) for each detected item,
+    // keyed by the suggestion's object reference.
+    const [suggestionCats, setSuggestionCats] = useState<Map<DetectedItem, string>>(new Map());
     const [busy, setBusy] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
     // Remembers whether the next picked photo should be AI-analyzed; set by the
@@ -30,7 +33,11 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     const [locations, setLocations] = useState<Lookup[]>([]);
     const [owners, setOwners] = useState<Lookup[]>([]);
     const [categories, setCategories] = useState<Lookup[]>([]);
+    // Other containers, fetched lazily so photos can be moved between them.
+    const [otherContainers, setOtherContainers] = useState<Container[]>([]);
+    const otherContainersLoaded = useRef(false);
     const confirm = useConfirm();
+    const prompt = usePrompt();
 
     // `silent` refreshes (after add/edit/skip) keep the current view rendered
     // instead of swapping to the full-page spinner, which looked like a reload.
@@ -65,6 +72,19 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             .then(setCategories)
             .catch(() => {});
     }, []);
+
+    // Fetch the list of other containers once (for the "Move photo to…" picker)
+    // when the container has photos.
+    useEffect(() => {
+        if (!container || container.photos.length === 0 || otherContainersLoaded.current) return;
+        otherContainersLoaded.current = true;
+        void api
+            .listContainers()
+            .then((cs) => setOtherContainers(cs.filter((c) => c.id !== container.id)))
+            .catch(() => {
+                otherContainersLoaded.current = false;
+            });
+    }, [container]);
 
     function flash(msg: string) {
         setToast(msg);
@@ -123,9 +143,22 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
 
     async function confirmSuggestion(s: DetectedItem, accept: boolean) {
         if (!container) return;
+        const categoryId = suggestionCats.get(s) || null;
         setSuggestions((prev) => prev?.filter((x) => x !== s) ?? null);
+        setSuggestionCats((m) => {
+            if (!m.has(s)) return m;
+            const next = new Map(m);
+            next.delete(s);
+            return next;
+        });
         if (!accept) return;
-        const input = { name: s.name, description: s.description ?? '', quantity: s.quantity || 1, tags: [] };
+        const input = {
+            name: s.name,
+            description: s.description ?? '',
+            quantity: s.quantity || 1,
+            tags: [],
+            categoryId,
+        };
         try {
             if (!navigator.onLine) {
                 await enqueue({ kind: 'addItem', containerId: container.id, input });
@@ -137,6 +170,22 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             await enqueue({ kind: 'addItem', containerId: container.id, input });
             flash('Saved offline.');
         }
+    }
+
+    async function pickSuggestionCategory(s: DetectedItem, v: string) {
+        if (v === '__new__') {
+            const name = (await prompt({ title: 'New category', label: 'Category name', confirmLabel: 'Add' }))?.trim();
+            if (!name) return;
+            const created = await addCategory(name);
+            if (created) setSuggestionCats((m) => new Map(m).set(s, created.id));
+            return;
+        }
+        setSuggestionCats((m) => {
+            const next = new Map(m);
+            if (v) next.set(s, v);
+            else next.delete(s);
+            return next;
+        });
     }
 
     async function removePhoto(photoId: string) {
@@ -152,6 +201,17 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             await load(true);
         } catch {
             flash('Could not delete photo — try again when online.');
+        }
+    }
+
+    async function movePhoto(photoId: string, targetContainerId: string) {
+        if (!targetContainerId) return;
+        try {
+            await api.movePhoto(photoId, targetContainerId);
+            await load(true);
+            flash('Photo moved.');
+        } catch {
+            flash('Could not move photo — try again when online.');
         }
     }
 
@@ -242,6 +302,17 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                 <strong>{s.name}</strong>
                                 {s.description && <div className="muted">{s.description}</div>}
                             </div>
+                            <Select
+                                value={suggestionCats.get(s) ?? ''}
+                                onChange={(v) => void pickSuggestionCategory(s, v)}
+                                ariaLabel="Category"
+                                auto
+                                options={[
+                                    { value: '', label: 'No category' },
+                                    ...categories.map((c) => ({ value: c.id, label: c.name })),
+                                    { value: '__new__', label: '+ New category…' },
+                                ]}
+                            />
                             <button className="small" onClick={() => confirmSuggestion(s, true)}>
                                 <Icon name="check" size={16} /> Add
                             </button>
@@ -268,7 +339,15 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                         {container.photos.map((p) => (
                             <div key={p.id} className="thumb">
                                 <a href={p.blobUrl} target="_blank" rel="noreferrer">
-                                    <img src={p.thumbUrl} alt="container contents" />
+                                    <img
+                                        src={p.thumbUrl}
+                                        alt="container contents"
+                                        decoding="async"
+                                        ref={(el) => {
+                                            if (el?.complete) el.classList.add('loaded');
+                                        }}
+                                        onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                                    />
                                 </a>
                                 <button
                                     className="danger small thumb-del"
@@ -279,6 +358,19 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                     <Icon name="trash" size={15} />
                                     <span className="thumb-del-label">Delete</span>
                                 </button>
+                                <Select
+                                    className="thumb-move"
+                                    value=""
+                                    onChange={(v) => void movePhoto(p.id, v)}
+                                    ariaLabel="Move photo to…"
+                                    options={[
+                                        { value: '', label: 'Move…', disabled: true },
+                                        ...otherContainers.map((c) => ({
+                                            value: c.id,
+                                            label: `#${c.number} ${c.name}`,
+                                        })),
+                                    ]}
+                                />
                             </div>
                         ))}
                     </div>

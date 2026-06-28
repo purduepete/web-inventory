@@ -249,6 +249,16 @@ public sealed class InventoryRepository
             new { photoId, containerId, blobUrl, thumbUrl });
     }
 
+    public async Task<bool> MovePhotoAsync(Guid photoId, Guid targetContainerId, CancellationToken ct)
+    {
+        await using var conn = await _db.OpenAsync(ct);
+        var rows = await conn.ExecuteAsync(
+            @"UPDATE inv.Photo SET ContainerId = @targetContainerId
+              WHERE Id = @photoId AND EXISTS (SELECT 1 FROM inv.Container WHERE Id = @targetContainerId);",
+            new { photoId, targetContainerId });
+        return rows > 0;
+    }
+
     public async Task<bool> DeletePhotoAsync(Guid photoId, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);

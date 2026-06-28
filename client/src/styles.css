@@ -1075,9 +1075,19 @@ a.card:active {
     object-fit: cover;
     border-radius: var(--radius);
     border: 1px solid var(--border);
+    background: var(--surface-2);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.thumbs img.loaded {
+    opacity: 1;
 }
 .thumb {
     position: relative;
+}
+.thumb-move {
+    margin-top: 6px;
+    font-size: 0.8rem;
 }
 .thumb-del {
     position: absolute;

@@ -39,7 +39,7 @@ public class PhotoFunctions
             return await req.Text("Empty image body.", HttpStatusCode.BadRequest);
 
         var photoId = Guid.NewGuid();
-        var (blobUrl, thumbUrl) = await _blob.UploadAsync(containerId, photoId, new MemoryStream(bytes), ct);
+        var (blobUrl, thumbUrl) = await _blob.UploadAsync(containerId, photoId, bytes, ct);
         await _repo.AddPhotoAsync(photoId, containerId, blobUrl, thumbUrl, ct);
 
         // Callers can skip AI detection (e.g. "Add photo only") with ?analyze=false.
@@ -61,5 +61,17 @@ public class PhotoFunctions
     {
         var deleted = await _repo.DeletePhotoAsync(id, ct);
         return req.Status(deleted ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
+    }
+
+    [Function("MovePhoto")]
+    public async Task<HttpResponseData> Move(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "photos/{id:guid}/move")] HttpRequestData req,
+        Guid id, CancellationToken ct)
+    {
+        var input = await req.ReadFromJsonAsync<MovePhotoInput>();
+        if (input is null || input.TargetContainerId == Guid.Empty)
+            return await req.Text("targetContainerId is required.", HttpStatusCode.BadRequest);
+        var moved = await _repo.MovePhotoAsync(id, input.TargetContainerId, ct);
+        return req.Status(moved ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
     }
 }

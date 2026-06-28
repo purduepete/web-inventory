@@ -2,6 +2,9 @@ using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
 namespace WebInventory.Api.Services;
 
@@ -37,20 +40,44 @@ public sealed class BlobService
     public bool Enabled => _enabled;
 
     public async Task<(string blobUrl, string thumbUrl)> UploadAsync(
-        Guid containerId, Guid photoId, Stream content, CancellationToken ct)
+        Guid containerId, Guid photoId, byte[] bytes, CancellationToken ct)
     {
         if (!_enabled)
             return ($"about:blank#{photoId}", $"about:blank#{photoId}");
 
-        var blobName = $"{containerId}/{photoId}.jpg";
-        var blob = _container.GetBlobClient(blobName);
-        await blob.UploadAsync(content, new BlobUploadOptions
+        var blob = _container.GetBlobClient($"{containerId}/{photoId}.jpg");
+        await blob.UploadAsync(new MemoryStream(bytes), new BlobUploadOptions
         {
             HttpHeaders = new BlobHttpHeaders { ContentType = "image/jpeg" },
         }, ct);
-        // v1 uses the same image for full + thumbnail; resize is done client-side.
-        var url = blob.Uri.ToString();
-        return (url, url);
+        var fullUrl = blob.Uri.ToString();
+
+        // Store a small thumbnail separately so the photo grid loads quickly instead
+        // of downloading every full-size image. Falls back to the full image if the
+        // bytes can't be decoded.
+        try
+        {
+            using var image = Image.Load(bytes);
+            image.Mutate(x => x.Resize(new ResizeOptions
+            {
+                Mode = ResizeMode.Max,
+                Size = new Size(320, 320),
+            }));
+            using var thumbMs = new MemoryStream();
+            await image.SaveAsJpegAsync(thumbMs, new JpegEncoder { Quality = 70 }, ct);
+            thumbMs.Position = 0;
+
+            var thumbBlob = _container.GetBlobClient($"{containerId}/{photoId}_thumb.jpg");
+            await thumbBlob.UploadAsync(thumbMs, new BlobUploadOptions
+            {
+                HttpHeaders = new BlobHttpHeaders { ContentType = "image/jpeg" },
+            }, ct);
+            return (fullUrl, thumbBlob.Uri.ToString());
+        }
+        catch
+        {
+            return (fullUrl, fullUrl);
+        }
     }
 
     /// <summary>

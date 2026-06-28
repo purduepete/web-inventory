@@ -18,6 +18,7 @@
     <PackageReference Include="Azure.Identity" Version="1.13.1" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.22.2" />
     <PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.11" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">

@@ -68,6 +68,12 @@ export const api = {
 
     deletePhoto: (photoId: string) => http<void>(`/photos/${photoId}`, { method: 'DELETE' }),
 
+    movePhoto: (photoId: string, targetContainerId: string) =>
+        http<void>(`/photos/${photoId}/move`, {
+            method: 'POST',
+            body: JSON.stringify({ targetContainerId }),
+        }),
+
     searchItems: (
         q: string,
         filters?: { tag?: string; locationId?: string; ownerId?: string; categoryId?: string },
