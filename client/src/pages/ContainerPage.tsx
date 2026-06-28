@@ -873,6 +873,7 @@ function ItemRow({
     const [editing, setEditing] = useState(false);
     const [addingCat, setAddingCat] = useState(false);
     const [newCat, setNewCat] = useState('');
+    const confirm = useConfirm();
 
     async function save(
         next: Partial<{ quantity: number; name: string; description: string; categoryId: string | null }>,
@@ -895,6 +896,13 @@ function ItemRow({
     }
 
     async function remove() {
+        const ok = await confirm({
+            title: 'Delete item',
+            message: `Delete "${item.name}"? This can't be undone.`,
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!ok) return;
         try {
             if (!navigator.onLine) await enqueue({ kind: 'deleteItem', itemId: item.id });
             else await api.deleteItem(item.id);
