@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { enqueue, enqueuePhoto, syncNow, getPendingSuggestions, removePendingSuggestion } from '../db';
+import {
+    enqueue,
+    enqueuePhoto,
+    syncNow,
+    getPendingSuggestions,
+    removePendingSuggestion,
+    getCachedContainer,
+} from '../db';
 import { downscaleImage } from '../image';
 import { makeQrDataUrl, printLabel } from '../qr';
 import { Icon } from '../Icon';
@@ -62,7 +69,13 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 setContainer(c);
                 setQr(await makeQrDataUrl(c.qrToken));
             } catch {
-                if (!silent) setContainer(null);
+                // Offline fallback: show the cached container (e.g. one just created
+                // offline) with whatever it has so far; items/photos sync later.
+                const cached = byToken ? undefined : await getCachedContainer(key);
+                if (cached) {
+                    setContainer({ ...cached, items: [], photos: [] });
+                    setQr(await makeQrDataUrl(cached.qrToken));
+                } else if (!silent) setContainer(null);
             } finally {
                 if (!silent) setLoading(false);
             }

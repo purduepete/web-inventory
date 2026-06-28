@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { createContainerOffline } from '../db';
 import { Select } from '../Select';
 import { usePrompt } from '../Dialog';
 import { getLookup, invalidateLookups } from '../lookups';
@@ -54,17 +55,24 @@ export default function NewContainerPage() {
         }
         setSaving(true);
         setError(null);
+        const input = {
+            name: name.trim(),
+            locationId: locationId || null,
+            ownerId: ownerId || null,
+            notes: notes.trim(),
+        };
         try {
-            const c = await api.createContainer({
-                name: name.trim(),
-                locationId: locationId || null,
-                ownerId: ownerId || null,
-                notes: notes.trim(),
-            });
+            const c = navigator.onLine ? await api.createContainer(input) : await createContainerOffline(input);
             nav(`/containers/${c.id}`);
         } catch {
-            setError('Could not create container. You may be offline.');
-            setSaving(false);
+            // Network died: create it offline so it syncs later.
+            try {
+                const c = await createContainerOffline(input);
+                nav(`/containers/${c.id}`);
+            } catch {
+                setError('Could not create container.');
+                setSaving(false);
+            }
         }
     }
 
