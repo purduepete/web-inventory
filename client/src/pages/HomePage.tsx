@@ -167,6 +167,19 @@ export default function HomePage() {
                                 ...categoryOptions.map((c) => ({ value: c.id, label: c.name })),
                             ]}
                         />
+                        {(hasFilter || tag) && (
+                            <button
+                                type="button"
+                                className="ghost small filter-clear"
+                                onClick={() => {
+                                    setFilters({ locationId: '', ownerId: '', categoryId: '' });
+                                    setTag('');
+                                }}
+                            >
+                                <Icon name="close" size={15} />
+                                Clear filters
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

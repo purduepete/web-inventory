@@ -785,6 +785,14 @@ a.card:active {
     flex: 1 1 160px;
     margin-top: 0;
 }
+.filter-clear {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 0;
+    align-self: center;
+}
 
 /* Collapsible filter section (keeps the search page compact, esp. on phones). */
 .collapse-filter {
