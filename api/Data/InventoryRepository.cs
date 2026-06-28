@@ -1,13 +1,19 @@
 using Dapper;
 using WebInventory.Api.Models;
+using WebInventory.Api.Services;
 
 namespace WebInventory.Api.Data;
 
 public sealed class InventoryRepository
 {
     private readonly Database _db;
+    private readonly BlobService _blob;
 
-    public InventoryRepository(Database db) => _db = db;
+    public InventoryRepository(Database db, BlobService blob)
+    {
+        _db = db;
+        _blob = blob;
+    }
 
     public async Task<IReadOnlyList<Container>> ListContainersAsync(CancellationToken ct)
     {
@@ -69,6 +75,14 @@ public sealed class InventoryRepository
             @"SELECT Id, ContainerId, BlobUrl, ThumbUrl, TakenAt, ProcessedAt
               FROM inv.Photo WHERE ContainerId = @id ORDER BY TakenAt DESC;",
             new { id = container.Id })).AsList();
+
+        // Hand the browser short-lived SAS URLs so the (private) blobs can render.
+        for (var i = 0; i < photos.Count; i++)
+            photos[i] = photos[i] with
+            {
+                BlobUrl = await _blob.SignReadUrlAsync(photos[i].BlobUrl, ct),
+                ThumbUrl = await _blob.SignReadUrlAsync(photos[i].ThumbUrl, ct),
+            };
 
         return new ContainerWithContents(container.Id, container.Number, container.Name,
             container.Location, container.Notes, container.QrToken, container.CreatedAt,
