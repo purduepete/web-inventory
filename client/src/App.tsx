@@ -2,12 +2,18 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { pendingCount, syncNow } from './db';
 import { Icon } from './Icon';
+import { Spinner } from './Spinner';
+import { getClientPrincipal, redirectToLogin } from './auth';
 
 export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
     const [pending, setPending] = useState(0);
     const [syncing, setSyncing] = useState(false);
     const [syncMsg, setSyncMsg] = useState<string | null>(null);
+    // 'checking' until we know whether there's a signed-in session; 'redirecting'
+    // while we bounce to the AAD login; 'ok' once authenticated (or offline, where
+    // we can't tell and let the cached/offline app run).
+    const [authState, setAuthState] = useState<'checking' | 'ok' | 'redirecting'>('checking');
     const location = useLocation();
     const [reloadKey, setReloadKey] = useState(0);
     const [reloading, setReloading] = useState(false);
@@ -43,6 +49,31 @@ export default function App() {
     const effectiveTheme =
         theme ??
         (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+    useEffect(() => {
+        let active = true;
+        // Proactively confirm there's a signed-in session on startup. If the SWA
+        // session has expired, bounce straight to the AAD login instead of
+        // rendering an app whose every API call silently fails (empty pages).
+        // When offline we can't tell, so we let the cached app run.
+        if (!navigator.onLine) {
+            setAuthState('ok');
+        } else {
+            void getClientPrincipal().then((principal) => {
+                if (!active) return;
+                if (principal === null) {
+                    setAuthState('redirecting');
+                    redirectToLogin();
+                } else {
+                    // Signed in, or status unknown (treat as ok so the app still loads).
+                    setAuthState('ok');
+                }
+            });
+        }
+        return () => {
+            active = false;
+        };
+    }, []);
 
     useEffect(() => {
         const refresh = () => void pendingCount().then(setPending);
@@ -88,6 +119,18 @@ export default function App() {
             setSyncing(false);
             setTimeout(() => setSyncMsg(null), 2500);
         }
+    }
+
+    // Block the app shell until we know the auth state, and show a clear message
+    // while bouncing to sign in — the user never lands on a broken/empty app.
+    if (authState !== 'ok') {
+        return (
+            <div className="app">
+                <main className="content">
+                    <Spinner label={authState === 'redirecting' ? 'Redirecting to sign in…' : 'Loading…'} />
+                </main>
+            </div>
+        );
     }
 
     return (

@@ -9,33 +9,22 @@ import type {
     LookupKind,
     SaveItemInput,
 } from './types';
+import { getClientPrincipal, redirectToLogin } from './auth';
 
 const BASE = '/api';
 
-// True once we've started a login redirect, so we don't fire it repeatedly.
-let redirectingToLogin = false;
-
 /**
- * Detects an expired/absent auth session. When the SWA `member` gate rejects an
- * API call it answers with a 302 to `/.auth/login/aad`; a cross-origin redirect
- * makes `fetch` throw `TypeError: Failed to fetch` (or, occasionally, surfaces a
- * 401). Without this check the failure is swallowed and pages render as empty
- * even though the data exists — so confirm via `/.auth/me` and, if there is no
- * signed-in principal, send the user to sign in (preserving the current route).
+ * Detects an expired/absent auth session after an API call has already failed.
+ * When the SWA `member` gate rejects a request it answers with a 302 to
+ * `/.auth/login/aad`; a cross-origin redirect makes `fetch` throw
+ * `TypeError: Failed to fetch` (or, occasionally, surfaces a 401). Confirm via
+ * `/.auth/me` and, if there is no signed-in principal, send the user to sign in.
+ * (The app also checks auth proactively on startup — see auth.ts / App.tsx —
+ * so this is the mid-session safety net.)
  */
 async function redirectToLoginIfSignedOut(): Promise<void> {
-    if (redirectingToLogin) return;
-    try {
-        const me = await fetch('/.auth/me', { headers: { Accept: 'application/json' } });
-        if (!me.ok) return;
-        const data = (await me.json()) as { clientPrincipal?: unknown };
-        if (data?.clientPrincipal) return; // still signed in — a genuine API error
-    } catch {
-        return; // can't reach /.auth/me; treat as a normal network error
-    }
-    redirectingToLogin = true;
-    const target = window.location.pathname + window.location.search;
-    window.location.href = `/.auth/login/aad?post_login_redirect_uri=${encodeURIComponent(target)}`;
+    const principal = await getClientPrincipal();
+    if (principal === null) redirectToLogin();
 }
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
