@@ -25,7 +25,7 @@
     --l-card2: #eef1f5;
     --l-border: #d0d7de;
     --l-text: #1f2328;
-    --l-muted: #4a525b;
+    --l-muted: #3d444d;
     --l-accent: #0969da;
     --l-green: #1a7f37;
     --l-red: #cf222e;
@@ -473,16 +473,14 @@ select:focus {
 .select.open .select-chevron {
     transform: rotate(-90deg);
 }
-/* Chevrons read as faint grey in light mode; pin them to the strong text colour. */
-:root[data-theme='light'] .select-chevron,
-:root[data-theme='light'] .group-chevron,
-:root[data-theme='light'] .collapse-chevron {
+/* The dropdown (select) chevron sits on a white input in light mode, so the
+   faint muted grey is hard to see; pin it to the strong text colour. The
+   collapse/group toggle chevrons live on accent-blue buttons and stay white. */
+:root[data-theme='light'] .select-chevron {
     color: var(--text);
 }
 @media (prefers-color-scheme: light) {
-    :root:not([data-theme='dark']) .select-chevron,
-    :root:not([data-theme='dark']) .group-chevron,
-    :root:not([data-theme='dark']) .collapse-chevron {
+    :root:not([data-theme='dark']) .select-chevron {
         color: var(--text);
     }
 }
@@ -914,6 +912,10 @@ a.card:active {
 }
 .collapse-toggle:hover {
     border-color: var(--border-strong);
+}
+/* Contents collapse on the container page wants breathing room above it. */
+.contents-toggle {
+    margin-top: 18px;
 }
 .collapse-chevron {
     transition: transform 0.18s ease;
