@@ -1,0 +1,34 @@
+import { registerSW } from 'virtual:pwa-register';
+
+// Service-worker registration with aggressive update checking.
+//
+// The app uses `registerType: 'autoUpdate'` (see vite.config.ts), so once a new
+// service worker is found it is installed, activated and the page reloads
+// automatically — no user action needed. The catch is *when* the browser checks
+// for a new worker: by default it only re-fetches sw.js on a cold navigation,
+// and iOS PWAs suspend background timers, so a device can sit on a stale build
+// for a long time. We therefore explicitly ask the browser to re-check:
+//   - shortly after launch, then on an interval, and
+//   - every time the app returns to the foreground (the reliable trigger on iOS).
+const UPDATE_INTERVAL_MS = 60 * 1000;
+
+registerSW({
+    immediate: true,
+    onRegisteredSW(_swUrl, registration) {
+        if (!registration) return;
+
+        const checkForUpdate = () => {
+            // Skip while an update is mid-install or when we know we're offline.
+            if (registration.installing) return;
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+            void registration.update();
+        };
+
+        setInterval(checkForUpdate, UPDATE_INTERVAL_MS);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') checkForUpdate();
+        });
+        window.addEventListener('focus', checkForUpdate);
+    },
+});

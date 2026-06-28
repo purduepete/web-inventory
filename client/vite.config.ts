@@ -9,6 +9,10 @@ export default defineConfig({
         react(),
         VitePWA({
             registerType: 'autoUpdate',
+            // We register the service worker ourselves (src/pwa.ts) so we can add
+            // periodic update checks; disable the auto-injected registration to
+            // avoid registering twice.
+            injectRegister: null,
             includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
             manifest: {
                 name: 'Web Inventory',

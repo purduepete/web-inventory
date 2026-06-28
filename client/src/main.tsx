@@ -9,6 +9,7 @@ import ContainerPage from './pages/ContainerPage';
 import ScanPage from './pages/ScanPage';
 import ManagePage from './pages/ManagePage';
 import { DialogProvider } from './Dialog';
+import './pwa';
 import './styles.css';
 
 const router = createBrowserRouter([
