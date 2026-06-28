@@ -119,8 +119,8 @@ export function HelpDialog({ open, onClose }: { open: boolean; onClose: () => vo
                         </h3>
                         <p>
                             The circular <strong>reload</strong> button refreshes what’s shown from the cloud. It is
-                            different from <em>sync</em>, which pushes your own queued changes up. Use reload to pull the
-                            latest; the sync badge handles sending your edits.
+                            different from <em>sync</em>, which pushes your own queued changes up. Use reload to pull
+                            the latest; the sync badge handles sending your edits.
                         </p>
                     </section>
                 </div>

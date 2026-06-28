@@ -111,9 +111,7 @@ export async function removePendingSuggestion(containerId: string, item: Detecte
     if (!row) return;
     const idx = row.items.findIndex(
         (x) =>
-            x.name === item.name &&
-            (x.description ?? '') === (item.description ?? '') &&
-            x.quantity === item.quantity,
+            x.name === item.name && (x.description ?? '') === (item.description ?? '') && x.quantity === item.quantity,
     );
     if (idx < 0) return;
     const items = row.items.slice();
