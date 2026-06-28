@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
-import { cacheContainers, db } from '../db';
+import { replaceCachedContainers, db } from '../db';
 import { Icon } from '../Icon';
 import { Spinner } from '../Spinner';
 import type { Container } from '../types';
@@ -27,7 +27,7 @@ export default function ContainersPage() {
             .then((c) => {
                 if (!active) return;
                 setContainers(c);
-                void cacheContainers(c);
+                void replaceCachedContainers(c);
             })
             .catch(async () => {
                 // Offline fallback: show cached containers.

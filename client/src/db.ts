@@ -106,6 +106,15 @@ export async function cacheContainers(containers: Container[]): Promise<void> {
     await db.containers.bulkPut(containers.map((c) => ({ ...c, cachedAt: now })));
 }
 
+/** Replace the cached container list wholesale (prunes stale/temp entries). */
+export async function replaceCachedContainers(containers: Container[]): Promise<void> {
+    const now = Date.now();
+    await db.transaction('rw', db.containers, async () => {
+        await db.containers.clear();
+        await db.containers.bulkPut(containers.map((c) => ({ ...c, cachedAt: now })));
+    });
+}
+
 export async function getCachedContainer(id: string): Promise<CachedContainer | undefined> {
     return db.containers.get(id);
 }
