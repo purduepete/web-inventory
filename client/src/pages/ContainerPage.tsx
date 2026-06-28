@@ -11,6 +11,12 @@ import { useConfirm, usePrompt } from '../Dialog';
 import { getLookup, invalidateLookups } from '../lookups';
 import type { Container, ContainerWithContents, DetectedItem, Item, Lookup } from '../types';
 
+// Normalize an item name/description: trim and uppercase the very first letter.
+function capitalizeFirst(s: string): string {
+    const t = s.trim();
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+}
+
 export default function ContainerPage({ byToken = false }: { byToken?: boolean }) {
     const params = useParams();
     const nav = useNavigate();
@@ -24,6 +30,11 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     // Category chosen (in the detection review list) for each detected item,
     // keyed by the suggestion's object reference.
     const [suggestionCats, setSuggestionCats] = useState<Map<DetectedItem, string>>(new Map());
+    // In-place edits to a detected item's name/description before it's added,
+    // keyed by the suggestion's object reference.
+    const [suggestionEdits, setSuggestionEdits] = useState<Map<DetectedItem, { name?: string; description?: string }>>(
+        new Map(),
+    );
     const [busy, setBusy] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
     // Remembers whether the next picked photo should be AI-analyzed; set by the
@@ -177,8 +188,15 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     async function confirmSuggestion(s: DetectedItem, accept: boolean) {
         if (!container) return;
         const categoryId = suggestionCats.get(s) || null;
+        const edit = suggestionEdits.get(s);
         setSuggestions((prev) => prev?.filter((x) => x !== s) ?? null);
         setSuggestionCats((m) => {
+            if (!m.has(s)) return m;
+            const next = new Map(m);
+            next.delete(s);
+            return next;
+        });
+        setSuggestionEdits((m) => {
             if (!m.has(s)) return m;
             const next = new Map(m);
             next.delete(s);
@@ -188,8 +206,8 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         void removePendingSuggestion(container.id, s);
         if (!accept) return;
         const input = {
-            name: s.name,
-            description: s.description ?? '',
+            name: capitalizeFirst(edit?.name ?? s.name) || s.name,
+            description: capitalizeFirst(edit?.description ?? s.description ?? ''),
             quantity: s.quantity || 1,
             tags: [],
             categoryId,
@@ -219,6 +237,14 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             const next = new Map(m);
             if (v) next.set(s, v);
             else next.delete(s);
+            return next;
+        });
+    }
+
+    function editSuggestion(s: DetectedItem, patch: { name?: string; description?: string }) {
+        setSuggestionEdits((m) => {
+            const next = new Map(m);
+            next.set(s, { ...(next.get(s) ?? {}), ...patch });
             return next;
         });
     }
@@ -334,8 +360,20 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                     {suggestions.map((s, i) => (
                         <div key={i} className="item-row sug-row">
                             <div className="grow">
-                                <strong>{s.name}</strong>
-                                {s.description && <div className="muted">{s.description}</div>}
+                                <input
+                                    className="item-name"
+                                    value={suggestionEdits.get(s)?.name ?? s.name}
+                                    onChange={(e) => editSuggestion(s, { name: e.target.value })}
+                                    placeholder="Item name"
+                                    aria-label="Item name"
+                                />
+                                <input
+                                    className="item-desc"
+                                    value={suggestionEdits.get(s)?.description ?? s.description ?? ''}
+                                    onChange={(e) => editSuggestion(s, { description: e.target.value })}
+                                    placeholder="Description (optional)"
+                                    aria-label="Item description"
+                                />
                             </div>
                             <div className="sug-actions">
                                 <Select
@@ -602,8 +640,8 @@ function AddItemModal({
         if (!name.trim() || saving) return;
         setSaving(true);
         const input = {
-            name: name.trim(),
-            description: description.trim(),
+            name: capitalizeFirst(name) || name.trim(),
+            description: capitalizeFirst(description),
             quantity: quantity || 1,
             tags: [],
             categoryId: categoryId || null,
@@ -840,8 +878,8 @@ function ItemRow({
         next: Partial<{ quantity: number; name: string; description: string; categoryId: string | null }>,
     ) {
         const input = {
-            name: (next.name ?? name).trim() || item.name,
-            description: next.description !== undefined ? next.description : (item.description ?? ''),
+            name: capitalizeFirst(next.name ?? name) || item.name,
+            description: capitalizeFirst(next.description !== undefined ? next.description : (item.description ?? '')),
             quantity: next.quantity ?? qty,
             tags: item.tags,
             categoryId: next.categoryId !== undefined ? next.categoryId : (item.categoryId ?? null),
