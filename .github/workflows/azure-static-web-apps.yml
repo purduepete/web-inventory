@@ -29,7 +29,6 @@ jobs:
                   app_location: 'client'
                   output_location: 'dist'
                   api_location: ''
-                  skip_api_build: true
 
     close_pr:
         if: github.event_name == 'pull_request' && github.event.action == 'closed'
