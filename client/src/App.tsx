@@ -109,17 +109,17 @@ export default function App() {
         }
         setSyncing(true);
         try {
-            const { synced, failed } = await syncNow();
+            const { synced, failed, error } = await syncNow();
             const remaining = await pendingCount();
             setPending(remaining);
-            if (failed > 0) setSyncMsg('Sync failed — will retry.');
+            if (failed > 0) setSyncMsg(error ? `Sync failed: ${error}` : 'Sync failed — will retry.');
             else if (synced > 0) setSyncMsg('Synced.');
             else setSyncMsg(null);
         } catch {
             setSyncMsg('Sync failed — will retry.');
         } finally {
             setSyncing(false);
-            setTimeout(() => setSyncMsg(null), 2500);
+            setTimeout(() => setSyncMsg(null), 5000);
         }
     }
 

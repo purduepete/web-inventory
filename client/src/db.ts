@@ -189,11 +189,12 @@ export async function removePendingSuggestion(containerId: string, item: Detecte
 let syncing = false;
 
 /** Replay queued mutations + photo uploads when connectivity returns. */
-export async function syncNow(): Promise<{ synced: number; failed: number }> {
+export async function syncNow(): Promise<{ synced: number; failed: number; error?: string }> {
     if (syncing || !navigator.onLine) return { synced: 0, failed: 0 };
     syncing = true;
     let synced = 0;
     let failed = 0;
+    let error: string | undefined;
     try {
         const rows = await db.queue.orderBy('createdAt').toArray();
         for (const row of rows) {
@@ -201,8 +202,9 @@ export async function syncNow(): Promise<{ synced: number; failed: number }> {
                 await applyMutation(row.mutation);
                 if (row.id != null) await db.queue.delete(row.id);
                 synced++;
-            } catch {
+            } catch (e) {
                 failed++;
+                error = e instanceof Error ? e.message : String(e);
                 // Stop on first failure to preserve ordering; retry on next sync.
                 break;
             }
@@ -214,10 +216,11 @@ export async function syncNow(): Promise<{ synced: number; failed: number }> {
                 // suggestions so the container page can prompt the user to confirm them.
                 const { detected } = await api.uploadPhoto(p.containerId, p.blob);
                 if (p.id != null) await db.pendingPhotos.delete(p.id);
-                if (detected.length) await addPendingSuggestions(p.containerId, detected);
+                if (detected?.length) await addPendingSuggestions(p.containerId, detected);
                 synced++;
-            } catch {
+            } catch (e) {
                 failed++;
+                error = e instanceof Error ? e.message : String(e);
                 break;
             }
         }
@@ -225,7 +228,7 @@ export async function syncNow(): Promise<{ synced: number; failed: number }> {
         syncing = false;
         notifyPending();
     }
-    return { synced, failed };
+    return { synced, failed, error };
 }
 
 async function applyMutation(m: QueuedMutation): Promise<void> {
