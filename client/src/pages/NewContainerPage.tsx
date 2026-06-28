@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { Select } from '../Select';
-import { getLookup } from '../lookups';
+import { usePrompt } from '../Dialog';
+import { getLookup, invalidateLookups } from '../lookups';
 import type { Lookup } from '../types';
 
 export default function NewContainerPage() {
     const nav = useNavigate();
+    const prompt = usePrompt();
     const [name, setName] = useState('');
     const [locationId, setLocationId] = useState('');
     const [ownerId, setOwnerId] = useState('');
@@ -15,6 +17,21 @@ export default function NewContainerPage() {
     const [owners, setOwners] = useState<Lookup[]>([]);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Create a new location ("room") inline without leaving the page.
+    async function addLocation() {
+        const room = (await prompt({ title: 'New location', label: 'Location name', confirmLabel: 'Add' }))?.trim();
+        if (!room) return;
+        try {
+            const created = await api.createLookup('locations', room);
+            invalidateLookups('locations');
+            const locs = await getLookup('locations').catch(() => null);
+            if (locs) setLocations(locs);
+            setLocationId(created.id);
+        } catch {
+            setError('Could not add location. You may be offline.');
+        }
+    }
 
     useEffect(() => {
         void getLookup('locations')
@@ -62,11 +79,15 @@ export default function NewContainerPage() {
                 Location (optional)
                 <Select
                     value={locationId}
-                    onChange={setLocationId}
+                    onChange={(v) => {
+                        if (v === '__new__') void addLocation();
+                        else setLocationId(v);
+                    }}
                     ariaLabel="Location"
                     options={[
                         { value: '', label: '— none —' },
                         ...locations.map((l) => ({ value: l.id, label: l.name })),
+                        { value: '__new__', label: '+ New location…' },
                     ]}
                 />
             </label>

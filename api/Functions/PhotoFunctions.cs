@@ -42,7 +42,15 @@ public class PhotoFunctions
         var (blobUrl, thumbUrl) = await _blob.UploadAsync(containerId, photoId, new MemoryStream(bytes), ct);
         await _repo.AddPhotoAsync(photoId, containerId, blobUrl, thumbUrl, ct);
 
-        var detected = await _vision.DetectAsync(bytes, ct);
+        // Callers can skip AI detection (e.g. "Add photo only") with ?analyze=false.
+        var analyze = !string.Equals(
+            System.Web.HttpUtility.ParseQueryString(req.Url.Query)["analyze"],
+            "false",
+            StringComparison.OrdinalIgnoreCase);
+
+        var detected = analyze
+            ? await _vision.DetectAsync(bytes, ct)
+            : new List<DetectedItem>();
         return await req.Json(new PhotoUploadResult(photoId, detected), HttpStatusCode.Created);
     }
 

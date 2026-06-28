@@ -41,9 +41,17 @@ public sealed class InventoryRepository
         await using var conn = await _db.OpenAsync(ct);
         var id = Guid.NewGuid();
         var token = Guid.NewGuid();
+        // Assign the smallest unused positive number so deleted slots get reused
+        // (e.g. with 1-3 present, deleting 2 makes the next container 2, then 4).
         await conn.ExecuteAsync(
             @"INSERT INTO inv.Container (Id, Number, Name, LocationId, OwnerId, Notes, QrToken)
-              VALUES (@id, NEXT VALUE FOR inv.ContainerNumberSeq, @Name, @LocationId, @OwnerId, @Notes, @token);",
+              SELECT @id,
+                     (SELECT MIN(t.n)
+                      FROM (SELECT 1 AS n
+                            UNION ALL
+                            SELECT Number + 1 FROM inv.Container) t
+                      WHERE NOT EXISTS (SELECT 1 FROM inv.Container c WHERE c.Number = t.n)),
+                     @Name, @LocationId, @OwnerId, @Notes, @token;",
             new { id, input.Name, input.LocationId, input.OwnerId, input.Notes, token });
         return await conn.QuerySingleOrDefaultAsync<Container>(
             $"{ContainerSelect} WHERE c.Id = @id;", new { id });

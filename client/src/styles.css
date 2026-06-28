@@ -978,6 +978,16 @@ a.card:active {
 
 /* On phones, stack an item's edit controls instead of cramming one row. */
 @media (max-width: 560px) {
+    /* Phones: full-width photo buttons. */
+    .container-head .head-grid .container-actions {
+        align-self: stretch;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .container-actions button {
+        width: 100%;
+        justify-content: center;
+    }
     .item-row.editing {
         flex-wrap: wrap;
         align-items: stretch;
@@ -1128,25 +1138,39 @@ a.card:active {
 }
 .container-head {
     align-items: flex-start;
-    position: relative;
-    min-height: 72px;
+    gap: 14px;
     margin-bottom: 4px;
 }
-.container-head > div:first-child {
-    padding-right: 156px;
+/* Title, owner/location and buttons stack vertically. */
+.head-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+        'title'
+        'meta'
+        'actions';
+    grid-template-rows: auto auto auto;
+    row-gap: 10px;
+    align-items: start;
 }
-.qr-head-block {
-    position: absolute;
-    top: 0;
-    right: 0;
+.head-grid .title-row {
+    grid-area: title;
+}
+.head-grid .meta-line {
+    grid-area: meta;
+}
+.head-grid .container-actions {
+    grid-area: actions;
+}
+/* QR + print label, anchored at the bottom of the page. */
+.qr-foot-block {
     width: 132px;
-    padding-right: 0;
     align-items: stretch;
     gap: 8px;
-    flex: 0 0 auto;
-    margin-top: 4px;
+    margin-top: 28px;
 }
-.qr-head {
+.qr-foot {
     width: 100%;
     height: auto;
     aspect-ratio: 1;

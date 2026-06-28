@@ -23,6 +23,9 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     const [suggestions, setSuggestions] = useState<DetectedItem[] | null>(null);
     const [busy, setBusy] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
+    // Remembers whether the next picked photo should be AI-analyzed; set by the
+    // button that opens the file picker.
+    const analyzeOnUpload = useRef(true);
     const [editing, setEditing] = useState(false);
     const [locations, setLocations] = useState<Lookup[]>([]);
     const [owners, setOwners] = useState<Lookup[]>([]);
@@ -85,17 +88,28 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         const file = e.target.files?.[0];
         e.target.value = '';
         if (!file || !container) return;
+        const analyze = analyzeOnUpload.current;
+        analyzeOnUpload.current = true; // reset to default for next time
         setBusy(true);
         try {
             const small = await downscaleImage(file);
             if (!navigator.onLine) {
                 await enqueuePhoto(container.id, small);
-                flash('Photo saved — will analyze when back online.');
+                flash(
+                    analyze
+                        ? 'Photo saved — will analyze when back online.'
+                        : 'Photo saved — will upload when back online.',
+                );
                 return;
             }
-            const { detected } = await api.uploadPhoto(container.id, small);
-            setSuggestions(detected.length ? detected : []);
-            if (!detected.length) flash('No items detected — add them manually.');
+            if (analyze) {
+                const { detected } = await api.uploadPhoto(container.id, small);
+                setSuggestions(detected.length ? detected : []);
+                if (!detected.length) flash('No items detected — add them manually.');
+            } else {
+                await api.uploadPhoto(container.id, small, false);
+                flash('Photo added.');
+            }
             await load(true);
         } catch {
             // Network died mid-upload: queue it.
@@ -159,45 +173,60 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                         }}
                     />
                 ) : (
-                    <>
-                        <div>
-                            <div className="title-row">
-                                <h1>
-                                    #{container.number} · {container.name}
-                                </h1>
-                                <button className="ghost small icon-btn" onClick={() => setEditing(true)} title="Edit">
-                                    <Icon name="pencil" size={16} />
-                                </button>
-                            </div>
-                            {(container.location || container.owner) && (
-                                <div className="muted meta-line">
-                                    {container.owner && (
-                                        <span>
-                                            <Icon name="user" size={14} /> {container.owner}
-                                        </span>
-                                    )}
-                                    {container.location && (
-                                        <span>
-                                            <Icon name="pin" size={14} /> {container.location}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
+                    <div className="head-grid">
+                        <div className="title-row">
+                            <h1>
+                                #{container.number} · {container.name}
+                            </h1>
+                            <button className="ghost small icon-btn" onClick={() => setEditing(true)} title="Edit">
+                                <Icon name="pencil" size={16} />
+                            </button>
                         </div>
-                        {qr && (
-                            <div className="stack qr-head-block">
-                                <img className="qr-img qr-head" src={qr} alt="container QR" />
-                                <button
-                                    className="small ghost"
-                                    onClick={() =>
-                                        printLabel({ number: container.number, name: container.name, qrDataUrl: qr })
-                                    }
-                                >
-                                    <Icon name="printer" size={16} /> Print label
-                                </button>
+                        {(container.location || container.owner) && (
+                            <div className="muted meta-line">
+                                {container.owner && (
+                                    <span>
+                                        <Icon name="user" size={14} /> {container.owner}
+                                    </span>
+                                )}
+                                {container.location && (
+                                    <span>
+                                        <Icon name="pin" size={14} /> {container.location}
+                                    </span>
+                                )}
                             </div>
                         )}
-                    </>
+                        <div className="row container-actions">
+                            <button
+                                onClick={() => {
+                                    analyzeOnUpload.current = true;
+                                    fileRef.current?.click();
+                                }}
+                                disabled={busy}
+                            >
+                                <Icon name="camera" size={18} />
+                                {busy ? 'Working…' : 'Photo → detect items'}
+                            </button>
+                            <button
+                                className="ghost"
+                                onClick={() => {
+                                    analyzeOnUpload.current = false;
+                                    fileRef.current?.click();
+                                }}
+                                disabled={busy}
+                            >
+                                <Icon name="plus" size={18} /> Add photo only
+                            </button>
+                            <input
+                                ref={fileRef}
+                                className="fab-input"
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={onPhoto}
+                            />
+                        </div>
+                    </div>
                 )}
             </div>
 
@@ -223,21 +252,6 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                     ))}
                 </div>
             )}
-
-            <div className="row" style={{ marginTop: 14 }}>
-                <button onClick={() => fileRef.current?.click()} disabled={busy}>
-                    <Icon name="camera" size={18} />
-                    {busy ? 'Analyzing…' : 'Photo → detect items'}
-                </button>
-                <input
-                    ref={fileRef}
-                    className="fab-input"
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={onPhoto}
-                />
-            </div>
 
             <ItemsEditor
                 container={container}
@@ -293,6 +307,18 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                     <Icon name="sync" size={16} /> Sync now
                 </button>
             </div>
+
+            {qr && (
+                <div className="stack qr-foot-block">
+                    <img className="qr-img qr-foot" src={qr} alt="container QR" />
+                    <button
+                        className="small ghost"
+                        onClick={() => printLabel({ number: container.number, name: container.name, qrDataUrl: qr })}
+                    >
+                        <Icon name="printer" size={16} /> Print label
+                    </button>
+                </div>
+            )}
 
             {toast && <div className="toast">{toast}</div>}
         </div>

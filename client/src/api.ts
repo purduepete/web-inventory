@@ -94,9 +94,15 @@ export const api = {
     deleteLookup: (kind: LookupKind, id: string) => http<void>(`/lookups/${kind}/${id}`, { method: 'DELETE' }),
 
     // Posts the (already downscaled) JPEG as the raw request body; the API stores
-    // it in Blob Storage and runs AI detection, returning suggested items.
-    uploadPhoto: async (containerId: string, blob: Blob): Promise<{ photoId: string; detected: DetectedItem[] }> => {
-        const res = await fetch(`${BASE}/containers/${containerId}/photos`, {
+    // it in Blob Storage and (unless analyze=false) runs AI detection, returning
+    // suggested items.
+    uploadPhoto: async (
+        containerId: string,
+        blob: Blob,
+        analyze = true,
+    ): Promise<{ photoId: string; detected: DetectedItem[] }> => {
+        const qs = analyze ? '' : '?analyze=false';
+        const res = await fetch(`${BASE}/containers/${containerId}/photos${qs}`, {
             method: 'POST',
             headers: { 'Content-Type': 'image/jpeg' },
             body: blob,
