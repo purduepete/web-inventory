@@ -8,7 +8,7 @@ import type { Lookup, LookupKind } from '../types';
 
 const SECTIONS: { kind: LookupKind; title: string; icon: 'pin' | 'user' | 'tag'; placeholder: string }[] = [
     { kind: 'owners', title: 'Owners', icon: 'user', placeholder: 'e.g. Fat Bob' },
-    { kind: 'locations', title: 'Locations', icon: 'pin', placeholder: 'e.g. Garage, top shelf' },
+    { kind: 'locations', title: 'Locations', icon: 'pin', placeholder: 'e.g. Garage' },
     { kind: 'categories', title: 'Categories', icon: 'tag', placeholder: 'e.g. Electronics' },
 ];
 
