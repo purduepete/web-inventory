@@ -432,6 +432,12 @@ select:focus {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
+    /* iOS Safari tints button text with the system accent (a washed-out blue),
+       which overrides `color`. Reset the native appearance and pin the fill so
+       our own text colours actually render — esp. in light mode on iPad. */
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-text-fill-color: var(--text);
     text-align: left;
     cursor: pointer;
     transition:
@@ -456,6 +462,7 @@ select:focus {
 }
 .select-value.placeholder {
     color: var(--muted);
+    -webkit-text-fill-color: var(--muted);
 }
 .select-chevron {
     flex: 0 0 auto;
@@ -506,6 +513,9 @@ select:focus {
     border: none;
     border-radius: var(--radius);
     color: var(--text);
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-text-fill-color: var(--text);
     text-align: left;
     cursor: pointer;
 }
@@ -525,6 +535,7 @@ select:focus {
 }
 .select-option[aria-selected='true'] {
     color: var(--accent);
+    -webkit-text-fill-color: var(--accent);
     font-weight: 600;
 }
 .select-option[aria-selected='true'] .select-check {
@@ -532,6 +543,7 @@ select:focus {
 }
 .select-option:disabled {
     color: var(--muted);
+    -webkit-text-fill-color: var(--muted);
     cursor: default;
 }
 

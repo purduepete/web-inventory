@@ -1104,6 +1104,15 @@ function HeaderEditor({
                 <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
             </label>
             <label>
+                Owner
+                <Select
+                    value={ownerId}
+                    onChange={setOwnerId}
+                    ariaLabel="Owner"
+                    options={[{ value: '', label: '— none —' }, ...owners.map((o) => ({ value: o.id, label: o.name }))]}
+                />
+            </label>
+            <label>
                 Location
                 <Select
                     value={locationId}
@@ -1113,15 +1122,6 @@ function HeaderEditor({
                         { value: '', label: '— none —' },
                         ...locations.map((l) => ({ value: l.id, label: l.name })),
                     ]}
-                />
-            </label>
-            <label>
-                Owner
-                <Select
-                    value={ownerId}
-                    onChange={setOwnerId}
-                    ariaLabel="Owner"
-                    options={[{ value: '', label: '— none —' }, ...owners.map((o) => ({ value: o.id, label: o.name }))]}
                 />
             </label>
             <div className="row">
