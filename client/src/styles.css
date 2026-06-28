@@ -150,12 +150,7 @@ body {
 .brand-mark {
     display: grid;
     place-items: center;
-    width: 30px;
-    height: 30px;
-    border-radius: var(--radius);
-    background: var(--accent-grad);
-    color: var(--on-accent);
-    box-shadow: var(--shadow-accent);
+    color: var(--accent);
 }
 
 .topbar-actions {
