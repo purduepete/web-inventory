@@ -9,6 +9,8 @@ export default function App() {
     const [syncing, setSyncing] = useState(false);
     const [syncMsg, setSyncMsg] = useState<string | null>(null);
     const location = useLocation();
+    const [reloadKey, setReloadKey] = useState(0);
+    const [reloading, setReloading] = useState(false);
     const [theme, setTheme] = useState<'light' | 'dark' | null>(
         () => (localStorage.getItem('theme') as 'light' | 'dark' | null) ?? null,
     );
@@ -28,6 +30,14 @@ export default function App() {
         const next = effective === 'dark' ? 'light' : 'dark';
         localStorage.setItem('theme', next);
         setTheme(next);
+    }
+
+    function reloadData() {
+        if (reloading) return;
+        setReloading(true);
+        // Remount the current route so its data-loading effects re-run.
+        setReloadKey((k) => k + 1);
+        setTimeout(() => setReloading(false), 1000);
     }
 
     const effectiveTheme =
@@ -106,6 +116,14 @@ export default function App() {
                         </span>
                     )}
                     <button
+                        className={`theme-toggle reload-btn${reloading ? ' spinning' : ''}`}
+                        onClick={reloadData}
+                        title="Reload data"
+                        aria-label="Reload data"
+                    >
+                        <Icon name="sync" size={18} />
+                    </button>
+                    <button
                         className="theme-toggle"
                         onClick={toggleTheme}
                         title={effectiveTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
@@ -117,7 +135,7 @@ export default function App() {
             </header>
 
             <main className="content">
-                <div className="page" key={location.pathname}>
+                <div className="page" key={`${location.pathname}#${reloadKey}`}>
                     <Outlet />
                 </div>
             </main>

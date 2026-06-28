@@ -178,6 +178,9 @@ body {
     background: var(--surface-3);
     filter: none;
 }
+.reload-btn.spinning svg {
+    animation: spin 1.2s linear infinite;
+}
 
 .badge {
     font-size: 12px;
