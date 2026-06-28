@@ -173,6 +173,7 @@ export async function addPendingSuggestions(containerId: string, items: Detected
     const merged = existing ? [...existing.items, ...items] : items;
     await db.pendingSuggestions.put({ containerId, items: merged, createdAt: Date.now() });
     notifySuggestions(containerId);
+    notifyPending();
 }
 
 export async function getPendingSuggestions(containerId: string): Promise<DetectedItem[]> {
@@ -193,6 +194,7 @@ export async function removePendingSuggestion(containerId: string, item: Detecte
     items.splice(idx, 1);
     if (items.length) await db.pendingSuggestions.put({ ...row, items });
     else await db.pendingSuggestions.delete(containerId);
+    notifyPending();
 }
 
 let syncing = false;
@@ -289,5 +291,12 @@ export async function pendingContainerIds(): Promise<Set<string>> {
     const ids = new Set<string>();
     for (const p of await db.pendingPhotos.toArray()) ids.add(p.containerId);
     for (const r of await db.queue.toArray()) if (r.mutation.kind === 'addItem') ids.add(r.mutation.containerId);
+    return ids;
+}
+
+/** Set of container ids that have AI suggestions awaiting add/skip review. */
+export async function suggestionContainerIds(): Promise<Set<string>> {
+    const ids = new Set<string>();
+    for (const row of await db.pendingSuggestions.toArray()) if (row.items.length) ids.add(row.containerId);
     return ids;
 }

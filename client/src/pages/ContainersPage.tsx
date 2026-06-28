@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
-import { replaceCachedContainers, db, pendingContainerIds } from '../db';
+import { replaceCachedContainers, db, pendingContainerIds, suggestionContainerIds } from '../db';
 import { Icon } from '../Icon';
 import { Spinner } from '../Spinner';
 import type { Container } from '../types';
@@ -14,6 +14,7 @@ export default function ContainersPage() {
     const [containers, setContainers] = useState<Container[]>([]);
     const [loading, setLoading] = useState(true);
     const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+    const [reviewIds, setReviewIds] = useState<Set<string>>(new Set());
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
         try {
             return JSON.parse(localStorage.getItem(GROUPS_KEY) || '{}');
@@ -42,10 +43,17 @@ export default function ContainersPage() {
     }, []);
 
     useEffect(() => {
-        const refresh = () => void pendingContainerIds().then(setPendingIds);
+        const refresh = () => {
+            void pendingContainerIds().then(setPendingIds);
+            void suggestionContainerIds().then(setReviewIds);
+        };
         refresh();
         window.addEventListener('pending-changed', refresh);
-        return () => window.removeEventListener('pending-changed', refresh);
+        window.addEventListener('suggestions-ready', refresh);
+        return () => {
+            window.removeEventListener('pending-changed', refresh);
+            window.removeEventListener('suggestions-ready', refresh);
+        };
     }, []);
 
     // Group containers by owner; named owners first (alphabetical), Unassigned last.
@@ -116,6 +124,9 @@ export default function ContainersPage() {
                                                 {c.location && <div className="muted">{c.location}</div>}
                                                 {pendingIds.has(c.id) && (
                                                     <div className="badge pending">Pending sync</div>
+                                                )}
+                                                {reviewIds.has(c.id) && (
+                                                    <div className="badge pending">Items to review</div>
                                                 )}
                                             </div>
                                         </Link>
