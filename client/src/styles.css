@@ -634,13 +634,13 @@ button.danger:hover {
 
 /* Light mode keeps solid (filled) buttons; the ghost/outline treatment is dark-only.
    Custom-select trigger/options are excluded so they keep the input look. */
-:root[data-theme='light'] button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(.group-toggle) {
+:root[data-theme='light'] button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(.group-toggle):not(.theme-toggle) {
     background: var(--accent-grad);
     color: var(--on-accent);
     border: none;
     box-shadow: var(--shadow-accent);
 }
-:root[data-theme='light'] button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(.group-toggle):hover {
+:root[data-theme='light'] button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(.group-toggle):not(.theme-toggle):hover {
     background: var(--accent-grad);
     border-color: transparent;
     filter: brightness(1.06);
@@ -657,13 +657,13 @@ button.danger:hover {
     filter: brightness(1.04);
 }
 @media (prefers-color-scheme: light) {
-    :root:not([data-theme='dark']) button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(.group-toggle) {
+    :root:not([data-theme='dark']) button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(.group-toggle):not(.theme-toggle) {
         background: var(--accent-grad);
         color: var(--on-accent);
         border: none;
         box-shadow: var(--shadow-accent);
     }
-    :root:not([data-theme='dark']) button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(.group-toggle):hover {
+    :root:not([data-theme='dark']) button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(.group-toggle):not(.theme-toggle):hover {
         background: var(--accent-grad);
         border-color: transparent;
         filter: brightness(1.06);
