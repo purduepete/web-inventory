@@ -5,6 +5,7 @@ import { Icon } from '../Icon';
 import { Select } from '../Select';
 import { Spinner } from '../Spinner';
 import { getLookup, getTags } from '../lookups';
+import { usePersistentToggle } from '../usePersistentToggle';
 import type { Facet, Item, Lookup } from '../types';
 
 const FILTER_KEY = 'webinv.search.filters';
@@ -39,8 +40,10 @@ export default function HomePage() {
     const [ready, setReady] = useState(false);
     // Filters start expanded on tablets and larger (iPad and up); on phones
     // (iPhone) they stay collapsed behind the toggle to save vertical space.
-    const [filtersOpen, setFiltersOpen] = useState(
-        () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches,
+    // The chosen state is then persisted so it sticks across navigation/reloads.
+    const [filtersOpen, setFiltersOpen] = usePersistentToggle(
+        'webinv.search.filtersOpen',
+        typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches,
     );
 
     useEffect(() => {
