@@ -756,6 +756,80 @@ a.card:active {
     line-height: 1.5;
 }
 
+/* ---------- Owner groups (Containers page) ---------- */
+.owner-group + .owner-group {
+    margin-top: 14px;
+}
+.group-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: 11px 12px;
+    text-align: left;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: none;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.group-toggle:hover {
+    border-color: var(--border-strong);
+    filter: none;
+}
+.group-chevron {
+    flex: 0 0 auto;
+    color: var(--muted);
+    transform: rotate(-90deg);
+    transition: transform 0.18s ease;
+}
+.group-chevron.open {
+    transform: rotate(0deg);
+}
+.group-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.group-count {
+    flex: 0 0 auto;
+    font-weight: 600;
+}
+/* When a group is open, its cards sit just below the header. */
+.owner-group .card-grid {
+    margin-top: 10px;
+}
+/* Owner label pinned to the far left of each container card. */
+.container-card {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+}
+.container-card .owner-col {
+    flex: 0 0 auto;
+    align-self: center;
+    max-width: 84px;
+    padding-right: 12px;
+    border-right: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.container-card .card-main {
+    flex: 1;
+    min-width: 0;
+}
+
 /* ---------- Pills / tags ---------- */
 .pill {
     display: inline-flex;
