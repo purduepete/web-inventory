@@ -4,6 +4,7 @@ import { Icon } from '../Icon';
 import { Spinner } from '../Spinner';
 import { useConfirm, usePrompt } from '../Dialog';
 import { invalidateLookups } from '../lookups';
+import { usePersistentToggle } from '../usePersistentToggle';
 import type { Lookup, LookupKind } from '../types';
 
 const SECTIONS: { kind: LookupKind; title: string; icon: 'pin' | 'user' | 'tag'; placeholder: string }[] = [
@@ -75,6 +76,9 @@ function LookupSection({
     const [draft, setDraft] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // Tag sections are collapsed by default to keep the page compact; the
+    // open/closed choice is remembered per section across reloads.
+    const [open, setOpen] = usePersistentToggle(`webinv.tags.${kind}.open`, false);
     const confirm = useConfirm();
     const prompt = usePrompt();
 
@@ -141,49 +145,63 @@ function LookupSection({
 
     return (
         <div className="card">
-            <h2 style={{ margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Icon name={icon} size={18} /> {title}
-            </h2>
-            <div className="row" style={{ marginBottom: 10 }}>
-                <input
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && add()}
-                    placeholder={placeholder}
-                />
-                <button className="small" onClick={add} disabled={busy || !draft.trim()}>
-                    <Icon name="plus" size={16} /> Add
-                </button>
-            </div>
-            {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
-            {items.length === 0 ? (
-                <div className="muted">Nothing yet.</div>
-            ) : (
-                <div className="stack" style={{ gap: 6 }}>
-                    {items.map((item) => (
-                        <div key={item.id} className="item-row">
-                            <div className="grow">
-                                <strong>{item.name}</strong>
-                            </div>
-                            <button
-                                className="small ghost icon-btn"
-                                onClick={() => rename(item)}
-                                title="Rename"
-                                aria-label="Rename"
-                            >
-                                <Icon name="pencil" size={15} />
-                            </button>
-                            <button
-                                className="danger small icon-btn"
-                                onClick={() => remove(item)}
-                                title="Delete"
-                                aria-label="Delete"
-                            >
-                                <Icon name="trash" size={15} />
-                            </button>
+            <button
+                type="button"
+                className="collapse-toggle section-toggle"
+                aria-expanded={open}
+                onClick={() => setOpen((v) => !v)}
+                style={{ width: '100%' }}
+            >
+                <Icon name={icon} size={18} />
+                <span className="grow" style={{ textAlign: 'left' }}>
+                    {title} ({items.length})
+                </span>
+                <Icon name="chevron" size={16} className={`collapse-chevron${open ? ' open' : ''}`} />
+            </button>
+            {open && (
+                <>
+                    <div className="row" style={{ marginTop: 10, marginBottom: 10 }}>
+                        <input
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && add()}
+                            placeholder={placeholder}
+                        />
+                        <button className="small" onClick={add} disabled={busy || !draft.trim()}>
+                            <Icon name="plus" size={16} /> Add
+                        </button>
+                    </div>
+                    {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
+                    {items.length === 0 ? (
+                        <div className="muted">Nothing yet.</div>
+                    ) : (
+                        <div className="stack" style={{ gap: 6 }}>
+                            {items.map((item) => (
+                                <div key={item.id} className="item-row">
+                                    <div className="grow">
+                                        <strong>{item.name}</strong>
+                                    </div>
+                                    <button
+                                        className="small ghost icon-btn"
+                                        onClick={() => rename(item)}
+                                        title="Rename"
+                                        aria-label="Rename"
+                                    >
+                                        <Icon name="pencil" size={15} />
+                                    </button>
+                                    <button
+                                        className="danger small icon-btn"
+                                        onClick={() => remove(item)}
+                                        title="Delete"
+                                        aria-label="Delete"
+                                    >
+                                        <Icon name="trash" size={15} />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    )}
+                </>
             )}
         </div>
     );

@@ -25,7 +25,7 @@
     --l-card2: #eef1f5;
     --l-border: #d0d7de;
     --l-text: #1f2328;
-    --l-muted: #656d76;
+    --l-muted: #4a525b;
     --l-accent: #0969da;
     --l-green: #1a7f37;
     --l-red: #cf222e;
@@ -472,6 +472,19 @@ select:focus {
 }
 .select.open .select-chevron {
     transform: rotate(-90deg);
+}
+/* Chevrons read as faint grey in light mode; pin them to the strong text colour. */
+:root[data-theme='light'] .select-chevron,
+:root[data-theme='light'] .group-chevron,
+:root[data-theme='light'] .collapse-chevron {
+    color: var(--text);
+}
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme='dark']) .select-chevron,
+    :root:not([data-theme='dark']) .group-chevron,
+    :root:not([data-theme='dark']) .collapse-chevron {
+        color: var(--text);
+    }
 }
 .select-panel {
     position: absolute;

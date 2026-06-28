@@ -9,6 +9,7 @@ import { Select } from '../Select';
 import { Spinner } from '../Spinner';
 import { useConfirm, usePrompt } from '../Dialog';
 import { getLookup, invalidateLookups } from '../lookups';
+import { usePersistentToggle } from '../usePersistentToggle';
 import type { Container, ContainerWithContents, DetectedItem, Item, Lookup } from '../types';
 
 // Normalize an item name/description: trim and uppercase the very first letter.
@@ -508,6 +509,9 @@ function ItemsEditor({
     const [adding, setAdding] = useState(false);
     const [others, setOthers] = useState<Container[]>([]);
     const othersLoaded = useRef(false);
+    // Contents are collapsed by default to keep the container page compact;
+    // the open/closed choice is remembered per container across reloads.
+    const [contentsOpen, setContentsOpen] = usePersistentToggle(`webinv.container.${container.id}.contentsOpen`, false);
 
     // The move-target list is only needed once the user edits an item, so defer
     // the (full) container-list fetch until then instead of on every page open.
@@ -523,26 +527,38 @@ function ItemsEditor({
 
     return (
         <>
-            <h2>Contents ({container.items.length})</h2>
-            <div className="stack">
-                {container.items.map((it) => (
-                    <ItemRow
-                        key={it.id}
-                        item={it}
-                        others={others}
-                        categories={categories}
-                        onChange={onChange}
-                        onEdit={ensureOthers}
-                        onAddCategory={onAddCategory}
-                        flash={flash}
-                    />
-                ))}
-            </div>
-            <div className="row" style={{ marginTop: 10 }}>
-                <button className="small" onClick={() => setAdding(true)}>
-                    <Icon name="plus" size={16} /> Add an item
-                </button>
-            </div>
+            <button
+                type="button"
+                className="collapse-toggle contents-toggle"
+                aria-expanded={contentsOpen}
+                onClick={() => setContentsOpen((v) => !v)}
+            >
+                <span>Contents ({container.items.length})</span>
+                <Icon name="chevron" size={16} className={`collapse-chevron${contentsOpen ? ' open' : ''}`} />
+            </button>
+            {contentsOpen && (
+                <>
+                    <div className="stack" style={{ marginTop: 10 }}>
+                        {container.items.map((it) => (
+                            <ItemRow
+                                key={it.id}
+                                item={it}
+                                others={others}
+                                categories={categories}
+                                onChange={onChange}
+                                onEdit={ensureOthers}
+                                onAddCategory={onAddCategory}
+                                flash={flash}
+                            />
+                        ))}
+                    </div>
+                    <div className="row" style={{ marginTop: 10 }}>
+                        <button className="small" onClick={() => setAdding(true)}>
+                            <Icon name="plus" size={16} /> Add an item
+                        </button>
+                    </div>
+                </>
+            )}
             {adding && (
                 <AddItemModal
                     container={container}
