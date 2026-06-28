@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { Icon } from './Icon';
 
 export type SelectOption = { value: string; label: string; disabled?: boolean };
@@ -18,6 +18,7 @@ interface SelectProps {
 export function Select({ value, onChange, options, placeholder, ariaLabel, className, style, auto }: SelectProps) {
     const [open, setOpen] = useState(false);
     const [active, setActive] = useState(0);
+    const [panelShift, setPanelShift] = useState(0);
     const rootRef = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const listId = useId();
@@ -54,6 +55,23 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
         const el = listRef.current?.children[active] as HTMLElement | undefined;
         el?.scrollIntoView({ block: 'nearest' });
     }, [active, open]);
+
+    // Nudge the panel horizontally so it never spills off-screen (matters when the
+    // panel is wider than its trigger, e.g. the narrow photo "Move" dropdown).
+    useLayoutEffect(() => {
+        if (!open) {
+            setPanelShift(0);
+            return;
+        }
+        const panel = listRef.current;
+        if (!panel) return;
+        const rect = panel.getBoundingClientRect();
+        const margin = 8;
+        let shift = 0;
+        if (rect.right > window.innerWidth - margin) shift = window.innerWidth - margin - rect.right;
+        if (rect.left + shift < margin) shift = margin - rect.left;
+        setPanelShift(shift);
+    }, [open]);
 
     const step = (dir: 1 | -1) => {
         setActive((cur) => {
@@ -137,7 +155,14 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
                 <Icon name="chevron" size={16} className="select-chevron" />
             </button>
             {open && (
-                <div ref={listRef} className="select-panel" role="listbox" id={listId} tabIndex={-1}>
+                <div
+                    ref={listRef}
+                    className="select-panel"
+                    role="listbox"
+                    id={listId}
+                    tabIndex={-1}
+                    style={panelShift ? { transform: `translateX(${panelShift}px)` } : undefined}
+                >
                     {options.map((opt, i) => (
                         <button
                             type="button"

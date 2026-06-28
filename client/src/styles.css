@@ -1089,6 +1089,17 @@ a.card:active {
     margin-top: 6px;
     font-size: 0.8rem;
 }
+/* The thumbnail is narrow, so let this dropdown grow wider than its trigger and
+   wrap long container names instead of clipping them (notably on phones). */
+.thumb-move .select-panel {
+    right: auto;
+    min-width: 180px;
+    max-width: min(72vw, 280px);
+}
+.thumb-move .select-option-label {
+    white-space: normal;
+    overflow: visible;
+}
 .thumb-del {
     position: absolute;
     top: 6px;
