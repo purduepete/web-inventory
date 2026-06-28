@@ -8,6 +8,7 @@ import NewContainerPage from './pages/NewContainerPage';
 import ContainerPage from './pages/ContainerPage';
 import ScanPage from './pages/ScanPage';
 import ManagePage from './pages/ManagePage';
+import { DialogProvider } from './Dialog';
 import './styles.css';
 
 const router = createBrowserRouter([
@@ -28,6 +29,8 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-        <RouterProvider router={router} />
+        <DialogProvider>
+            <RouterProvider router={router} />
+        </DialogProvider>
     </React.StrictMode>,
 );

@@ -52,8 +52,7 @@ export default function HomePage() {
     }, [filters]);
 
     const hasFilter = !!(filters.locationId || filters.ownerId || filters.categoryId);
-    const activeFilterCount =
-        (filters.ownerId ? 1 : 0) + (filters.locationId ? 1 : 0) + (filters.categoryId ? 1 : 0);
+    const activeFilterCount = (filters.ownerId ? 1 : 0) + (filters.locationId ? 1 : 0) + (filters.categoryId ? 1 : 0);
 
     useEffect(() => {
         if (!q && !tag && !hasFilter) {

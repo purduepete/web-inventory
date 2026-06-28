@@ -7,6 +7,7 @@ import { makeQrDataUrl, printLabel } from '../qr';
 import { Icon } from '../Icon';
 import { Select } from '../Select';
 import { Spinner } from '../Spinner';
+import { useConfirm } from '../Dialog';
 import { getLookup, invalidateLookups } from '../lookups';
 import type { Container, ContainerWithContents, DetectedItem, Item, Lookup } from '../types';
 
@@ -26,6 +27,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     const [locations, setLocations] = useState<Lookup[]>([]);
     const [owners, setOwners] = useState<Lookup[]>([]);
     const [categories, setCategories] = useState<Lookup[]>([]);
+    const confirm = useConfirm();
 
     // `silent` refreshes (after add/edit/skip) keep the current view rendered
     // instead of swapping to the full-page spinner, which looked like a reload.
@@ -124,7 +126,13 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     }
 
     async function removePhoto(photoId: string) {
-        if (!window.confirm('Delete this photo?')) return;
+        const ok = await confirm({
+            title: 'Delete photo',
+            message: 'Delete this photo?',
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!ok) return;
         try {
             await api.deletePhoto(photoId);
             await load(true);
@@ -249,12 +257,13 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                     <img src={p.thumbUrl} alt="container contents" />
                                 </a>
                                 <button
-                                    className="danger small icon-btn thumb-del"
+                                    className="danger small thumb-del"
                                     onClick={() => removePhoto(p.id)}
                                     title="Delete photo"
                                     aria-label="Delete photo"
                                 >
                                     <Icon name="trash" size={15} />
+                                    <span className="thumb-del-label">Delete</span>
                                 </button>
                             </div>
                         ))}
@@ -267,7 +276,13 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 <button
                     className="danger small"
                     onClick={async () => {
-                        if (!confirm(`Delete container #${container.number} and all its items?`)) return;
+                        const ok = await confirm({
+                            title: 'Delete container',
+                            message: `Delete container #${container.number} and all its items?`,
+                            confirmLabel: 'Delete',
+                            danger: true,
+                        });
+                        if (!ok) return;
                         await api.deleteContainer(container.id);
                         nav('/containers');
                     }}

@@ -1081,13 +1081,35 @@ a.card:active {
     border: none;
     box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
 }
+.thumb-del-label {
+    display: none;
+}
 .thumb:hover .thumb-del,
 .thumb-del:focus-visible {
     opacity: 1;
 }
+/* On touch devices there's no hover, so a corner overlay invites accidental
+   taps (right next to the photo's own tap target). Move it to its own row
+   below the thumbnail instead, with a clear label. */
 @media (hover: none) {
+    .thumb {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
     .thumb-del {
+        position: static;
         opacity: 1;
+        width: 100%;
+        padding: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        box-shadow: none;
+    }
+    .thumb-del-label {
+        display: inline;
     }
 }
 
@@ -1156,6 +1178,80 @@ a.card:active {
     to {
         opacity: 1;
         transform: translateX(-50%) translateY(0);
+    }
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    animation: modal-fade 0.14s ease;
+}
+.modal {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    animation: modal-pop 0.16s ease;
+}
+.modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+}
+.modal-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+.modal-body {
+    padding: 16px;
+}
+.modal-message {
+    margin: 0;
+    line-height: 1.5;
+}
+.modal-label {
+    display: block;
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+}
+.modal-body input {
+    width: 100%;
+}
+.modal-message + .modal-label {
+    margin-top: 14px;
+}
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+}
+@keyframes modal-fade {
+    from {
+        opacity: 0;
+    }
+}
+@keyframes modal-pop {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
     }
 }
 

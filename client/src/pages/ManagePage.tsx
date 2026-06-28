@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Icon } from '../Icon';
 import { Spinner } from '../Spinner';
+import { useConfirm, usePrompt } from '../Dialog';
 import { invalidateLookups } from '../lookups';
 import type { Lookup, LookupKind } from '../types';
 
@@ -74,6 +75,8 @@ function LookupSection({
     const [draft, setDraft] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const confirm = useConfirm();
+    const prompt = usePrompt();
 
     async function load() {
         try {
@@ -101,7 +104,14 @@ function LookupSection({
     }
 
     async function rename(item: Lookup) {
-        const name = window.prompt(`Rename "${item.name}" to:`, item.name)?.trim();
+        const name = (
+            await prompt({
+                title: `Rename ${title.replace(/s$/, '').toLowerCase()}`,
+                label: `Rename “${item.name}” to:`,
+                defaultValue: item.name,
+                confirmLabel: 'Rename',
+            })
+        )?.trim();
         if (!name || name === item.name) return;
         try {
             await api.renameLookup(kind, item.id, name);
@@ -113,7 +123,13 @@ function LookupSection({
     }
 
     async function remove(item: Lookup) {
-        if (!window.confirm(`Delete "${item.name}"? It will be removed from anything using it.`)) return;
+        const ok = await confirm({
+            title: 'Delete',
+            message: `Delete “${item.name}”? It will be removed from anything using it.`,
+            confirmLabel: 'Delete',
+            danger: true,
+        });
+        if (!ok) return;
         try {
             await api.deleteLookup(kind, item.id);
             invalidateLookups(kind);
