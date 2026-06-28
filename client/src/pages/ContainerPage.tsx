@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { enqueue, enqueuePhoto, syncNow } from '../db';
+import { enqueue, enqueuePhoto, syncNow, getPendingSuggestions, removePendingSuggestion } from '../db';
 import { downscaleImage } from '../image';
 import { makeQrDataUrl, printLabel } from '../qr';
 import { Icon } from '../Icon';
@@ -91,6 +91,39 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         setTimeout(() => setToast(null), 2200);
     }
 
+    // Merge in any AI suggestions that were detected from photos uploaded during
+    // sync (i.e. attached while offline). They live in IndexedDB until the user
+    // confirms or skips each one, so they survive navigating away and back.
+    const loadPendingSuggestions = useCallback(async (containerId: string, announce = false) => {
+        const pending = await getPendingSuggestions(containerId);
+        if (!pending.length) return;
+        let added = 0;
+        setSuggestions((prev) => {
+            const existing = prev ?? [];
+            const keyOf = (s: DetectedItem) => `${s.name}|${s.description ?? ''}|${s.quantity}`;
+            const have = new Set(existing.map(keyOf));
+            const additions = pending.filter((s) => !have.has(keyOf(s)));
+            added = additions.length;
+            return additions.length ? [...existing, ...additions] : existing;
+        });
+        if (announce && added) flash('AI found items in a synced photo — review below.');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Pull stored suggestions once the container id is known, and react to fresh
+    // ones arriving from a sync while this page is open.
+    useEffect(() => {
+        const id = container?.id;
+        if (!id) return;
+        void loadPendingSuggestions(id);
+        const onReady = (e: Event) => {
+            const detail = (e as CustomEvent).detail as { containerId?: string } | undefined;
+            if (detail?.containerId === id) void loadPendingSuggestions(id, true);
+        };
+        window.addEventListener('suggestions-ready', onReady);
+        return () => window.removeEventListener('suggestions-ready', onReady);
+    }, [container?.id, loadPendingSuggestions]);
+
     // Create a category inline (from an item's category picker) and refresh the list.
     const addCategory = useCallback(async (name: string): Promise<Lookup | null> => {
         try {
@@ -151,6 +184,8 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             next.delete(s);
             return next;
         });
+        // Drop it from the durable offline store too (no-op for online suggestions).
+        void removePendingSuggestion(container.id, s);
         if (!accept) return;
         const input = {
             name: s.name,

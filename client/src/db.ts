@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { api } from './api';
-import type { Container, SaveItemInput } from './types';
+import type { Container, DetectedItem, SaveItemInput } from './types';
 
 export type QueuedMutation =
     | { kind: 'addItem'; containerId: string; input: SaveItemInput }
@@ -25,10 +25,22 @@ export interface CachedContainer extends Container {
     cachedAt: number;
 }
 
+/**
+ * AI suggestions detected from a photo that was uploaded during sync (i.e. the
+ * photo was attached while offline). The container page picks these up the next
+ * time it is open so the user can still confirm the detected items.
+ */
+export interface PendingSuggestionRow {
+    containerId: string;
+    items: DetectedItem[];
+    createdAt: number;
+}
+
 class InventoryDb extends Dexie {
     queue!: Table<QueueRow, number>;
     pendingPhotos!: Table<PendingPhoto, number>;
     containers!: Table<CachedContainer, string>;
+    pendingSuggestions!: Table<PendingSuggestionRow, string>;
 
     constructor() {
         super('webinventory');
@@ -43,6 +55,11 @@ class InventoryDb extends Dexie {
         this.version(2).stores({
             containers: 'id, number',
             items: null,
+        });
+        // v3: hold AI suggestions detected from photos that synced after being
+        // captured offline, keyed by container.
+        this.version(3).stores({
+            pendingSuggestions: 'containerId, createdAt',
         });
     }
 }
@@ -69,6 +86,42 @@ export async function cacheContainers(containers: Container[]): Promise<void> {
     await db.containers.bulkPut(containers.map((c) => ({ ...c, cachedAt: now })));
 }
 
+/** Tell an open container page that AI suggestions arrived for it after a sync. */
+function notifySuggestions(containerId: string): void {
+    if (typeof window !== 'undefined')
+        window.dispatchEvent(new CustomEvent('suggestions-ready', { detail: { containerId } }));
+}
+
+export async function addPendingSuggestions(containerId: string, items: DetectedItem[]): Promise<void> {
+    if (!items.length) return;
+    const existing = await db.pendingSuggestions.get(containerId);
+    const merged = existing ? [...existing.items, ...items] : items;
+    await db.pendingSuggestions.put({ containerId, items: merged, createdAt: Date.now() });
+    notifySuggestions(containerId);
+}
+
+export async function getPendingSuggestions(containerId: string): Promise<DetectedItem[]> {
+    const row = await db.pendingSuggestions.get(containerId);
+    return row?.items ?? [];
+}
+
+/** Drop a single suggestion once the user has confirmed or skipped it. */
+export async function removePendingSuggestion(containerId: string, item: DetectedItem): Promise<void> {
+    const row = await db.pendingSuggestions.get(containerId);
+    if (!row) return;
+    const idx = row.items.findIndex(
+        (x) =>
+            x.name === item.name &&
+            (x.description ?? '') === (item.description ?? '') &&
+            x.quantity === item.quantity,
+    );
+    if (idx < 0) return;
+    const items = row.items.slice();
+    items.splice(idx, 1);
+    if (items.length) await db.pendingSuggestions.put({ ...row, items });
+    else await db.pendingSuggestions.delete(containerId);
+}
+
 let syncing = false;
 
 /** Replay queued mutations + photo uploads when connectivity returns. */
@@ -93,8 +146,11 @@ export async function syncNow(): Promise<{ synced: number; failed: number }> {
         const photos = await db.pendingPhotos.orderBy('createdAt').toArray();
         for (const p of photos) {
             try {
-                await api.uploadPhoto(p.containerId, p.blob);
+                // Photos captured offline still get AI detection on upload; stash the
+                // suggestions so the container page can prompt the user to confirm them.
+                const { detected } = await api.uploadPhoto(p.containerId, p.blob);
                 if (p.id != null) await db.pendingPhotos.delete(p.id);
+                if (detected.length) await addPendingSuggestions(p.containerId, detected);
                 synced++;
             } catch {
                 failed++;
