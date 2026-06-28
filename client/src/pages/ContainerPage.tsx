@@ -7,7 +7,7 @@ import { makeQrDataUrl, printLabel } from '../qr';
 import { Icon } from '../Icon';
 import { Select } from '../Select';
 import { Spinner } from '../Spinner';
-import { getLookup } from '../lookups';
+import { getLookup, invalidateLookups } from '../lookups';
 import type { Container, ContainerWithContents, DetectedItem, Item, Lookup } from '../types';
 
 export default function ContainerPage({ byToken = false }: { byToken?: boolean }) {
@@ -27,18 +27,23 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     const [owners, setOwners] = useState<Lookup[]>([]);
     const [categories, setCategories] = useState<Lookup[]>([]);
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        try {
-            const c = byToken ? await api.getContainerByToken(key) : await api.getContainer(key);
-            setContainer(c);
-            setQr(await makeQrDataUrl(c.qrToken));
-        } catch {
-            setContainer(null);
-        } finally {
-            setLoading(false);
-        }
-    }, [byToken, key]);
+    // `silent` refreshes (after add/edit/skip) keep the current view rendered
+    // instead of swapping to the full-page spinner, which looked like a reload.
+    const load = useCallback(
+        async (silent = false) => {
+            if (!silent) setLoading(true);
+            try {
+                const c = byToken ? await api.getContainerByToken(key) : await api.getContainer(key);
+                setContainer(c);
+                setQr(await makeQrDataUrl(c.qrToken));
+            } catch {
+                if (!silent) setContainer(null);
+            } finally {
+                if (!silent) setLoading(false);
+            }
+        },
+        [byToken, key],
+    );
 
     useEffect(() => {
         void load();
@@ -61,6 +66,19 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         setTimeout(() => setToast(null), 2200);
     }
 
+    // Create a category inline (from an item's category picker) and refresh the list.
+    const addCategory = useCallback(async (name: string): Promise<Lookup | null> => {
+        try {
+            const created = await api.createLookup('categories', name);
+            invalidateLookups('categories');
+            const cats = await getLookup('categories').catch(() => null);
+            setCategories(cats ?? ((prev) => prev));
+            return created;
+        } catch {
+            return null;
+        }
+    }, []);
+
     async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         e.target.value = '';
@@ -76,7 +94,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             const { detected } = await api.uploadPhoto(container.id, small);
             setSuggestions(detected.length ? detected : []);
             if (!detected.length) flash('No items detected — add them manually.');
-            await load();
+            await load(true);
         } catch {
             // Network died mid-upload: queue it.
             const small = await downscaleImage(file);
@@ -98,7 +116,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             } else {
                 await api.addItem(container.id, input);
             }
-            await load();
+            await load(true);
         } catch {
             await enqueue({ kind: 'addItem', containerId: container.id, input });
             flash('Saved offline.');
@@ -109,7 +127,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         if (!window.confirm('Delete this photo?')) return;
         try {
             await api.deletePhoto(photoId);
-            await load();
+            await load(true);
         } catch {
             flash('Could not delete photo — try again when online.');
         }
@@ -129,7 +147,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                         flash={flash}
                         onDone={async (saved) => {
                             setEditing(false);
-                            if (saved) await load();
+                            if (saved) await load(true);
                         }}
                     />
                 ) : (
@@ -213,7 +231,13 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 />
             </div>
 
-            <ItemsEditor container={container} categories={categories} onChange={load} flash={flash} />
+            <ItemsEditor
+                container={container}
+                categories={categories}
+                onChange={() => load(true)}
+                onAddCategory={addCategory}
+                flash={flash}
+            />
 
             {container.photos.length > 0 && (
                 <>
@@ -264,11 +288,13 @@ function ItemsEditor({
     container,
     categories,
     onChange,
+    onAddCategory,
     flash,
 }: {
     container: ContainerWithContents;
     categories: Lookup[];
     onChange: () => Promise<void>;
+    onAddCategory: (name: string) => Promise<Lookup | null>;
     flash: (m: string) => void;
 }) {
     const [newName, setNewName] = useState('');
@@ -313,6 +339,7 @@ function ItemsEditor({
                         categories={categories}
                         onChange={onChange}
                         onEdit={ensureOthers}
+                        onAddCategory={onAddCategory}
                         flash={flash}
                     />
                 ))}
@@ -338,6 +365,7 @@ function ItemRow({
     categories,
     onChange,
     onEdit,
+    onAddCategory,
     flash,
 }: {
     item: Item;
@@ -345,12 +373,15 @@ function ItemRow({
     categories: Lookup[];
     onChange: () => Promise<void>;
     onEdit: () => void;
+    onAddCategory: (name: string) => Promise<Lookup | null>;
     flash: (m: string) => void;
 }) {
     const [qty, setQty] = useState(item.quantity);
     const [name, setName] = useState(item.name);
     const [description, setDescription] = useState(item.description ?? '');
     const [editing, setEditing] = useState(false);
+    const [addingCat, setAddingCat] = useState(false);
+    const [newCat, setNewCat] = useState('');
 
     async function save(
         next: Partial<{ quantity: number; name: string; description: string; categoryId: string | null }>,
@@ -395,8 +426,18 @@ function ItemRow({
         }
     }
 
+    async function confirmNewCategory() {
+        const n = newCat.trim();
+        setAddingCat(false);
+        setNewCat('');
+        if (!n) return;
+        const created = await onAddCategory(n);
+        if (created) await save({ categoryId: created.id });
+        else flash('Could not add category.');
+    }
+
     return (
-        <div className="item-row">
+        <div className={`item-row${editing ? ' editing' : ''}`}>
             {editing ? (
                 <input
                     className="qty"
@@ -436,16 +477,56 @@ function ItemRow({
             </div>
             {editing ? (
                 <>
-                    <Select
-                        value={item.categoryId ?? ''}
-                        onChange={(v) => save({ categoryId: v || null })}
-                        ariaLabel="Category"
-                        auto
-                        options={[
-                            { value: '', label: 'No category' },
-                            ...categories.map((c) => ({ value: c.id, label: c.name })),
-                        ]}
-                    />
+                    {addingCat ? (
+                        <span className="new-cat-row">
+                            <input
+                                className="new-cat-input"
+                                value={newCat}
+                                autoFocus
+                                placeholder="New category"
+                                onChange={(e) => setNewCat(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') void confirmNewCategory();
+                                    else if (e.key === 'Escape') {
+                                        setAddingCat(false);
+                                        setNewCat('');
+                                    }
+                                }}
+                            />
+                            <button
+                                className="small icon-btn"
+                                onClick={() => void confirmNewCategory()}
+                                title="Add category"
+                            >
+                                <Icon name="check" size={16} />
+                            </button>
+                            <button
+                                className="ghost small icon-btn"
+                                onClick={() => {
+                                    setAddingCat(false);
+                                    setNewCat('');
+                                }}
+                                title="Cancel"
+                            >
+                                <Icon name="close" size={16} />
+                            </button>
+                        </span>
+                    ) : (
+                        <Select
+                            value={item.categoryId ?? ''}
+                            onChange={(v) => {
+                                if (v === '__new__') setAddingCat(true);
+                                else save({ categoryId: v || null });
+                            }}
+                            ariaLabel="Category"
+                            auto
+                            options={[
+                                { value: '', label: 'No category' },
+                                ...categories.map((c) => ({ value: c.id, label: c.name })),
+                                { value: '__new__', label: '+ New category…' },
+                            ]}
+                        />
+                    )}
                     <Select
                         value=""
                         onChange={(v) => move(v)}
@@ -460,22 +541,24 @@ function ItemRow({
             ) : (
                 <span className="cat-col">{item.category && <span className="cat-pill">{item.category}</span>}</span>
             )}
-            {editing && (
-                <button className="danger small icon-btn" onClick={remove} title="Remove">
-                    <Icon name="close" size={16} />
+            <span className="item-actions">
+                {editing && (
+                    <button className="danger small icon-btn" onClick={remove} title="Remove">
+                        <Icon name="close" size={16} />
+                    </button>
+                )}
+                <button
+                    className="ghost small icon-btn"
+                    onClick={() => {
+                        const next = !editing;
+                        setEditing(next);
+                        if (next) onEdit();
+                    }}
+                    title={editing ? 'Done' : 'Edit'}
+                >
+                    <Icon name={editing ? 'check' : 'pencil'} size={16} />
                 </button>
-            )}
-            <button
-                className="ghost small icon-btn"
-                onClick={() => {
-                    const next = !editing;
-                    setEditing(next);
-                    if (next) onEdit();
-                }}
-                title={editing ? 'Done' : 'Edit'}
-            >
-                <Icon name={editing ? 'check' : 'pencil'} size={16} />
-            </button>
+            </span>
         </div>
     );
 }

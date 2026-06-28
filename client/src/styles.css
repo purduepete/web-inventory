@@ -782,6 +782,38 @@ a.card:active {
     flex: 1 1 160px;
     margin-top: 0;
 }
+
+/* Collapsible filter section (keeps the search page compact, esp. on phones). */
+.collapse-filter {
+    margin-top: 12px;
+}
+.collapse-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0;
+    width: auto;
+    padding: 7px 12px;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.collapse-toggle:hover {
+    border-color: var(--border-strong);
+}
+.collapse-chevron {
+    transition: transform 0.18s ease;
+    color: var(--muted);
+}
+.collapse-chevron.open {
+    transform: rotate(180deg);
+}
+.collapse-filter .filter-row {
+    margin-top: 10px;
+}
 .search-input {
     position: relative;
     margin-top: 12px;
@@ -880,6 +912,25 @@ a.card:active {
     padding: 6px;
     flex: 0 0 auto;
 }
+
+/* Inline "add new category" editor inside an item row. */
+.new-cat-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+.new-cat-input {
+    width: 130px;
+    margin-top: 0;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+/* Action buttons (edit/done/remove) sit inline on desktop. */
+.item-actions {
+    display: contents;
+}
 .item-row .item-name {
     margin-top: 0;
     padding: 6px 10px;
@@ -923,6 +974,43 @@ a.card:active {
     background: var(--surface-2);
     border: 1px solid var(--border);
     color: var(--muted);
+}
+
+/* On phones, stack an item's edit controls instead of cramming one row. */
+@media (max-width: 560px) {
+    .item-row.editing {
+        flex-wrap: wrap;
+        align-items: stretch;
+        column-gap: 8px;
+        row-gap: 8px;
+    }
+    /* qty + name/description share the first line */
+    .item-row.editing .grow {
+        flex: 1 1 0;
+    }
+    /* category + move pickers each get a full-width line */
+    .item-row.editing .select,
+    .item-row.editing .new-cat-row {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+    .item-row.editing .new-cat-row {
+        display: flex;
+    }
+    .item-row.editing .new-cat-input {
+        flex: 1;
+        width: auto;
+    }
+    .item-row.editing .select .select-trigger {
+        width: 100%;
+    }
+    /* action buttons drop to their own line, right-aligned */
+    .item-row.editing .item-actions {
+        display: flex;
+        flex: 1 1 100%;
+        justify-content: flex-end;
+        gap: 8px;
+    }
 }
 
 /* Header meta (location / owner) + inline edit. */

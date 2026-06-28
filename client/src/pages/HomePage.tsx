@@ -36,6 +36,7 @@ export default function HomePage() {
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
     const [ready, setReady] = useState(false);
+    const [filtersOpen, setFiltersOpen] = useState(false);
 
     useEffect(() => {
         Promise.allSettled([
@@ -51,6 +52,8 @@ export default function HomePage() {
     }, [filters]);
 
     const hasFilter = !!(filters.locationId || filters.ownerId || filters.categoryId);
+    const activeFilterCount =
+        (filters.ownerId ? 1 : 0) + (filters.locationId ? 1 : 0) + (filters.categoryId ? 1 : 0);
 
     useEffect(() => {
         if (!q && !tag && !hasFilter) {
@@ -81,34 +84,48 @@ export default function HomePage() {
     return (
         <div>
             <h1>Find an item</h1>
-            <div className="filter-row">
-                <Select
-                    value={filters.ownerId}
-                    onChange={(v) => setFilters((f) => ({ ...f, ownerId: v }))}
-                    ariaLabel="Filter by owner"
-                    options={[
-                        { value: '', label: 'All owners' },
-                        ...owners.map((o) => ({ value: o.id, label: o.name })),
-                    ]}
-                />
-                <Select
-                    value={filters.locationId}
-                    onChange={(v) => setFilters((f) => ({ ...f, locationId: v }))}
-                    ariaLabel="Filter by location"
-                    options={[
-                        { value: '', label: 'All locations' },
-                        ...locations.map((l) => ({ value: l.id, label: l.name })),
-                    ]}
-                />
-                <Select
-                    value={filters.categoryId}
-                    onChange={(v) => setFilters((f) => ({ ...f, categoryId: v }))}
-                    ariaLabel="Filter by category"
-                    options={[
-                        { value: '', label: 'All categories' },
-                        ...categories.map((c) => ({ value: c.id, label: c.name })),
-                    ]}
-                />
+            <div className="collapse-filter">
+                <button
+                    type="button"
+                    className="collapse-toggle"
+                    aria-expanded={filtersOpen}
+                    onClick={() => setFiltersOpen((o) => !o)}
+                >
+                    <Icon name="sliders" size={15} />
+                    <span>Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</span>
+                    <Icon name="chevron" size={15} className={`collapse-chevron${filtersOpen ? ' open' : ''}`} />
+                </button>
+                {filtersOpen && (
+                    <div className="filter-row">
+                        <Select
+                            value={filters.ownerId}
+                            onChange={(v) => setFilters((f) => ({ ...f, ownerId: v }))}
+                            ariaLabel="Filter by owner"
+                            options={[
+                                { value: '', label: 'All owners' },
+                                ...owners.map((o) => ({ value: o.id, label: o.name })),
+                            ]}
+                        />
+                        <Select
+                            value={filters.locationId}
+                            onChange={(v) => setFilters((f) => ({ ...f, locationId: v }))}
+                            ariaLabel="Filter by location"
+                            options={[
+                                { value: '', label: 'All locations' },
+                                ...locations.map((l) => ({ value: l.id, label: l.name })),
+                            ]}
+                        />
+                        <Select
+                            value={filters.categoryId}
+                            onChange={(v) => setFilters((f) => ({ ...f, categoryId: v }))}
+                            ariaLabel="Filter by category"
+                            options={[
+                                { value: '', label: 'All categories' },
+                                ...categories.map((c) => ({ value: c.id, label: c.name })),
+                            ]}
+                        />
+                    </div>
+                )}
             </div>
             <div className="search-input">
                 <input
