@@ -274,3 +274,20 @@ async function applyMutation(m: QueuedMutation): Promise<void> {
 export async function pendingCount(): Promise<number> {
     return (await db.queue.count()) + (await db.pendingPhotos.count());
 }
+
+/** Count of queued work (items + photos) tied to a specific container. */
+export async function pendingForContainer(containerId: string): Promise<number> {
+    const photos = await db.pendingPhotos.where('containerId').equals(containerId).count();
+    const items = (await db.queue.toArray()).filter(
+        (r) => r.mutation.kind === 'addItem' && r.mutation.containerId === containerId,
+    ).length;
+    return photos + items;
+}
+
+/** Set of container ids that have queued offline work (for list badges). */
+export async function pendingContainerIds(): Promise<Set<string>> {
+    const ids = new Set<string>();
+    for (const p of await db.pendingPhotos.toArray()) ids.add(p.containerId);
+    for (const r of await db.queue.toArray()) if (r.mutation.kind === 'addItem') ids.add(r.mutation.containerId);
+    return ids;
+}

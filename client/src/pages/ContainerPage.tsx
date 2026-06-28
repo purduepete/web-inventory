@@ -8,6 +8,7 @@ import {
     getPendingSuggestions,
     removePendingSuggestion,
     getCachedContainer,
+    pendingForContainer,
 } from '../db';
 import { downscaleImage } from '../image';
 import { makeQrDataUrl, printLabel } from '../qr';
@@ -44,6 +45,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         new Map(),
     );
     const [busy, setBusy] = useState(false);
+    const [pendingWork, setPendingWork] = useState(0);
     const fileRef = useRef<HTMLInputElement>(null);
     // Remembers whether the next picked photo should be AI-analyzed; set by the
     // button that opens the file picker.
@@ -149,6 +151,17 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         window.addEventListener('suggestions-ready', onReady);
         return () => window.removeEventListener('suggestions-ready', onReady);
     }, [container?.id, loadPendingSuggestions]);
+
+    // Track queued offline work for this container (e.g. a photo awaiting upload/
+    // detection) so we can show a clear "pending" badge until it syncs.
+    useEffect(() => {
+        const id = container?.id;
+        if (!id) return;
+        const refresh = () => void pendingForContainer(id).then(setPendingWork);
+        refresh();
+        window.addEventListener('pending-changed', refresh);
+        return () => window.removeEventListener('pending-changed', refresh);
+    }, [container?.id]);
 
     // Create a category inline (from an item's category picker) and refresh the list.
     const addCategory = useCallback(async (name: string): Promise<Lookup | null> => {
@@ -296,6 +309,11 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
 
     return (
         <div>
+            {pendingWork > 0 && (
+                <div className="badge pending" style={{ marginBottom: 10 }}>
+                    {pendingWork} change{pendingWork === 1 ? '' : 's'} pending sync
+                </div>
+            )}
             <div className="spread container-head">
                 {editing ? (
                     <HeaderEditor

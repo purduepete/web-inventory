@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
-import { replaceCachedContainers, db } from '../db';
+import { replaceCachedContainers, db, pendingContainerIds } from '../db';
 import { Icon } from '../Icon';
 import { Spinner } from '../Spinner';
 import type { Container } from '../types';
@@ -13,6 +13,7 @@ const GROUPS_KEY = 'containerGroupsOpen';
 export default function ContainersPage() {
     const [containers, setContainers] = useState<Container[]>([]);
     const [loading, setLoading] = useState(true);
+    const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
         try {
             return JSON.parse(localStorage.getItem(GROUPS_KEY) || '{}');
@@ -38,6 +39,13 @@ export default function ContainersPage() {
         return () => {
             active = false;
         };
+    }, []);
+
+    useEffect(() => {
+        const refresh = () => void pendingContainerIds().then(setPendingIds);
+        refresh();
+        window.addEventListener('pending-changed', refresh);
+        return () => window.removeEventListener('pending-changed', refresh);
     }, []);
 
     // Group containers by owner; named owners first (alphabetical), Unassigned last.
@@ -106,6 +114,9 @@ export default function ContainersPage() {
                                                     <span className="muted">{c.itemCount ?? 0} items</span>
                                                 </div>
                                                 {c.location && <div className="muted">{c.location}</div>}
+                                                {pendingIds.has(c.id) && (
+                                                    <div className="badge pending">Pending sync</div>
+                                                )}
                                             </div>
                                         </Link>
                                     ))}
