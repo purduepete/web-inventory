@@ -802,11 +802,10 @@ a.card:active {
 .group-chevron {
     flex: 0 0 auto;
     color: var(--muted);
-    transform: rotate(-90deg);
     transition: transform 0.18s ease;
 }
 .group-chevron.open {
-    transform: rotate(0deg);
+    transform: rotate(180deg);
 }
 .group-name {
     flex: 1;
@@ -1019,6 +1018,10 @@ a.card:active {
     height: 30px;
     padding: 6px;
     flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: var(--muted);
 }
 
 /* Inline "add new category" editor inside an item row. */
@@ -1205,9 +1208,28 @@ a.card:active {
 }
 
 /* ---------- Thumbnails ---------- */
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    margin: 24px 0 10px;
+}
+.section-head h2 {
+    margin: 0;
+}
+.section-head .icon-btn {
+    width: 26px;
+    height: 26px;
+    padding: 4px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: var(--muted);
+}
 .thumbs {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(96px, 120px));
     gap: 10px;
 }
 .thumbs img {
@@ -1229,6 +1251,10 @@ a.card:active {
 .thumb-move {
     margin-top: 6px;
     font-size: 0.8rem;
+}
+.thumb-move .select-trigger {
+    padding: 5px 8px;
+    font-size: 0.75rem;
 }
 /* The thumbnail is narrow, so let this dropdown grow wider than its trigger and
    wrap long container names instead of clipping them (notably on phones). */

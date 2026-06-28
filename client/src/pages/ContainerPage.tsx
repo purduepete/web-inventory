@@ -42,6 +42,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     // button that opens the file picker.
     const analyzeOnUpload = useRef(true);
     const [editing, setEditing] = useState(false);
+    const [photosEditing, setPhotosEditing] = useState(false);
     const [locations, setLocations] = useState<Lookup[]>([]);
     const [owners, setOwners] = useState<Lookup[]>([]);
     const [categories, setCategories] = useState<Lookup[]>([]);
@@ -410,7 +411,16 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
 
             {container.photos.length > 0 && (
                 <>
-                    <h2>Photos</h2>
+                    <div className="section-head">
+                        <h2>Photos</h2>
+                        <button
+                            className="ghost small icon-btn"
+                            onClick={() => setPhotosEditing((v) => !v)}
+                            title={photosEditing ? 'Done' : 'Edit photos'}
+                        >
+                            <Icon name={photosEditing ? 'check' : 'pencil'} size={14} />
+                        </button>
+                    </div>
                     <div className="thumbs">
                         {container.photos.map((p) => (
                             <div key={p.id} className="thumb">
@@ -425,28 +435,32 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                         onLoad={(e) => e.currentTarget.classList.add('loaded')}
                                     />
                                 </a>
-                                <button
-                                    className="danger small thumb-del"
-                                    onClick={() => removePhoto(p.id)}
-                                    title="Delete photo"
-                                    aria-label="Delete photo"
-                                >
-                                    <Icon name="trash" size={15} />
-                                    <span className="thumb-del-label">Delete</span>
-                                </button>
-                                <Select
-                                    className="thumb-move"
-                                    value=""
-                                    onChange={(v) => void movePhoto(p.id, v)}
-                                    ariaLabel="Move photo to…"
-                                    options={[
-                                        { value: '', label: 'Move…', disabled: true },
-                                        ...otherContainers.map((c) => ({
-                                            value: c.id,
-                                            label: `#${c.number} ${c.name}`,
-                                        })),
-                                    ]}
-                                />
+                                {photosEditing && (
+                                    <>
+                                        <button
+                                            className="danger small thumb-del"
+                                            onClick={() => removePhoto(p.id)}
+                                            title="Delete photo"
+                                            aria-label="Delete photo"
+                                        >
+                                            <Icon name="trash" size={15} />
+                                            <span className="thumb-del-label">Delete</span>
+                                        </button>
+                                        <Select
+                                            className="thumb-move"
+                                            value=""
+                                            onChange={(v) => void movePhoto(p.id, v)}
+                                            ariaLabel="Move photo to…"
+                                            options={[
+                                                { value: '', label: 'Move…', disabled: true },
+                                                ...otherContainers.map((c) => ({
+                                                    value: c.id,
+                                                    label: `#${c.number} ${c.name}`,
+                                                })),
+                                            ]}
+                                        />
+                                    </>
+                                )}
                             </div>
                         ))}
                     </div>
