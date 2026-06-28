@@ -18,7 +18,7 @@ interface SelectProps {
 export function Select({ value, onChange, options, placeholder, ariaLabel, className, style, auto }: SelectProps) {
     const [open, setOpen] = useState(false);
     const [active, setActive] = useState(0);
-    const [panelShift, setPanelShift] = useState(0);
+    const [panelLeft, setPanelLeft] = useState<number | null>(null);
     const rootRef = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const listId = useId();
@@ -57,10 +57,12 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
     }, [active, open]);
 
     // Nudge the panel horizontally so it never spills off-screen (matters when the
-    // panel is wider than its trigger, e.g. the narrow photo "Move" dropdown).
+    // panel is wider than its trigger, e.g. the narrow photo "Move" dropdown). We move
+    // it with `left` rather than a transform so the box itself shrinks back inside the
+    // viewport and the document never gains a horizontal scroll / page shift.
     useLayoutEffect(() => {
         if (!open) {
-            setPanelShift(0);
+            setPanelLeft(null);
             return;
         }
         const panel = listRef.current;
@@ -70,7 +72,7 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
         let shift = 0;
         if (rect.right > window.innerWidth - margin) shift = window.innerWidth - margin - rect.right;
         if (rect.left + shift < margin) shift = margin - rect.left;
-        setPanelShift(shift);
+        setPanelLeft(shift ? shift : null);
     }, [open]);
 
     const step = (dir: 1 | -1) => {
@@ -161,7 +163,7 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
                     role="listbox"
                     id={listId}
                     tabIndex={-1}
-                    style={panelShift ? { transform: `translateX(${panelShift}px)` } : undefined}
+                    style={panelLeft != null ? { left: `${panelLeft}px` } : undefined}
                 >
                     {options.map((opt, i) => (
                         <button
