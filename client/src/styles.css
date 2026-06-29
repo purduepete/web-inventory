@@ -936,6 +936,7 @@ a.card:active {
 .input-clear {
     position: relative;
     display: flex;
+    flex: 1;
     min-width: 0;
 }
 .input-clear input {
