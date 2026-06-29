@@ -13,6 +13,7 @@ import {
 import { downscaleImage } from '../image';
 import { makeQrDataUrl, printLabel } from '../qr';
 import { Icon } from '../Icon';
+import { ClearableInput } from '../ClearableInput';
 import { Select } from '../Select';
 import { Spinner } from '../Spinner';
 import { useConfirm, usePrompt } from '../Dialog';
@@ -811,11 +812,12 @@ function AddItemModal({
                             <label className="modal-label" htmlFor="add-item-name">
                                 Name
                             </label>
-                            <input
+                            <ClearableInput
                                 id="add-item-name"
                                 ref={nameRef}
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
+                                onClear={() => setName('')}
                                 placeholder="Item name"
                             />
                         </div>
@@ -1056,10 +1058,11 @@ function ItemRow({
             <div className="grow">
                 {editing ? (
                     <>
-                        <input
+                        <ClearableInput
                             className="item-name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            onClear={() => setName('')}
                             onBlur={() => name.trim() && name.trim() !== item.name && save({ name: name.trim() })}
                             placeholder="Item name"
                         />
@@ -1205,7 +1208,7 @@ function HeaderEditor({
         <div className="grow stack header-editor">
             <label>
                 Name
-                <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+                <ClearableInput value={name} onChange={(e) => setName(e.target.value)} onClear={() => setName('')} autoFocus />
             </label>
             <label>
                 Owner

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { createContainerOffline } from '../db';
 import { Select } from '../Select';
+import { ClearableInput } from '../ClearableInput';
 import { usePrompt } from '../Dialog';
 import { getLookup, invalidateLookups } from '../lookups';
 import type { Lookup } from '../types';
@@ -81,10 +82,11 @@ export default function NewContainerPage() {
             <h1>New container</h1>
             <label>
                 Name
-                <input
+                <ClearableInput
                     className="glow-input"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    onClear={() => setName('')}
                     placeholder="e.g. Garage shelf bin"
                     autoFocus={autoFocusName}
                 />
