@@ -1504,6 +1504,13 @@ button.icon-btn.ok:focus,
 .title-row h1 {
     margin: 0;
 }
+/* Nav arrows + edit pencil are grouped together at the far right. */
+.title-nav {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 /* The inline name-edit pencil sits bare next to the title (no border/fill). */
 .title-row button.icon-btn {
     background: transparent;
@@ -1514,7 +1521,7 @@ button.icon-btn.ok:focus,
     border-color: transparent;
 }
 .title-row button.icon-btn.nav-arrow:disabled {
-    opacity: 0.3;
+    opacity: 0.55;
     cursor: default;
     background: transparent;
 }

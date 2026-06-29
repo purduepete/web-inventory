@@ -466,38 +466,44 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 ) : (
                     <div className="head-grid">
                         <div className="title-row">
-                            <button
-                                className="ghost small icon-btn nav-arrow"
-                                onClick={() => siblings.prev && nav(`/containers/${siblings.prev.id}`)}
-                                disabled={!siblings.prev}
-                                title={
-                                    siblings.prev
-                                        ? `#${siblings.prev.number} ${siblings.prev.name}`
-                                        : 'No earlier container'
-                                }
-                                aria-label="Previous container"
-                            >
-                                <Icon name="arrow-left" size={16} />
-                            </button>
                             <h1>
                                 #{container.number} · {container.name}
                             </h1>
-                            <button
-                                className="ghost small icon-btn nav-arrow"
-                                onClick={() => siblings.next && nav(`/containers/${siblings.next.id}`)}
-                                disabled={!siblings.next}
-                                title={
-                                    siblings.next
-                                        ? `#${siblings.next.number} ${siblings.next.name}`
-                                        : 'No later container'
-                                }
-                                aria-label="Next container"
-                            >
-                                <Icon name="arrow-right" size={16} />
-                            </button>
-                            <button className="ghost small icon-btn" onClick={() => setEditing(true)} title="Edit">
-                                <Icon name="pencil" size={16} />
-                            </button>
+                            <div className="title-nav">
+                                <button
+                                    className="ghost small icon-btn nav-arrow"
+                                    onClick={() => siblings.prev && nav(`/containers/${siblings.prev.id}`)}
+                                    disabled={!siblings.prev}
+                                    title={
+                                        siblings.prev
+                                            ? `#${siblings.prev.number} ${siblings.prev.name}`
+                                            : 'No earlier container'
+                                    }
+                                    aria-label="Previous container"
+                                >
+                                    <Icon name="arrow-left" size={16} />
+                                </button>
+                                <button
+                                    className="ghost small icon-btn"
+                                    onClick={() => setEditing(true)}
+                                    title="Edit"
+                                >
+                                    <Icon name="pencil" size={16} />
+                                </button>
+                                <button
+                                    className="ghost small icon-btn nav-arrow"
+                                    onClick={() => siblings.next && nav(`/containers/${siblings.next.id}`)}
+                                    disabled={!siblings.next}
+                                    title={
+                                        siblings.next
+                                            ? `#${siblings.next.number} ${siblings.next.name}`
+                                            : 'No later container'
+                                    }
+                                    aria-label="Next container"
+                                >
+                                    <Icon name="arrow-right" size={16} />
+                                </button>
+                            </div>
                         </div>
                         {(container.location || container.owner) && (
                             <div className="muted meta-line">
