@@ -1097,6 +1097,10 @@ a.card:active {
 .tag-list .item-row + .item-row {
     margin-top: -1px;
 }
+.tag-list .item-row,
+.tag-list .item-row input {
+    font-size: 13px;
+}
 .tag-list .item-row:nth-child(odd) {
     background: var(--surface-2);
 }
