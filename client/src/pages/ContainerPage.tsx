@@ -1208,7 +1208,12 @@ function HeaderEditor({
         <div className="grow stack header-editor">
             <label>
                 Name
-                <ClearableInput value={name} onChange={(e) => setName(e.target.value)} onClear={() => setName('')} autoFocus />
+                <ClearableInput
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onClear={() => setName('')}
+                    autoFocus
+                />
             </label>
             <label>
                 Owner

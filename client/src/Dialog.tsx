@@ -135,7 +135,7 @@ function DialogHost({ state, onClose }: { state: DialogState; onClose: (result: 
                                     {state.label}
                                 </label>
                             )}
-                            <div className="tag-add">
+                            <div className="input-clear">
                                 <input
                                     id="modal-input"
                                     ref={inputRef}
@@ -146,7 +146,7 @@ function DialogHost({ state, onClose }: { state: DialogState; onClose: (result: 
                                 {value && (
                                     <button
                                         type="button"
-                                        className="small ghost icon-btn"
+                                        className="input-clear-btn"
                                         onClick={() => {
                                             setValue('');
                                             inputRef.current?.focus();

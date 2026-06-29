@@ -154,22 +154,25 @@ function LookupSection({
             {open && (
                 <>
                     <div className="tag-add">
-                        <input
-                            value={draft}
-                            onChange={(e) => setDraft(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && add()}
-                            placeholder={placeholder}
-                        />
-                        {draft && (
-                            <button
-                                className="small ghost icon-btn"
-                                onClick={() => setDraft('')}
-                                title="Clear"
-                                aria-label="Clear"
-                            >
-                                <Icon name="close" size={16} />
-                            </button>
-                        )}
+                        <div className="input-clear grow">
+                            <input
+                                value={draft}
+                                onChange={(e) => setDraft(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && add()}
+                                placeholder={placeholder}
+                            />
+                            {draft && (
+                                <button
+                                    type="button"
+                                    className="input-clear-btn"
+                                    onClick={() => setDraft('')}
+                                    title="Clear"
+                                    aria-label="Clear"
+                                >
+                                    <Icon name="close" size={16} />
+                                </button>
+                            )}
+                        </div>
                         <button
                             className="small icon-btn"
                             onClick={add}
