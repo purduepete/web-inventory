@@ -194,20 +194,20 @@ function LookupSection({
                                         <strong>{item.name}</strong>
                                     </div>
                                     <button
-                                        className="small ghost icon-btn"
-                                        onClick={() => rename(item)}
-                                        title="Rename"
-                                        aria-label="Rename"
-                                    >
-                                        <Icon name="pencil" size={15} />
-                                    </button>
-                                    <button
                                         className="danger small icon-btn"
                                         onClick={() => remove(item)}
                                         title="Delete"
                                         aria-label="Delete"
                                     >
                                         <Icon name="trash" size={15} />
+                                    </button>
+                                    <button
+                                        className="small ghost icon-btn"
+                                        onClick={() => rename(item)}
+                                        title="Rename"
+                                        aria-label="Rename"
+                                    >
+                                        <Icon name="pencil" size={15} />
                                     </button>
                                 </div>
                             ))}
