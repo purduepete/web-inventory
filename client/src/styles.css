@@ -917,6 +917,18 @@ a.card:active {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
 }
+/* Highlight the primary field on a form (e.g. New container name) so the eye
+   lands on it without auto-focusing the iPad keyboard. */
+.glow-input {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.glow-input:focus,
+.glow-input:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
 .tag-add button {
     flex: 0 0 auto;
 }
