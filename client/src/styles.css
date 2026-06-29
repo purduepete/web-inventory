@@ -1174,7 +1174,10 @@ a.card:active {
 :root:not([data-theme='dark']) .tag-list .item-row button.icon-btn,
 .item-actions button.icon-btn,
 :root[data-theme='light'] .item-actions button.icon-btn,
-:root:not([data-theme='dark']) .item-actions button.icon-btn {
+:root:not([data-theme='dark']) .item-actions button.icon-btn,
+.header-editor button.icon-btn,
+:root[data-theme='light'] .header-editor button.icon-btn,
+:root:not([data-theme='dark']) .header-editor button.icon-btn {
     border: none;
     background: transparent;
     box-shadow: none;

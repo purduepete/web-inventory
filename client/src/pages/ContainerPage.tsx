@@ -530,7 +530,9 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             )}
 
             <hr className="qr-divider" />
-            <h2>Manage</h2>
+            <div className="section-head">
+                <h2>Manage</h2>
+            </div>
             <div className="row">
                 <button
                     className="danger small"
@@ -565,7 +567,9 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             {qr && (
                 <>
                     <hr className="qr-divider" />
-                    <h2>QR Code</h2>
+                    <div className="section-head">
+                        <h2>QR Code</h2>
+                    </div>
                     <div className="stack qr-foot-block">
                         <img className="qr-img qr-foot" src={qr} alt="container QR" />
                         <button
