@@ -1087,6 +1087,30 @@ a.card:active {
 .item-row:last-child {
     border-bottom: none;
 }
+/* Tags page: zebra-stripe each lookup list for readability. */
+.tag-list .item-row {
+    padding: 8px 10px;
+    border-bottom: none;
+    border-radius: var(--radius);
+}
+.tag-list .item-row:nth-child(odd) {
+    background: var(--surface-2);
+}
+/* Tags page: keep rename/delete icon buttons borderless & transparent in every
+   theme (light mode otherwise gives the danger button a solid filled box). */
+.tag-list .item-row button.icon-btn,
+:root[data-theme='light'] .tag-list .item-row button.icon-btn,
+:root:not([data-theme='dark']) .tag-list .item-row button.icon-btn {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: var(--muted);
+}
+.tag-list .item-row button.icon-btn.danger,
+:root[data-theme='light'] .tag-list .item-row button.icon-btn.danger,
+:root:not([data-theme='dark']) .tag-list .item-row button.icon-btn.danger {
+    color: var(--red);
+}
 .item-row .grow {
     flex: 1;
     min-width: 0;

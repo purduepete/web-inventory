@@ -160,15 +160,21 @@ function LookupSection({
                             onKeyDown={(e) => e.key === 'Enter' && add()}
                             placeholder={placeholder}
                         />
-                        <button className="small" onClick={add} disabled={busy || !draft.trim()}>
-                            <Icon name="plus" size={16} /> Add
+                        <button
+                            className="small icon-btn"
+                            onClick={add}
+                            disabled={busy || !draft.trim()}
+                            title="Add"
+                            aria-label="Add"
+                        >
+                            <Icon name="plus" size={16} />
                         </button>
                     </div>
                     {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
                     {items.length === 0 ? (
                         <div className="muted">Nothing yet.</div>
                     ) : (
-                        <div className="stack" style={{ gap: 6 }}>
+                        <div className="stack tag-list" style={{ gap: 0 }}>
                             {items.map((item) => (
                                 <div key={item.id} className="item-row">
                                     <div className="grow">
