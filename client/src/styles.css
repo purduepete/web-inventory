@@ -1111,7 +1111,7 @@ a.card:active {
     background: transparent;
 }
 :root[data-theme='dark'] .tag-list .item-row:nth-child(even) {
-    background: var(--surface-2);
+    background: color-mix(in srgb, var(--text) 4%, transparent);
 }
 /* Tags page: keep rename/delete icon buttons borderless & transparent in every
    theme (light mode otherwise gives the danger button a solid filled box). */
