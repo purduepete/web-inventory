@@ -110,7 +110,7 @@ function LookupSection({
     async function rename(item: Lookup) {
         const name = (
             await prompt({
-                title: `Rename ${title.replace(/s$/, '').toLowerCase()}`,
+                title: `Rename ${title.replace(/ies$/, 'y').replace(/s$/, '').toLowerCase()}`,
                 label: `Rename “${item.name}” to:`,
                 defaultValue: item.name,
                 confirmLabel: 'Rename',
