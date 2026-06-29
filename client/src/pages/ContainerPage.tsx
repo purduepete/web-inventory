@@ -157,11 +157,21 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     useEffect(() => {
         const id = container?.id;
         if (!id) return;
-        const refresh = () => void pendingForContainer(id).then(setPendingWork);
-        refresh();
-        window.addEventListener('pending-changed', refresh);
-        return () => window.removeEventListener('pending-changed', refresh);
-    }, [container?.id]);
+        const isTemp = key.startsWith('temp-');
+        const onChange = () => {
+            void pendingForContainer(id).then(setPendingWork);
+            // A container created offline lives under a temp id; once it syncs the
+            // temp record is replaced by the real one, so this page can no longer
+            // resolve. Bounce back to the list rather than stranding a 404.
+            if (isTemp)
+                void getCachedContainer(key).then((c) => {
+                    if (!c) nav('/containers', { replace: true });
+                });
+        };
+        onChange();
+        window.addEventListener('pending-changed', onChange);
+        return () => window.removeEventListener('pending-changed', onChange);
+    }, [container?.id, key, nav]);
 
     // Create a category inline (from an item's category picker) and refresh the list.
     const addCategory = useCallback(async (name: string): Promise<Lookup | null> => {
@@ -289,7 +299,8 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             await api.deletePhoto(photoId);
             await load(true);
         } catch {
-            flash('Could not delete photo — try again when online.');
+            await enqueue({ kind: 'deletePhoto', photoId });
+            flash('Delete queued — will apply when online.');
         }
     }
 
@@ -300,7 +311,17 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             await load(true);
             flash('Photo moved.');
         } catch {
-            flash('Could not move photo — try again when online.');
+            await enqueue({ kind: 'movePhoto', photoId, targetContainerId });
+            flash('Move queued — will apply when online.');
+        }
+    }
+
+    async function rotatePhoto(photoId: string) {
+        try {
+            await api.rotatePhoto(photoId, 90);
+            await load(true);
+        } catch {
+            flash('Could not rotate — try again when online.');
         }
     }
 
@@ -310,9 +331,9 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     return (
         <div>
             {pendingWork > 0 && (
-                <div className="badge pending" style={{ marginBottom: 10 }}>
-                    {pendingWork} change{pendingWork === 1 ? '' : 's'} pending sync
-                </div>
+                <span className="card-pill sync" style={{ marginBottom: 10 }}>
+                    <Icon name="cloud" size={13} /> {pendingWork} change{pendingWork === 1 ? '' : 's'} pending sync
+                </span>
             )}
             <div className="spread container-head">
                 {editing ? (
@@ -477,6 +498,14 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                             <Icon name="trash" size={15} />
                                             <span className="thumb-del-label">Delete</span>
                                         </button>
+                                        <button
+                                            className="ghost small thumb-rotate"
+                                            onClick={() => void rotatePhoto(p.id)}
+                                            title="Rotate 90°"
+                                            aria-label="Rotate photo 90 degrees"
+                                        >
+                                            <Icon name="rotate-cw" size={15} />
+                                        </button>
                                         <Select
                                             className="thumb-move"
                                             value=""
@@ -516,7 +545,12 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 >
                     <Icon name="trash" size={16} /> Delete container
                 </button>
-                <button className="ghost small" onClick={() => void syncNow().then(() => flash('Synced.'))}>
+                <button
+                    className="ghost small"
+                    onClick={() =>
+                        void syncNow().then((r) => flash(r.failed > 0 ? 'Sync incomplete — will retry.' : 'Synced.'))
+                    }
+                >
                     <Icon name="sync" size={16} /> Sync now
                 </button>
             </div>

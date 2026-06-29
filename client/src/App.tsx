@@ -10,6 +10,7 @@ export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
     const [pending, setPending] = useState(0);
     const [syncing, setSyncing] = useState(false);
+    const [syncMsg, setSyncMsg] = useState<string | null>(null);
     // 'checking' until we know whether there's a signed-in session; 'redirecting'
     // while we bounce to the AAD login; 'ok' once authenticated (or offline, where
     // we can't tell and let the cached/offline app run).
@@ -83,7 +84,10 @@ export default function App() {
             if (!navigator.onLine) return;
             setSyncing(true);
             void syncNow()
-                .then(refresh)
+                .then((r) => {
+                    refresh();
+                    if (r.failed > 0) setSyncMsg('Some changes failed to sync — will retry.');
+                })
                 .finally(() => setSyncing(false));
         };
         // Attempt a sync on startup if we're already online with a queue —
@@ -110,14 +114,22 @@ export default function App() {
         if (syncing || !navigator.onLine) return;
         setSyncing(true);
         try {
-            await syncNow();
+            const r = await syncNow();
             setPending(await pendingCount());
+            if (r.failed > 0) setSyncMsg('Some changes failed to sync — will retry.');
         } catch {
             // queue stays; will retry on next sync
         } finally {
             setSyncing(false);
         }
     }
+
+    // Briefly show, then auto-dismiss, a sync failure message.
+    useEffect(() => {
+        if (!syncMsg) return;
+        const t = setTimeout(() => setSyncMsg(null), 4000);
+        return () => clearTimeout(t);
+    }, [syncMsg]);
 
     // Block the app shell until we know the auth state, and show a clear message
     // while bouncing to sign in — the user never lands on a broken/empty app.
@@ -146,13 +158,7 @@ export default function App() {
                             type="button"
                             className={`sync-pill ${syncing ? 'syncing' : !online ? 'offline' : 'idle'}`}
                             onClick={manualSync}
-                            title={
-                                syncing
-                                    ? 'Syncing…'
-                                    : !online
-                                      ? 'Offline — tap to retry'
-                                      : 'Tap to sync now'
-                            }
+                            title={syncing ? 'Syncing…' : !online ? 'Offline — tap to retry' : 'Tap to sync now'}
                             aria-label={
                                 syncing
                                     ? `Syncing, ${pending} remaining`
@@ -201,7 +207,11 @@ export default function App() {
                     <Outlet />
                 </div>
             </main>
-
+            {syncMsg && (
+                <div className="toast" role="status" onClick={() => setSyncMsg(null)}>
+                    {syncMsg}
+                </div>
+            )}
             <nav className="tabbar">
                 <NavLink to="/" end className="tab">
                     <Icon name="search" />

@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import { api } from './api';
+import { ApiError, api } from './api';
 import type { Container, CreateContainerInput, DetectedItem, Lookup, LookupKind, SaveItemInput } from './types';
 
 export type QueuedMutation =
@@ -7,7 +7,9 @@ export type QueuedMutation =
     | { kind: 'addItem'; containerId: string; input: SaveItemInput }
     | { kind: 'updateItem'; itemId: string; input: SaveItemInput }
     | { kind: 'deleteItem'; itemId: string }
-    | { kind: 'moveItem'; itemId: string; targetContainerId: string };
+    | { kind: 'moveItem'; itemId: string; targetContainerId: string }
+    | { kind: 'deletePhoto'; photoId: string }
+    | { kind: 'movePhoto'; photoId: string; targetContainerId: string };
 
 export interface QueueRow {
     id?: number;
@@ -201,6 +203,13 @@ export async function removePendingSuggestion(containerId: string, item: Detecte
 
 let syncing = false;
 
+/** A 4xx (except auth) is permanent — replaying it will never succeed, so drop
+ * the offending item rather than letting it wedge the whole queue forever. A
+ * network error or 5xx is transient: stop and retry on the next sync. */
+function isPermanent(e: unknown): boolean {
+    return e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 401;
+}
+
 /** Replay queued mutations + photo uploads when connectivity returns. */
 export async function syncNow(): Promise<{ synced: number; failed: number; error?: string }> {
     if (syncing || !navigator.onLine) return { synced: 0, failed: 0 };
@@ -219,7 +228,13 @@ export async function syncNow(): Promise<{ synced: number; failed: number; error
             } catch (e) {
                 failed++;
                 error = e instanceof Error ? e.message : String(e);
-                // Stop on first failure to preserve ordering; retry on next sync.
+                if (isPermanent(e)) {
+                    // Drop the poison row so it can't block everything behind it.
+                    if (row.id != null) await db.queue.delete(row.id);
+                    notifyPending();
+                    continue;
+                }
+                // Transient: stop to preserve ordering; retry on next sync.
                 break;
             }
         }
@@ -238,6 +253,11 @@ export async function syncNow(): Promise<{ synced: number; failed: number; error
             } catch (e) {
                 failed++;
                 error = e instanceof Error ? e.message : String(e);
+                if (isPermanent(e)) {
+                    if (p.id != null) await db.pendingPhotos.delete(p.id);
+                    notifyPending();
+                    continue;
+                }
                 break;
             }
         }
@@ -276,6 +296,12 @@ async function applyMutation(m: QueuedMutation): Promise<void> {
         case 'moveItem':
             await api.moveItem(m.itemId, m.targetContainerId);
             break;
+        case 'deletePhoto':
+            await api.deletePhoto(m.photoId);
+            break;
+        case 'movePhoto':
+            await api.movePhoto(m.photoId, m.targetContainerId);
+            break;
     }
 }
 
@@ -286,9 +312,14 @@ export async function pendingCount(): Promise<number> {
 /** Count of queued work (items + photos) tied to a specific container. */
 export async function pendingForContainer(containerId: string): Promise<number> {
     const photos = await db.pendingPhotos.where('containerId').equals(containerId).count();
-    const items = (await db.queue.toArray()).filter(
-        (r) => r.mutation.kind === 'addItem' && r.mutation.containerId === containerId,
-    ).length;
+    const items = (await db.queue.toArray()).filter((r) => {
+        const m = r.mutation;
+        return (
+            (m.kind === 'addItem' && m.containerId === containerId) ||
+            (m.kind === 'createContainer' && m.tempId === containerId) ||
+            (m.kind === 'moveItem' && m.targetContainerId === containerId)
+        );
+    }).length;
     return photos + items;
 }
 
@@ -296,7 +327,12 @@ export async function pendingForContainer(containerId: string): Promise<number> 
 export async function pendingContainerIds(): Promise<Set<string>> {
     const ids = new Set<string>();
     for (const p of await db.pendingPhotos.toArray()) ids.add(p.containerId);
-    for (const r of await db.queue.toArray()) if (r.mutation.kind === 'addItem') ids.add(r.mutation.containerId);
+    for (const r of await db.queue.toArray()) {
+        const m = r.mutation;
+        if (m.kind === 'addItem') ids.add(m.containerId);
+        else if (m.kind === 'createContainer') ids.add(m.tempId);
+        else if (m.kind === 'moveItem') ids.add(m.targetContainerId);
+    }
     return ids;
 }
 

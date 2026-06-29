@@ -5,6 +5,7 @@ export type IconName =
     | 'box'
     | 'boxes'
     | 'camera'
+    | 'rotate-cw'
     | 'plus'
     | 'printer'
     | 'trash'
@@ -103,6 +104,12 @@ const paths: Record<IconName, JSX.Element> = {
         <>
             <path d="M12 3 13.6 8.4 19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6Z" />
             <path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7Z" />
+        </>
+    ),
+    'rotate-cw': (
+        <>
+            <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
+            <path d="M21 3v5h-5" />
         </>
     ),
     check: (

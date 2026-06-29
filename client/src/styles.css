@@ -1358,6 +1358,13 @@ a.card:active {
 .thumb-del-label {
     display: inline;
 }
+.thumb-rotate {
+    width: 100%;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
 
 .fab-input {
     display: none;

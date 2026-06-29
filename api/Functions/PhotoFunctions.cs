@@ -75,6 +75,19 @@ public class PhotoFunctions
         return req.Status(moved ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
     }
 
+    [Function("RotatePhoto")]
+    public async Task<HttpResponseData> Rotate(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "photos/{id:guid}/rotate")] HttpRequestData req,
+        Guid id, CancellationToken ct)
+    {
+        var raw = System.Web.HttpUtility.ParseQueryString(req.Url.Query)["degrees"];
+        var degrees = int.TryParse(raw, out var d) ? ((d % 360) + 360) % 360 : 90;
+        if (degrees is not (90 or 180 or 270))
+            return await req.Text("degrees must be 90, 180, or 270.", HttpStatusCode.BadRequest);
+        var rotated = await _repo.RotatePhotoAsync(id, degrees, ct);
+        return req.Status(rotated ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
+    }
+
     /// <summary>
     /// One-time backfill: regenerates small thumbnails for photos uploaded before
     /// thumbnails existed (where ThumbUrl still equals the full BlobUrl). Idempotent —

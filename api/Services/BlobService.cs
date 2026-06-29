@@ -80,6 +80,44 @@ public sealed class BlobService
     }
 
     /// <summary>
+    /// Rotates an already-stored full image by the given degrees (90/180/270),
+    /// overwrites the full blob, and regenerates its thumbnail. Returns the (new)
+    /// thumbnail URL, or null if the source can't be read or decoded.
+    /// </summary>
+    public async Task<string?> RotateAsync(
+        Guid containerId, Guid photoId, string fullBlobUrl, int degrees, CancellationToken ct)
+    {
+        if (!_enabled || _service is null || string.IsNullOrWhiteSpace(fullBlobUrl)
+            || !Uri.TryCreate(fullBlobUrl, UriKind.Absolute, out var uri)
+            || !uri.Host.StartsWith(_service.AccountName + ".", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var blob = _container.GetBlobClient(new BlobUriBuilder(uri).BlobName);
+        if (!await blob.ExistsAsync(ct)) return null;
+
+        var resp = await blob.DownloadContentAsync(ct);
+        byte[] rotated;
+        try
+        {
+            using var image = Image.Load(resp.Value.Content.ToArray());
+            image.Mutate(x => x.Rotate(degrees));
+            using var ms = new MemoryStream();
+            await image.SaveAsJpegAsync(ms, new JpegEncoder { Quality = 85 }, ct);
+            rotated = ms.ToArray();
+        }
+        catch
+        {
+            return null;
+        }
+
+        await blob.UploadAsync(new MemoryStream(rotated), new BlobUploadOptions
+        {
+            HttpHeaders = new BlobHttpHeaders { ContentType = "image/jpeg" },
+        }, ct);
+        return await TryCreateThumbnailAsync(containerId, photoId, rotated, ct);
+    }
+
+    /// <summary>
     /// Builds a ~320px JPEG thumbnail from the given image bytes and uploads it as a
     /// separate blob. Returns the thumbnail URL, or null if the bytes can't be decoded.
     /// </summary>

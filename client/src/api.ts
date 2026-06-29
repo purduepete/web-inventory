@@ -92,6 +92,9 @@ export const api = {
 
     deletePhoto: (photoId: string) => http<void>(`/photos/${photoId}`, { method: 'DELETE' }),
 
+    rotatePhoto: (photoId: string, degrees = 90) =>
+        http<void>(`/photos/${photoId}/rotate?degrees=${degrees}`, { method: 'POST' }),
+
     movePhoto: (photoId: string, targetContainerId: string) =>
         http<void>(`/photos/${photoId}/move`, {
             method: 'POST',
