@@ -1090,11 +1090,18 @@ a.card:active {
 /* Tags page: zebra-stripe each lookup list for readability. */
 .tag-list .item-row {
     padding: 8px 10px;
-    border-bottom: none;
+    border: 1px solid var(--border);
     border-radius: var(--radius);
     align-items: center;
 }
 .tag-list .item-row:nth-child(odd) {
+    background: var(--surface-2);
+}
+/* Dark theme: flip striping so even rows are tinted. */
+:root[data-theme='dark'] .tag-list .item-row:nth-child(odd) {
+    background: transparent;
+}
+:root[data-theme='dark'] .tag-list .item-row:nth-child(even) {
     background: var(--surface-2);
 }
 /* Tags page: keep rename/delete icon buttons borderless & transparent in every
