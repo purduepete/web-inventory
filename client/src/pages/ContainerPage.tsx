@@ -1155,6 +1155,16 @@ function ItemRow({
                         <Icon name="trash" size={16} />
                     </button>
                 )}
+                {editing && (
+                    <button
+                        className="ghost small icon-btn"
+                        onClick={() => setEditing(false)}
+                        title="Cancel"
+                        aria-label="Cancel"
+                    >
+                        <Icon name="close" size={16} />
+                    </button>
+                )}
                 <button
                     className="ghost small icon-btn"
                     onClick={() => {
@@ -1238,12 +1248,24 @@ function HeaderEditor({
                     ]}
                 />
             </label>
-            <div className="row">
-                <button className="small" onClick={save} disabled={saving || !name.trim()}>
-                    <Icon name="check" size={16} /> {saving ? 'Saving…' : 'Save'}
+            <div className="row spread">
+                <button
+                    className="small ghost icon-btn"
+                    onClick={() => void onDone(false)}
+                    disabled={saving}
+                    title="Cancel"
+                    aria-label="Cancel"
+                >
+                    <Icon name="close" size={16} />
                 </button>
-                <button className="small ghost" onClick={() => void onDone(false)} disabled={saving}>
-                    Cancel
+                <button
+                    className="small icon-btn"
+                    onClick={save}
+                    disabled={saving || !name.trim()}
+                    title={saving ? 'Saving…' : 'Save'}
+                    aria-label="Save"
+                >
+                    <Icon name="check" size={16} />
                 </button>
             </div>
         </div>
