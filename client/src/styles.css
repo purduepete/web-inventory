@@ -584,6 +584,7 @@ select:focus {
     -webkit-text-fill-color: var(--text);
     text-align: left;
     cursor: pointer;
+    font-size: 13px;
 }
 .select-option-label {
     overflow: hidden;
