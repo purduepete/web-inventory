@@ -194,6 +194,38 @@ body {
     border: 1px solid var(--border);
 }
 
+/* Combined offline / sync-count pill in the topbar. */
+.sync-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    cursor: pointer;
+    line-height: 1;
+}
+.sync-pill.offline {
+    background: color-mix(in srgb, var(--red) 18%, transparent);
+    color: var(--red);
+    border-color: color-mix(in srgb, var(--red) 45%, transparent);
+}
+.sync-pill.syncing {
+    background: color-mix(in srgb, var(--green) 18%, transparent);
+    color: var(--green);
+    border-color: color-mix(in srgb, var(--green) 45%, transparent);
+}
+.sync-pill.idle {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.sync-pill svg.spinning {
+    animation: spin 1.2s linear infinite;
+}
+
 .content {
     flex: 1;
     padding: 18px;

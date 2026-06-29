@@ -22,6 +22,8 @@ export type IconName =
     | 'tag'
     | 'user'
     | 'pin'
+    | 'cloud'
+    | 'cloud-off'
     | 'help';
 
 const paths: Record<IconName, JSX.Element> = {
@@ -176,6 +178,18 @@ const paths: Record<IconName, JSX.Element> = {
         <>
             <path d="M12 21s7-6.3 7-11a7 7 0 0 0-14 0c0 4.7 7 11 7 11Z" />
             <circle cx="12" cy="10" r="2.5" />
+        </>
+    ),
+    cloud: (
+        <>
+            <path d="M17.5 19a4.5 4.5 0 0 0 .5-9 6 6 0 0 0-11.6-1.5A4 4 0 0 0 6.5 19Z" />
+        </>
+    ),
+    'cloud-off': (
+        <>
+            <path d="M9.4 5.5A6 6 0 0 1 18 10a4.5 4.5 0 0 1 2.4 8" />
+            <path d="M6.4 8.4A4 4 0 0 0 6.5 19h9.5" />
+            <path d="m2 2 20 20" />
         </>
     ),
     help: (

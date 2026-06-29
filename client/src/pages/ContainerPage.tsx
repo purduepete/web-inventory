@@ -186,7 +186,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         try {
             const small = await downscaleImage(file);
             if (!navigator.onLine) {
-                await enqueuePhoto(container.id, small);
+                await enqueuePhoto(container.id, small, analyze);
                 flash(
                     analyze
                         ? 'Photo saved — will analyze when back online.'
@@ -206,7 +206,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         } catch {
             // Network died mid-upload: queue it.
             const small = await downscaleImage(file);
-            await enqueuePhoto(container.id, small);
+            await enqueuePhoto(container.id, small, analyze);
             flash('Photo queued for upload.');
         } finally {
             setBusy(false);

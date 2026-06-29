@@ -10,7 +10,6 @@ export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
     const [pending, setPending] = useState(0);
     const [syncing, setSyncing] = useState(false);
-    const [syncMsg, setSyncMsg] = useState<string | null>(null);
     // 'checking' until we know whether there's a signed-in session; 'redirecting'
     // while we bounce to the AAD login; 'ok' once authenticated (or offline, where
     // we can't tell and let the cached/offline app run).
@@ -108,25 +107,15 @@ export default function App() {
     }, []);
 
     async function manualSync() {
-        if (syncing) return;
-        if (!navigator.onLine) {
-            setSyncMsg('Offline — will sync when reconnected.');
-            setTimeout(() => setSyncMsg(null), 2500);
-            return;
-        }
+        if (syncing || !navigator.onLine) return;
         setSyncing(true);
         try {
-            const { synced, failed, error } = await syncNow();
-            const remaining = await pendingCount();
-            setPending(remaining);
-            if (failed > 0) setSyncMsg(error ? `Sync failed: ${error}` : 'Sync failed — will retry.');
-            else if (synced > 0) setSyncMsg('Synced.');
-            else setSyncMsg(null);
+            await syncNow();
+            setPending(await pendingCount());
         } catch {
-            setSyncMsg('Sync failed — will retry.');
+            // queue stays; will retry on next sync
         } finally {
             setSyncing(false);
-            setTimeout(() => setSyncMsg(null), 5000);
         }
     }
 
@@ -152,21 +141,33 @@ export default function App() {
                     Inventory
                 </span>
                 <div className="topbar-actions">
-                    {!online && <span className="badge offline">Offline</span>}
-                    {syncMsg && <span className="badge pending">{syncMsg}</span>}
-                    {syncing && !syncMsg && <span className="badge pending">Syncing…</span>}
-                    {pending > 0 && !syncMsg && !syncing && (
-                        <span
-                            className="badge pending"
-                            role="button"
-                            tabIndex={0}
+                    {(!online || pending > 0 || syncing) && (
+                        <button
+                            type="button"
+                            className={`sync-pill ${syncing ? 'syncing' : !online ? 'offline' : 'idle'}`}
                             onClick={manualSync}
-                            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && manualSync()}
-                            title="Tap to sync now"
-                            style={{ cursor: 'pointer' }}
+                            title={
+                                syncing
+                                    ? 'Syncing…'
+                                    : !online
+                                      ? 'Offline — tap to retry'
+                                      : 'Tap to sync now'
+                            }
+                            aria-label={
+                                syncing
+                                    ? `Syncing, ${pending} remaining`
+                                    : !online
+                                      ? `Offline, ${pending} to sync`
+                                      : `${pending} to sync, tap to sync`
+                            }
                         >
-                            {`${pending} to sync`}
-                        </span>
+                            <Icon
+                                name={syncing ? 'sync' : !online ? 'cloud-off' : 'cloud'}
+                                size={15}
+                                className={syncing ? 'spinning' : undefined}
+                            />
+                            <span>{pending}</span>
+                        </button>
                     )}
                     <button
                         className={`theme-toggle reload-btn${reloading ? ' spinning' : ''}`}

@@ -20,6 +20,8 @@ export interface PendingPhoto {
     containerId: string;
     blob: Blob;
     createdAt: number;
+    /** Whether to run AI detection on upload. Absent = legacy rows = true. */
+    analyze?: boolean;
 }
 
 export interface CachedContainer extends Container {
@@ -96,8 +98,8 @@ export async function enqueue(mutation: QueuedMutation): Promise<void> {
     notifyPending();
 }
 
-export async function enqueuePhoto(containerId: string, blob: Blob): Promise<void> {
-    await db.pendingPhotos.add({ containerId, blob, createdAt: Date.now() });
+export async function enqueuePhoto(containerId: string, blob: Blob, analyze = true): Promise<void> {
+    await db.pendingPhotos.add({ containerId, blob, createdAt: Date.now(), analyze });
     notifyPending();
 }
 
@@ -213,6 +215,7 @@ export async function syncNow(): Promise<{ synced: number; failed: number; error
                 await applyMutation(row.mutation);
                 if (row.id != null) await db.queue.delete(row.id);
                 synced++;
+                notifyPending();
             } catch (e) {
                 failed++;
                 error = e instanceof Error ? e.message : String(e);
@@ -225,10 +228,13 @@ export async function syncNow(): Promise<{ synced: number; failed: number; error
             try {
                 // Photos captured offline still get AI detection on upload; stash the
                 // suggestions so the container page can prompt the user to confirm them.
-                const { detected } = await api.uploadPhoto(p.containerId, p.blob);
+                // Honor 'add photo only' (analyze=false): don't detect on sync.
+                const analyze = p.analyze !== false;
+                const { detected } = await api.uploadPhoto(p.containerId, p.blob, analyze);
                 if (p.id != null) await db.pendingPhotos.delete(p.id);
                 if (detected?.length) await addPendingSuggestions(p.containerId, detected);
                 synced++;
+                notifyPending();
             } catch (e) {
                 failed++;
                 error = e instanceof Error ? e.message : String(e);
