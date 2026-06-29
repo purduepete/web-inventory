@@ -1092,6 +1092,7 @@ a.card:active {
     padding: 8px 10px;
     border-bottom: none;
     border-radius: var(--radius);
+    align-items: center;
 }
 .tag-list .item-row:nth-child(odd) {
     background: var(--surface-2);
