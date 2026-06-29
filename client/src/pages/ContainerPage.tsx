@@ -545,26 +545,33 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 >
                     <Icon name="trash" size={16} /> Delete container
                 </button>
-                <button
-                    className="ghost small"
-                    onClick={() =>
-                        void syncNow().then((r) => flash(r.failed > 0 ? 'Sync incomplete — will retry.' : 'Synced.'))
-                    }
-                >
-                    <Icon name="sync" size={16} /> Sync now
-                </button>
+                {pendingWork > 0 && (
+                    <button
+                        className="ghost small"
+                        onClick={() =>
+                            void syncNow().then((r) =>
+                                flash(r.failed > 0 ? 'Sync incomplete — will retry.' : 'Synced.'),
+                            )
+                        }
+                    >
+                        <Icon name="sync" size={16} /> Sync now
+                    </button>
+                )}
             </div>
 
             {qr && (
-                <div className="stack qr-foot-block">
-                    <img className="qr-img qr-foot" src={qr} alt="container QR" />
-                    <button
-                        className="small ghost"
-                        onClick={() => printLabel({ number: container.number, name: container.name, qrDataUrl: qr })}
-                    >
-                        <Icon name="printer" size={16} /> Print label
-                    </button>
-                </div>
+                <>
+                    <hr className="qr-divider" />
+                    <div className="stack qr-foot-block">
+                        <img className="qr-img qr-foot" src={qr} alt="container QR" />
+                        <button
+                            className="small ghost"
+                            onClick={() => printLabel({ number: container.number, name: container.name, qrDataUrl: qr })}
+                        >
+                            <Icon name="printer" size={16} /> Print label
+                        </button>
+                    </div>
+                </>
             )}
 
             {toast && <div className="toast">{toast}</div>}

@@ -1245,6 +1245,15 @@ a.card:active {
 .title-row h1 {
     margin: 0;
 }
+/* The inline name-edit pencil sits bare next to the title (no border/fill). */
+.title-row button.icon-btn {
+    background: transparent;
+    border-color: transparent;
+}
+.title-row button.icon-btn:hover {
+    background: var(--surface-3);
+    border-color: transparent;
+}
 .meta-line {
     display: flex;
     flex-wrap: wrap;
@@ -1412,6 +1421,11 @@ a.card:active {
     align-items: stretch;
     gap: 8px;
     margin-top: 28px;
+}
+.qr-divider {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 28px 0 0;
 }
 .qr-foot {
     width: 100%;

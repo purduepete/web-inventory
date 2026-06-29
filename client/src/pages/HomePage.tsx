@@ -4,7 +4,7 @@ import { api } from '../api';
 import { Icon } from '../Icon';
 import { Select } from '../Select';
 import { Spinner } from '../Spinner';
-import { getLookup, getTags } from '../lookups';
+import { getCachedLookupFast, getCachedTagsFast, getLookup, getTags } from '../lookups';
 import { usePersistentToggle } from '../usePersistentToggle';
 import type { Facet, Item, Lookup } from '../types';
 
@@ -47,6 +47,14 @@ export default function HomePage() {
     );
 
     useEffect(() => {
+        // Paint instantly from cached lists so a cold-started API doesn't block
+        // the page; the network fetches below then refresh them.
+        Promise.allSettled([
+            getCachedTagsFast().then((t) => t && setTags(t)),
+            getCachedLookupFast('locations').then((l) => l && setLocations(l)),
+            getCachedLookupFast('owners').then((l) => l && setOwners(l)),
+            getCachedLookupFast('categories').then((l) => l && setCategories(l)),
+        ]).finally(() => setReady(true)); // render from cache; don't wait on cold API
         Promise.allSettled([
             getTags().then(setTags),
             getLookup('locations').then(setLocations),

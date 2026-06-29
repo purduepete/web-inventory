@@ -33,6 +33,11 @@ export function getLookup(kind: LookupKind): Promise<Lookup[]> {
     return p;
 }
 
+/** Cached lookup list for an instant first paint (undefined if none cached). */
+export function getCachedLookupFast(kind: LookupKind): Promise<Lookup[] | undefined> {
+    return getCachedLookups(kind);
+}
+
 export function getTags(): Promise<string[]> {
     if (!tagsCache) {
         tagsCache = api
@@ -49,6 +54,11 @@ export function getTags(): Promise<string[]> {
             });
     }
     return tagsCache;
+}
+
+/** Cached tags for an instant first paint (undefined if none cached yet). */
+export function getCachedTagsFast(): Promise<string[] | undefined> {
+    return getCachedTags();
 }
 
 export function invalidateLookups(kind?: LookupKind): void {
