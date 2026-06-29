@@ -123,10 +123,14 @@ export default function ContainersPage() {
                                                 </div>
                                                 {c.location && <div className="muted">{c.location}</div>}
                                                 {pendingIds.has(c.id) && (
-                                                    <div className="badge pending">Pending sync</div>
+                                                    <span className="card-pill sync">
+                                                        <Icon name="cloud" size={13} /> Pending sync
+                                                    </span>
                                                 )}
                                                 {reviewIds.has(c.id) && (
-                                                    <div className="badge pending">Items to review</div>
+                                                    <span className="card-pill review">
+                                                        <Icon name="sparkles" size={13} /> Items to review
+                                                    </span>
                                                 )}
                                             </div>
                                         </Link>
