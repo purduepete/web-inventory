@@ -1444,6 +1444,11 @@ a.card:active {
 .section-head h2 {
     margin: 0;
 }
+.section-head + .row,
+.section-head + .thumbs,
+.section-head + .qr-foot-block {
+    margin-top: 0;
+}
 .section-head .icon-btn {
     width: 26px;
     height: 26px;
@@ -1571,7 +1576,7 @@ a.card:active {
     width: 132px;
     align-items: stretch;
     gap: 8px;
-    margin-top: 28px;
+    margin-top: 0;
 }
 .qr-divider {
     border: 0;
