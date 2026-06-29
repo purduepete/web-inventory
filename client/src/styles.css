@@ -1285,6 +1285,21 @@ a.card:active {
 :root:not([data-theme='dark']) .item-actions button.icon-btn.danger {
     color: var(--red);
 }
+/* Green-hued "done / save" check buttons in edit mode. */
+button.icon-btn.ok,
+:root[data-theme='light'] button.icon-btn.ok,
+:root:not([data-theme='dark']) button.icon-btn.ok,
+.item-actions button.icon-btn.ok,
+:root[data-theme='light'] .item-actions button.icon-btn.ok,
+:root:not([data-theme='dark']) .item-actions button.icon-btn.ok,
+.header-editor button.icon-btn.ok,
+:root[data-theme='light'] .header-editor button.icon-btn.ok,
+:root:not([data-theme='dark']) .header-editor button.icon-btn.ok {
+    background: var(--ok);
+    color: #fff;
+    border: 1px solid var(--ok);
+    box-shadow: none;
+}
 .item-row .grow {
     flex: 1;
     min-width: 0;

@@ -507,7 +507,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                     <div className="section-head">
                         <h2>Photos</h2>
                         <button
-                            className="ghost small icon-btn"
+                            className={`ghost small icon-btn${photosEditing ? ' ok' : ''}`}
                             onClick={() => (photosEditing ? void savePhotoEdits() : startPhotosEditing())}
                             title={photosEditing ? 'Done' : 'Edit photos'}
                         >
@@ -1230,7 +1230,7 @@ function ItemRow({
                     </button>
                 )}
                 <button
-                    className="ghost small icon-btn"
+                    className={`ghost small icon-btn${editing ? ' ok' : ''}`}
                     onClick={() => {
                         if (editing) {
                             void commitEdits();
@@ -1327,7 +1327,7 @@ function HeaderEditor({
                     <Icon name="close" size={16} />
                 </button>
                 <button
-                    className="ghost small icon-btn"
+                    className="ghost small icon-btn ok"
                     onClick={save}
                     disabled={saving || !name.trim()}
                     title={saving ? 'Saving…' : 'Save'}
