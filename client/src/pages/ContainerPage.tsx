@@ -565,6 +565,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             {qr && (
                 <>
                     <hr className="qr-divider" />
+                    <h2>QR Code</h2>
                     <div className="stack qr-foot-block">
                         <img className="qr-img qr-foot" src={qr} alt="container QR" />
                         <button
