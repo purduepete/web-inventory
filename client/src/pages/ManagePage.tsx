@@ -144,23 +144,16 @@ function LookupSection({
     }
 
     return (
-        <div className="card">
-            <button
-                type="button"
-                className="collapse-toggle section-toggle"
-                aria-expanded={open}
-                onClick={() => setOpen((v) => !v)}
-                style={{ width: '100%' }}
-            >
-                <Icon name={icon} size={18} />
-                <span className="grow" style={{ textAlign: 'left' }}>
-                    {title} ({items.length})
-                </span>
-                <Icon name="chevron" size={16} className={`collapse-chevron${open ? ' open' : ''}`} />
+        <section className="owner-group">
+            <button type="button" className="group-toggle" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+                <Icon name="chevron" size={18} className={`group-chevron${open ? ' open' : ''}`} />
+                <Icon name={icon} size={16} />
+                <span className="group-name">{title}</span>
+                <span className="muted group-count">{items.length}</span>
             </button>
             {open && (
                 <>
-                    <div className="row" style={{ marginTop: 10, marginBottom: 10 }}>
+                    <div className="tag-add">
                         <input
                             value={draft}
                             onChange={(e) => setDraft(e.target.value)}
@@ -203,6 +196,6 @@ function LookupSection({
                     )}
                 </>
             )}
-        </div>
+        </section>
     );
 }
