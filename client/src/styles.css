@@ -554,6 +554,22 @@ select:focus {
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     animation: select-pop 0.12s ease;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+}
+.select-panel::-webkit-scrollbar {
+    width: 10px;
+}
+.select-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+.select-panel::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border: 3px solid var(--surface);
+    border-radius: var(--radius);
+}
+.select-panel::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
 }
 .select.auto .select-panel {
     right: auto;
