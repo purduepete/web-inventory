@@ -934,11 +934,8 @@ a.card:active {
 }
 @media (max-width: 560px) {
     .tag-add {
-        flex-direction: column;
+        flex-direction: row;
         align-items: stretch;
-    }
-    .tag-add button {
-        width: 100%;
     }
 }
 /* Owner label pinned to the far left of each container card. */

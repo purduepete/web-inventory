@@ -75,7 +75,6 @@ function DialogHost({ state, onClose }: { state: DialogState; onClose: (result: 
     useEffect(() => {
         if (state.kind === 'prompt') {
             inputRef.current?.focus();
-            inputRef.current?.select();
         } else {
             confirmRef.current?.focus();
         }
@@ -136,13 +135,29 @@ function DialogHost({ state, onClose }: { state: DialogState; onClose: (result: 
                                     {state.label}
                                 </label>
                             )}
-                            <input
-                                id="modal-input"
-                                ref={inputRef}
-                                value={value}
-                                placeholder={state.placeholder}
-                                onChange={(e) => setValue(e.target.value)}
-                            />
+                            <div className="tag-add">
+                                <input
+                                    id="modal-input"
+                                    ref={inputRef}
+                                    value={value}
+                                    placeholder={state.placeholder}
+                                    onChange={(e) => setValue(e.target.value)}
+                                />
+                                {value && (
+                                    <button
+                                        type="button"
+                                        className="small ghost icon-btn"
+                                        onClick={() => {
+                                            setValue('');
+                                            inputRef.current?.focus();
+                                        }}
+                                        title="Clear"
+                                        aria-label="Clear"
+                                    >
+                                        <Icon name="close" size={16} />
+                                    </button>
+                                )}
+                            </div>
                         </form>
                     )}
                 </div>

@@ -160,6 +160,16 @@ function LookupSection({
                             onKeyDown={(e) => e.key === 'Enter' && add()}
                             placeholder={placeholder}
                         />
+                        {draft && (
+                            <button
+                                className="small ghost icon-btn"
+                                onClick={() => setDraft('')}
+                                title="Clear"
+                                aria-label="Clear"
+                            >
+                                <Icon name="close" size={16} />
+                            </button>
+                        )}
                         <button
                             className="small icon-btn"
                             onClick={add}
