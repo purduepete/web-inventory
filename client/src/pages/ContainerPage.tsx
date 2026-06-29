@@ -30,7 +30,7 @@ function capitalizeFirst(s: string): string {
 
 function fmtDate(iso: string): string {
     const d = new Date(iso);
-    return isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 export default function ContainerPage({ byToken = false }: { byToken?: boolean }) {
