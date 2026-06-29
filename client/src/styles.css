@@ -1513,6 +1513,32 @@ button.icon-btn.ok:focus,
     background: var(--surface-3);
     border-color: transparent;
 }
+.title-row button.icon-btn.nav-arrow:disabled {
+    opacity: 0.3;
+    cursor: default;
+    background: transparent;
+}
+.pending-pill {
+    margin-bottom: 10px;
+}
+.sug-card {
+    margin-top: 14px;
+}
+.sug-card-title {
+    margin: 0 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.contents-list {
+    margin-top: 10px;
+}
+.contents-add {
+    margin-top: 10px;
+}
+.header-editor-actions {
+    justify-content: flex-end;
+}
 .meta-line {
     display: flex;
     flex-wrap: wrap;

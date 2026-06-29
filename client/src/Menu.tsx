@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon, type IconName } from './Icon';
 
-export type MenuItem = { title: string; description?: string; icon?: IconName; onSelect: () => void; disabled?: boolean };
+export type MenuItem = {
+    title: string;
+    description?: string;
+    icon?: IconName;
+    onSelect: () => void;
+    disabled?: boolean;
+};
 
 interface MenuProps {
     icon: IconName;

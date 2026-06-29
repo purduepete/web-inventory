@@ -35,6 +35,48 @@ function fmtDate(iso: string): string {
         : d.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
+// Standard option list for a category <Select>: none, the categories, and a
+// "+ New category…" sentinel.
+function categoryOptions(categories: Lookup[]) {
+    return [
+        { value: '', label: 'No category' },
+        ...categories.map((c) => ({ value: c.id, label: c.name })),
+        { value: '__new__', label: '+ New category…' },
+    ];
+}
+
+// Inline "type a new category name" row (text input + confirm/cancel), shared by
+// the add-item modal and an item's edit row.
+function NewCategoryInput({ onConfirm, onCancel }: { onConfirm: (name: string) => void; onCancel: () => void }) {
+    const [value, setValue] = useState('');
+    return (
+        <span className="new-cat-row">
+            <input
+                className="new-cat-input"
+                value={value}
+                autoFocus
+                placeholder="New category"
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        onConfirm(value);
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        onCancel();
+                    }
+                }}
+            />
+            <button type="button" className="small icon-btn" onClick={() => onConfirm(value)} title="Add category">
+                <Icon name="check" size={16} />
+            </button>
+            <button type="button" className="ghost small icon-btn" onClick={onCancel} title="Cancel">
+                <Icon name="close" size={16} />
+            </button>
+        </span>
+    );
+}
+
 export default function ContainerPage({ byToken = false }: { byToken?: boolean }) {
     const params = useParams();
     const nav = useNavigate();
@@ -72,6 +114,11 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     // Other containers, fetched lazily so photos can be moved between them.
     const [otherContainers, setOtherContainers] = useState<Container[]>([]);
     const otherContainersLoaded = useRef(false);
+    // Previous/next container for the same owner (by number), for quick nav.
+    const [siblings, setSiblings] = useState<{ prev: Container | null; next: Container | null }>({
+        prev: null,
+        next: null,
+    });
     const confirm = useConfirm();
     const prompt = usePrompt();
 
@@ -132,6 +179,30 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         setToast(msg);
         setTimeout(() => setToast(null), 2200);
     }
+
+    // Find the previous/next container for the same owner (ordered by number)
+    // so the header can offer quick sequential navigation.
+    useEffect(() => {
+        if (!container || byToken) return;
+        let cancelled = false;
+        void api
+            .listContainers()
+            .then((cs) => {
+                if (cancelled) return;
+                const sameOwner = cs
+                    .filter((c) => (c.ownerId ?? '') === (container.ownerId ?? ''))
+                    .sort((a, b) => a.number - b.number);
+                const i = sameOwner.findIndex((c) => c.id === container.id);
+                setSiblings({
+                    prev: i > 0 ? sameOwner[i - 1] : null,
+                    next: i >= 0 && i < sameOwner.length - 1 ? sameOwner[i + 1] : null,
+                });
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, [container, byToken]);
 
     // Merge in any AI suggestions that were detected from photos uploaded during
     // sync (i.e. attached while offline). They live in IndexedDB until the user
@@ -301,6 +372,13 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         });
     }
 
+    // Clear all staged photo edits (rotations, moves, deletes).
+    function resetPhotoEdits() {
+        setPhotoMoves(new Map());
+        setPhotoDeletes(new Set());
+        setPhotoRotations(new Map());
+    }
+
     function stageRotate(photoId: string) {
         setPhotoRotations((cur) => {
             const next = new Map(cur);
@@ -312,9 +390,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     // Begin a photo edit session: changes (rotates + moves + deletes) are staged
     // and only sent when the check is pressed.
     function startPhotosEditing() {
-        setPhotoMoves(new Map());
-        setPhotoDeletes(new Set());
-        setPhotoRotations(new Map());
+        resetPhotoEdits();
         setPhotosEditing(true);
     }
 
@@ -356,16 +432,12 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 await enqueue({ kind: 'movePhoto', photoId: id, targetContainerId: target });
             flash('Changes queued — will apply when online.');
         }
-        setPhotoMoves(new Map());
-        setPhotoDeletes(new Set());
-        setPhotoRotations(new Map());
+        resetPhotoEdits();
         setPhotosEditing(false);
     }
 
     function cancelPhotoEdits() {
-        setPhotoMoves(new Map());
-        setPhotoDeletes(new Set());
-        setPhotoRotations(new Map());
+        resetPhotoEdits();
         setPhotosEditing(false);
     }
 
@@ -375,7 +447,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     return (
         <div>
             {pendingWork > 0 && (
-                <span className="card-pill sync" style={{ marginBottom: 10 }}>
+                <span className="card-pill sync pending-pill">
                     <Icon name="cloud" size={13} /> {pendingWork} change{pendingWork === 1 ? '' : 's'} pending sync
                 </span>
             )}
@@ -394,9 +466,35 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 ) : (
                     <div className="head-grid">
                         <div className="title-row">
+                            <button
+                                className="ghost small icon-btn nav-arrow"
+                                onClick={() => siblings.prev && nav(`/containers/${siblings.prev.id}`)}
+                                disabled={!siblings.prev}
+                                title={
+                                    siblings.prev
+                                        ? `#${siblings.prev.number} ${siblings.prev.name}`
+                                        : 'No earlier container'
+                                }
+                                aria-label="Previous container"
+                            >
+                                <Icon name="arrow-left" size={16} />
+                            </button>
                             <h1>
                                 #{container.number} · {container.name}
                             </h1>
+                            <button
+                                className="ghost small icon-btn nav-arrow"
+                                onClick={() => siblings.next && nav(`/containers/${siblings.next.id}`)}
+                                disabled={!siblings.next}
+                                title={
+                                    siblings.next
+                                        ? `#${siblings.next.number} ${siblings.next.name}`
+                                        : 'No later container'
+                                }
+                                aria-label="Next container"
+                            >
+                                <Icon name="arrow-right" size={16} />
+                            </button>
                             <button className="ghost small icon-btn" onClick={() => setEditing(true)} title="Edit">
                                 <Icon name="pencil" size={16} />
                             </button>
@@ -456,8 +554,8 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
 
             {/* AI suggestion review */}
             {suggestions && suggestions.length > 0 && (
-                <div className="card" style={{ marginTop: 14 }}>
-                    <h2 style={{ margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="card sug-card">
+                    <h2 className="sug-card-title">
                         <Icon name="sparkles" size={18} /> Detected items — confirm to add
                     </h2>
                     {suggestions.map((s, i) => (
@@ -484,11 +582,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                     onChange={(v) => void pickSuggestionCategory(s, v)}
                                     ariaLabel="Category"
                                     auto
-                                    options={[
-                                        { value: '', label: 'No category' },
-                                        ...categories.map((c) => ({ value: c.id, label: c.name })),
-                                        { value: '__new__', label: '+ New category…' },
-                                    ]}
+                                    options={categoryOptions(categories)}
                                 />
                                 <button className="small" onClick={() => confirmSuggestion(s, true)}>
                                     <Icon name="check" size={16} /> Add
@@ -697,7 +791,7 @@ function ItemsEditor({
             </button>
             {contentsOpen && (
                 <>
-                    <div className="stack" style={{ marginTop: 10 }}>
+                    <div className="stack contents-list">
                         {container.items.map((it) => (
                             <ItemRow
                                 key={it.id}
@@ -711,7 +805,7 @@ function ItemsEditor({
                             />
                         ))}
                     </div>
-                    <div className="row" style={{ marginTop: 10 }}>
+                    <div className="row contents-add">
                         <button className="small" onClick={() => setAdding(true)}>
                             <Icon name="plus" size={16} /> Add an item
                         </button>
@@ -752,7 +846,6 @@ function AddItemModal({
     const [quantity, setQuantity] = useState(1);
     const [categoryId, setCategoryId] = useState('');
     const [addingCat, setAddingCat] = useState(false);
-    const [newCat, setNewCat] = useState('');
     const [photo, setPhoto] = useState<File | null>(null);
     const [photoUrl, setPhotoUrl] = useState('');
     const [saving, setSaving] = useState(false);
@@ -794,18 +887,16 @@ function AddItemModal({
         setPhotoUrl('');
     }
 
-    async function confirmNewCategory() {
-        const n = newCat.trim();
+    async function confirmNewCategory(name: string) {
+        const n = name.trim();
         if (!n) {
             setAddingCat(false);
-            setNewCat('');
             return;
         }
         const created = await onAddCategory(n);
         if (created) {
             setCategoryId(created.id);
             setAddingCat(false);
-            setNewCat('');
         } else {
             flash('Could not add category.');
         }
@@ -922,44 +1013,10 @@ function AddItemModal({
                             <div className="grow">
                                 <label className="modal-label">Category</label>
                                 {addingCat ? (
-                                    <span className="new-cat-row">
-                                        <input
-                                            className="new-cat-input"
-                                            value={newCat}
-                                            autoFocus
-                                            placeholder="New category"
-                                            onChange={(e) => setNewCat(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    void confirmNewCategory();
-                                                } else if (e.key === 'Escape') {
-                                                    e.preventDefault();
-                                                    setAddingCat(false);
-                                                    setNewCat('');
-                                                }
-                                            }}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="small icon-btn"
-                                            onClick={() => void confirmNewCategory()}
-                                            title="Add category"
-                                        >
-                                            <Icon name="check" size={16} />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="ghost small icon-btn"
-                                            onClick={() => {
-                                                setAddingCat(false);
-                                                setNewCat('');
-                                            }}
-                                            title="Cancel"
-                                        >
-                                            <Icon name="close" size={16} />
-                                        </button>
-                                    </span>
+                                    <NewCategoryInput
+                                        onConfirm={(n) => void confirmNewCategory(n)}
+                                        onCancel={() => setAddingCat(false)}
+                                    />
                                 ) : (
                                     <Select
                                         value={categoryId}
@@ -968,11 +1025,7 @@ function AddItemModal({
                                             else setCategoryId(v);
                                         }}
                                         ariaLabel="Category"
-                                        options={[
-                                            { value: '', label: 'No category' },
-                                            ...categories.map((c) => ({ value: c.id, label: c.name })),
-                                            { value: '__new__', label: '+ New category…' },
-                                        ]}
+                                        options={categoryOptions(categories)}
                                     />
                                 )}
                             </div>
@@ -1049,7 +1102,6 @@ function ItemRow({
     const [categoryId, setCategoryId] = useState(item.categoryId ?? '');
     const [editing, setEditing] = useState(false);
     const [addingCat, setAddingCat] = useState(false);
-    const [newCat, setNewCat] = useState('');
     const [pendingMove, setPendingMove] = useState('');
     const confirm = useConfirm();
 
@@ -1060,7 +1112,6 @@ function ItemRow({
         setCategoryId(item.categoryId ?? '');
         setPendingMove('');
         setAddingCat(false);
-        setNewCat('');
     }
 
     async function commitEdits() {
@@ -1112,10 +1163,9 @@ function ItemRow({
         }
     }
 
-    async function confirmNewCategory() {
-        const n = newCat.trim();
+    async function confirmNewCategory(name: string) {
+        const n = name.trim();
         setAddingCat(false);
-        setNewCat('');
         if (!n) return;
         const created = await onAddCategory(n);
         if (created) setCategoryId(created.id);
@@ -1168,39 +1218,10 @@ function ItemRow({
             {editing ? (
                 <>
                     {addingCat ? (
-                        <span className="new-cat-row">
-                            <input
-                                className="new-cat-input"
-                                value={newCat}
-                                autoFocus
-                                placeholder="New category"
-                                onChange={(e) => setNewCat(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') void confirmNewCategory();
-                                    else if (e.key === 'Escape') {
-                                        setAddingCat(false);
-                                        setNewCat('');
-                                    }
-                                }}
-                            />
-                            <button
-                                className="small icon-btn"
-                                onClick={() => void confirmNewCategory()}
-                                title="Add category"
-                            >
-                                <Icon name="check" size={16} />
-                            </button>
-                            <button
-                                className="ghost small icon-btn"
-                                onClick={() => {
-                                    setAddingCat(false);
-                                    setNewCat('');
-                                }}
-                                title="Cancel"
-                            >
-                                <Icon name="close" size={16} />
-                            </button>
-                        </span>
+                        <NewCategoryInput
+                            onConfirm={(n) => void confirmNewCategory(n)}
+                            onCancel={() => setAddingCat(false)}
+                        />
                     ) : (
                         <Select
                             value={categoryId}
@@ -1210,11 +1231,7 @@ function ItemRow({
                             }}
                             ariaLabel="Category"
                             auto
-                            options={[
-                                { value: '', label: 'No category' },
-                                ...categories.map((c) => ({ value: c.id, label: c.name })),
-                                { value: '__new__', label: '+ New category…' },
-                            ]}
+                            options={categoryOptions(categories)}
                         />
                     )}
                     <Select
@@ -1337,7 +1354,7 @@ function HeaderEditor({
                     ]}
                 />
             </label>
-            <div className="row" style={{ justifyContent: 'flex-end' }}>
+            <div className="row header-editor-actions">
                 <button
                     className="ghost small icon-btn"
                     onClick={() => void onDone(false)}

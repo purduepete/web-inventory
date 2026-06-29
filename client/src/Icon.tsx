@@ -16,6 +16,8 @@ export type IconName =
     | 'check'
     | 'move'
     | 'chevron'
+    | 'arrow-left'
+    | 'arrow-right'
     | 'sun'
     | 'moon'
     | 'pencil'
@@ -130,6 +132,18 @@ const paths: Record<IconName, JSX.Element> = {
     chevron: (
         <>
             <path d="m9 18 6-6-6-6" />
+        </>
+    ),
+    'arrow-left': (
+        <>
+            <path d="M19 12H5" />
+            <path d="m12 19-7-7 7-7" />
+        </>
+    ),
+    'arrow-right': (
+        <>
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
         </>
     ),
     sun: (
