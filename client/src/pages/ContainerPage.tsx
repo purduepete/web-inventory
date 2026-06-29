@@ -1249,9 +1249,9 @@ function HeaderEditor({
                     ]}
                 />
             </label>
-            <div className="row spread">
+            <div className="row" style={{ justifyContent: 'flex-end' }}>
                 <button
-                    className="small ghost icon-btn"
+                    className="ghost small icon-btn"
                     onClick={() => void onDone(false)}
                     disabled={saving}
                     title="Cancel"
@@ -1260,7 +1260,7 @@ function HeaderEditor({
                     <Icon name="close" size={16} />
                 </button>
                 <button
-                    className="small icon-btn"
+                    className="ghost small icon-btn"
                     onClick={save}
                     disabled={saving || !name.trim()}
                     title={saving ? 'Saving…' : 'Save'}
