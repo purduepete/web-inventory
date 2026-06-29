@@ -1429,6 +1429,13 @@ button.icon-btn.ok:focus,
 
 /* On phones, stack an item's edit controls instead of cramming one row. */
 @media (max-width: 560px) {
+    /* Shrink the container title so it stays on one line next to the nav. */
+    .title-row {
+        gap: 8px;
+    }
+    .title-row h1 {
+        font-size: clamp(15px, 5.2vw, 24px);
+    }
     /* Phones: full-width photo buttons. */
     .container-head .head-grid .container-actions {
         align-self: stretch;
@@ -1503,10 +1510,16 @@ button.icon-btn.ok:focus,
 }
 .title-row h1 {
     margin: 0;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 /* Nav arrows + edit pencil are grouped together at the far right. */
 .title-nav {
     margin-left: auto;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     gap: 8px;
