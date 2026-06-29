@@ -961,11 +961,11 @@ a.card:active {
     background: transparent !important;
     box-shadow: none !important;
     line-height: 0;
-    color: var(--muted);
+    color: var(--muted) !important;
     cursor: pointer;
 }
 .input-clear .input-clear-btn:hover {
-    color: var(--text);
+    color: var(--text) !important;
 }
 @media (max-width: 560px) {
     .tag-add {
