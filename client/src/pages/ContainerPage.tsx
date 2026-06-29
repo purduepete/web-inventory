@@ -464,6 +464,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
 
             {container.photos.length > 0 && (
                 <>
+                    <hr className="qr-divider" />
                     <div className="section-head">
                         <h2>Photos</h2>
                         <button
@@ -528,6 +529,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 </>
             )}
 
+            <hr className="qr-divider" />
             <h2>Manage</h2>
             <div className="row">
                 <button
