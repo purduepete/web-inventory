@@ -47,8 +47,9 @@ export function HelpDialog({ open, onClose }: { open: boolean; onClose: () => vo
                         </p>
                         <ul>
                             <li>
-                                The <strong>“N to sync”</strong> badge at the top shows how many changes are still
-                                waiting. Tap it to sync immediately.
+                                The <strong>sync pill</strong> at the top shows your status: a green
+                                cloud while syncing, a red <Icon name="cloud-off" size={14} /> when offline, and a
+                                count of how many changes are still waiting. Tap it to sync immediately.
                             </li>
                             <li>
                                 Syncing also happens <strong>automatically</strong> when you reconnect and each time you
