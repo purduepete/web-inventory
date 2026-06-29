@@ -945,7 +945,7 @@ a.card:active {
     width: 100%;
     padding-right: 38px;
 }
-.input-clear-btn {
+.input-clear .input-clear-btn {
     position: absolute;
     top: 50%;
     right: 6px;
@@ -958,10 +958,11 @@ a.card:active {
     padding: 0;
     border: none;
     background: transparent;
+    box-shadow: none;
     color: var(--muted);
     cursor: pointer;
 }
-.input-clear-btn:hover {
+.input-clear .input-clear-btn:hover {
     color: var(--text);
 }
 @media (max-width: 560px) {
