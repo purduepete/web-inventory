@@ -15,6 +15,7 @@ import { makeQrDataUrl, printLabel } from '../qr';
 import { Icon } from '../Icon';
 import { ClearableInput } from '../ClearableInput';
 import { Select } from '../Select';
+import { Menu } from '../Menu';
 import { Spinner } from '../Spinner';
 import { useConfirm, usePrompt } from '../Dialog';
 import { getLookup, invalidateLookups } from '../lookups';
@@ -373,26 +374,29 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                             </div>
                         )}
                         <div className="row container-actions">
-                            <button
-                                onClick={() => {
-                                    analyzeOnUpload.current = true;
-                                    fileRef.current?.click();
-                                }}
+                            <Menu
+                                icon="camera"
+                                label={busy ? 'Working…' : 'Photos'}
                                 disabled={busy}
-                            >
-                                <Icon name="camera" size={18} />
-                                {busy ? 'Working…' : 'Photo → detect items'}
-                            </button>
-                            <button
-                                className="ghost"
-                                onClick={() => {
-                                    analyzeOnUpload.current = false;
-                                    fileRef.current?.click();
-                                }}
-                                disabled={busy}
-                            >
-                                <Icon name="plus" size={18} /> Add photo only
-                            </button>
+                                items={[
+                                    {
+                                        title: 'Detect Items',
+                                        description: 'Photo → AI finds items',
+                                        onSelect: () => {
+                                            analyzeOnUpload.current = true;
+                                            fileRef.current?.click();
+                                        },
+                                    },
+                                    {
+                                        title: 'Photo Only',
+                                        description: 'Attach without detection',
+                                        onSelect: () => {
+                                            analyzeOnUpload.current = false;
+                                            fileRef.current?.click();
+                                        },
+                                    },
+                                ]}
+                            />
                             <input
                                 ref={fileRef}
                                 className="fab-input"

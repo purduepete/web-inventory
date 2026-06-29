@@ -631,6 +631,75 @@ select:focus {
     cursor: default;
 }
 
+/* Action menu (camera "Photos" dropdown): trigger is a primary button, the
+   panel lists titled items each with a muted description (like the mockup). */
+.menu {
+    position: relative;
+    display: inline-block;
+}
+.menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.menu-chevron {
+    flex: 0 0 auto;
+    transform: rotate(90deg);
+    transition: transform 0.18s ease;
+}
+.menu.open .menu-chevron {
+    transform: rotate(-90deg);
+}
+.menu-trigger:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+.menu-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 40;
+    min-width: 220px;
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    animation: select-pop 0.12s ease;
+}
+.menu-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    padding: 9px 12px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius);
+    color: var(--text);
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-text-fill-color: var(--text);
+    text-align: left;
+    cursor: pointer;
+}
+.menu-item:hover {
+    background: var(--surface-2);
+}
+.menu-item-title {
+    font-size: 13px;
+    font-weight: 600;
+}
+.menu-item-desc {
+    font-size: 11px;
+    color: var(--muted);
+    -webkit-text-fill-color: var(--muted);
+}
+.menu-item:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
 /* Context overrides so the custom select matches native select layout */
 .filter-row .select {
     flex: 1 1 160px;
