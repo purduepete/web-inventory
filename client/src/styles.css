@@ -1091,13 +1091,15 @@ a.card:active {
     width: 28px;
     height: 28px;
     padding: 0;
-    background: transparent;
+    background: transparent !important;
     border: none;
-    color: var(--muted);
+    box-shadow: none !important;
+    line-height: 0;
+    color: var(--muted) !important;
     cursor: pointer;
 }
 .search-clear:hover {
-    color: var(--text);
+    color: var(--text) !important;
 }
 .pill.selectable:hover {
     border-color: var(--border-strong);
