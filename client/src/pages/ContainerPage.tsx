@@ -62,6 +62,8 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     // Staged photo edits while editing; applied only when the check is pressed.
     const [photoMoves, setPhotoMoves] = useState<Map<string, string>>(new Map());
     const [photoDeletes, setPhotoDeletes] = useState<Set<string>>(new Set());
+    // Staged rotation per photo, in degrees (cumulative, mod 360).
+    const [photoRotations, setPhotoRotations] = useState<Map<string, number>>(new Map());
     const [locations, setLocations] = useState<Lookup[]>([]);
     const [owners, setOwners] = useState<Lookup[]>([]);
     const [categories, setCategories] = useState<Lookup[]>([]);
@@ -297,20 +299,20 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         });
     }
 
-    async function rotatePhoto(photoId: string) {
-        try {
-            await api.rotatePhoto(photoId, 90);
-            await load(true);
-        } catch {
-            flash('Could not rotate — try again when online.');
-        }
+    function stageRotate(photoId: string) {
+        setPhotoRotations((cur) => {
+            const next = new Map(cur);
+            next.set(photoId, ((next.get(photoId) ?? 0) + 90) % 360);
+            return next;
+        });
     }
 
-    // Begin a photo edit session: changes (moves + deletes) are staged and only
-    // sent when the check is pressed.
+    // Begin a photo edit session: changes (rotates + moves + deletes) are staged
+    // and only sent when the check is pressed.
     function startPhotosEditing() {
         setPhotoMoves(new Map());
         setPhotoDeletes(new Set());
+        setPhotoRotations(new Map());
         setPhotosEditing(true);
     }
 
@@ -335,11 +337,13 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     async function savePhotoEdits() {
         const deletes = [...photoDeletes];
         const moves = [...photoMoves].filter(([id]) => !photoDeletes.has(id));
-        if (deletes.length === 0 && moves.length === 0) {
+        const rotations = [...photoRotations].filter(([id, deg]) => deg > 0 && !photoDeletes.has(id));
+        if (deletes.length === 0 && moves.length === 0 && rotations.length === 0) {
             setPhotosEditing(false);
             return;
         }
         try {
+            for (const [id, deg] of rotations) await api.rotatePhoto(id, deg);
             for (const id of deletes) await api.deletePhoto(id);
             for (const [id, target] of moves) await api.movePhoto(id, target);
             await load(true);
@@ -352,6 +356,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         }
         setPhotoMoves(new Map());
         setPhotoDeletes(new Set());
+        setPhotoRotations(new Map());
         setPhotosEditing(false);
     }
 
@@ -517,6 +522,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                         src={p.thumbUrl}
                                         alt="container contents"
                                         decoding="async"
+                                        style={{ transform: `rotate(${photoRotations.get(p.id) ?? 0}deg)` }}
                                         ref={(el) => {
                                             if (el?.complete) el.classList.add('loaded');
                                         }}
@@ -527,7 +533,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                     <>
                                         <button
                                             className="ghost small thumb-rotate"
-                                            onClick={() => void rotatePhoto(p.id)}
+                                            onClick={() => stageRotate(p.id)}
                                             title="Rotate 90°"
                                             aria-label="Rotate photo 90 degrees"
                                         >
@@ -1019,29 +1025,40 @@ function ItemRow({
     const [qty, setQty] = useState(item.quantity);
     const [name, setName] = useState(item.name);
     const [description, setDescription] = useState(item.description ?? '');
+    const [categoryId, setCategoryId] = useState(item.categoryId ?? '');
     const [editing, setEditing] = useState(false);
     const [addingCat, setAddingCat] = useState(false);
     const [newCat, setNewCat] = useState('');
+    const [pendingMove, setPendingMove] = useState('');
     const confirm = useConfirm();
 
-    async function save(
-        next: Partial<{ quantity: number; name: string; description: string; categoryId: string | null }>,
-    ) {
+    function resetEdits() {
+        setQty(item.quantity);
+        setName(item.name);
+        setDescription(item.description ?? '');
+        setCategoryId(item.categoryId ?? '');
+        setPendingMove('');
+        setAddingCat(false);
+        setNewCat('');
+    }
+
+    async function commitEdits() {
         const input = {
-            name: capitalizeFirst(next.name ?? name) || item.name,
-            description: capitalizeFirst(next.description !== undefined ? next.description : (item.description ?? '')),
-            quantity: next.quantity ?? qty,
+            name: capitalizeFirst(name) || item.name,
+            description: capitalizeFirst(description),
+            quantity: Math.max(1, qty),
             tags: item.tags,
-            categoryId: next.categoryId !== undefined ? next.categoryId : (item.categoryId ?? null),
+            categoryId: categoryId || null,
         };
         try {
             if (!navigator.onLine) await enqueue({ kind: 'updateItem', itemId: item.id, input });
             else await api.updateItem(item.id, input);
-            await onChange();
         } catch {
             await enqueue({ kind: 'updateItem', itemId: item.id, input });
             flash('Saved offline.');
         }
+        if (pendingMove) await move(pendingMove);
+        else await onChange();
     }
 
     async function remove() {
@@ -1080,7 +1097,7 @@ function ItemRow({
         setNewCat('');
         if (!n) return;
         const created = await onAddCategory(n);
-        if (created) await save({ categoryId: created.id });
+        if (created) setCategoryId(created.id);
         else flash('Could not add category.');
     }
 
@@ -1093,7 +1110,6 @@ function ItemRow({
                     min={1}
                     value={qty}
                     onChange={(e) => setQty(Number(e.target.value))}
-                    onBlur={() => qty !== item.quantity && save({ quantity: qty })}
                 />
             ) : (
                 <span className="qty-view muted">×{item.quantity}</span>
@@ -1106,14 +1122,12 @@ function ItemRow({
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             onClear={() => setName('')}
-                            onBlur={() => name.trim() && name.trim() !== item.name && save({ name: name.trim() })}
                             placeholder="Item name"
                         />
                         <input
                             className="item-desc"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            onBlur={() => description !== (item.description ?? '') && save({ description })}
                             placeholder="Description"
                         />
                     </>
@@ -1168,10 +1182,10 @@ function ItemRow({
                         </span>
                     ) : (
                         <Select
-                            value={item.categoryId ?? ''}
+                            value={categoryId}
                             onChange={(v) => {
                                 if (v === '__new__') setAddingCat(true);
-                                else save({ categoryId: v || null });
+                                else setCategoryId(v);
                             }}
                             ariaLabel="Category"
                             auto
@@ -1183,12 +1197,12 @@ function ItemRow({
                         />
                     )}
                     <Select
-                        value=""
-                        onChange={(v) => move(v)}
+                        value={pendingMove}
+                        onChange={(v) => setPendingMove(v)}
                         ariaLabel="Move to…"
                         auto
                         options={[
-                            { value: '', label: 'Move…', disabled: true },
+                            { value: '', label: 'Move…' },
                             ...others.map((c) => ({ value: c.id, label: `#${c.number} ${c.name}` })),
                         ]}
                     />
@@ -1205,7 +1219,10 @@ function ItemRow({
                 {editing && (
                     <button
                         className="ghost small icon-btn"
-                        onClick={() => setEditing(false)}
+                        onClick={() => {
+                            resetEdits();
+                            setEditing(false);
+                        }}
                         title="Cancel"
                         aria-label="Cancel"
                     >
@@ -1215,9 +1232,13 @@ function ItemRow({
                 <button
                     className="ghost small icon-btn"
                     onClick={() => {
-                        const next = !editing;
-                        setEditing(next);
-                        if (next) onEdit();
+                        if (editing) {
+                            void commitEdits();
+                            setEditing(false);
+                        } else {
+                            setEditing(true);
+                            onEdit();
+                        }
                     }}
                     title={editing ? 'Done' : 'Edit'}
                 >
