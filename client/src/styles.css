@@ -1289,6 +1289,10 @@ a.card:active {
     flex: 1;
     min-width: 0;
 }
+.item-dates {
+    font-size: 11px;
+    margin-top: 2px;
+}
 .qty {
     width: 60px;
     text-align: center;

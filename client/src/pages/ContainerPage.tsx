@@ -28,6 +28,11 @@ function capitalizeFirst(s: string): string {
     return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
 }
 
+function fmtDate(iso: string): string {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 export default function ContainerPage({ byToken = false }: { byToken?: boolean }) {
     const params = useParams();
     const nav = useNavigate();
@@ -1116,6 +1121,12 @@ function ItemRow({
                     <>
                         <strong>{item.name}</strong>
                         {item.description && <div className="muted">{item.description}</div>}
+                        <div className="item-dates muted">
+                            Added {fmtDate(item.createdAt)}
+                            {item.updatedAt && item.updatedAt !== item.createdAt && (
+                                <> · Edited {fmtDate(item.updatedAt)}</>
+                            )}
+                        </div>
                     </>
                 )}
             </div>
