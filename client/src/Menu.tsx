@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon, type IconName } from './Icon';
 
-export type MenuItem = { title: string; description?: string; onSelect: () => void; disabled?: boolean };
+export type MenuItem = { title: string; description?: string; icon?: IconName; onSelect: () => void; disabled?: boolean };
 
 interface MenuProps {
     icon: IconName;
@@ -65,8 +65,11 @@ export function Menu({ icon, label, items, disabled, className }: MenuProps) {
                             }}
                             onClick={() => choose(it)}
                         >
-                            <span className="menu-item-title">{it.title}</span>
-                            {it.description && <span className="menu-item-desc">{it.description}</span>}
+                            {it.icon && <Icon name={it.icon} size={18} className="menu-item-icon" />}
+                            <span className="menu-item-text">
+                                <span className="menu-item-title">{it.title}</span>
+                                {it.description && <span className="menu-item-desc">{it.description}</span>}
+                            </span>
                         </button>
                     ))}
                 </div>

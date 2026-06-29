@@ -54,6 +54,9 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     const analyzeOnUpload = useRef(true);
     const [editing, setEditing] = useState(false);
     const [photosEditing, setPhotosEditing] = useState(false);
+    // Staged photo edits while editing; applied only when the check is pressed.
+    const [photoMoves, setPhotoMoves] = useState<Map<string, string>>(new Map());
+    const [photoDeletes, setPhotoDeletes] = useState<Set<string>>(new Set());
     const [locations, setLocations] = useState<Lookup[]>([]);
     const [owners, setOwners] = useState<Lookup[]>([]);
     const [categories, setCategories] = useState<Lookup[]>([]);
@@ -289,35 +292,6 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         });
     }
 
-    async function removePhoto(photoId: string) {
-        const ok = await confirm({
-            title: 'Delete photo',
-            message: 'Delete this photo?',
-            confirmLabel: 'Delete',
-            danger: true,
-        });
-        if (!ok) return;
-        try {
-            await api.deletePhoto(photoId);
-            await load(true);
-        } catch {
-            await enqueue({ kind: 'deletePhoto', photoId });
-            flash('Delete queued — will apply when online.');
-        }
-    }
-
-    async function movePhoto(photoId: string, targetContainerId: string) {
-        if (!targetContainerId) return;
-        try {
-            await api.movePhoto(photoId, targetContainerId);
-            await load(true);
-            flash('Photo moved.');
-        } catch {
-            await enqueue({ kind: 'movePhoto', photoId, targetContainerId });
-            flash('Move queued — will apply when online.');
-        }
-    }
-
     async function rotatePhoto(photoId: string) {
         try {
             await api.rotatePhoto(photoId, 90);
@@ -325,6 +299,55 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         } catch {
             flash('Could not rotate — try again when online.');
         }
+    }
+
+    // Begin a photo edit session: changes (moves + deletes) are staged and only
+    // sent when the check is pressed.
+    function startPhotosEditing() {
+        setPhotoMoves(new Map());
+        setPhotoDeletes(new Set());
+        setPhotosEditing(true);
+    }
+
+    function toggleDelete(photoId: string) {
+        setPhotoDeletes((cur) => {
+            const next = new Set(cur);
+            if (next.has(photoId)) next.delete(photoId);
+            else next.add(photoId);
+            return next;
+        });
+    }
+
+    function stageMove(photoId: string, targetContainerId: string) {
+        setPhotoMoves((cur) => {
+            const next = new Map(cur);
+            if (targetContainerId) next.set(photoId, targetContainerId);
+            else next.delete(photoId);
+            return next;
+        });
+    }
+
+    async function savePhotoEdits() {
+        const deletes = [...photoDeletes];
+        const moves = [...photoMoves].filter(([id]) => !photoDeletes.has(id));
+        if (deletes.length === 0 && moves.length === 0) {
+            setPhotosEditing(false);
+            return;
+        }
+        try {
+            for (const id of deletes) await api.deletePhoto(id);
+            for (const [id, target] of moves) await api.movePhoto(id, target);
+            await load(true);
+            flash('Photo changes saved.');
+        } catch {
+            for (const id of deletes) await enqueue({ kind: 'deletePhoto', photoId: id });
+            for (const [id, target] of moves)
+                await enqueue({ kind: 'movePhoto', photoId: id, targetContainerId: target });
+            flash('Changes queued — will apply when online.');
+        }
+        setPhotoMoves(new Map());
+        setPhotoDeletes(new Set());
+        setPhotosEditing(false);
     }
 
     if (loading) return <Spinner />;
@@ -382,6 +405,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                     {
                                         title: 'Detect Items',
                                         description: 'Photo → AI finds items',
+                                        icon: 'sparkles',
                                         onSelect: () => {
                                             analyzeOnUpload.current = true;
                                             fileRef.current?.click();
@@ -390,6 +414,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                     {
                                         title: 'Photo Only',
                                         description: 'Attach without detection',
+                                        icon: 'camera',
                                         onSelect: () => {
                                             analyzeOnUpload.current = false;
                                             fileRef.current?.click();
@@ -473,7 +498,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                         <h2>Photos</h2>
                         <button
                             className="ghost small icon-btn"
-                            onClick={() => setPhotosEditing((v) => !v)}
+                            onClick={() => (photosEditing ? void savePhotoEdits() : startPhotosEditing())}
                             title={photosEditing ? 'Done' : 'Edit photos'}
                         >
                             <Icon name={photosEditing ? 'check' : 'pencil'} size={14} />
@@ -481,7 +506,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                     </div>
                     <div className="thumbs">
                         {container.photos.map((p) => (
-                            <div key={p.id} className="thumb">
+                            <div key={p.id} className={`thumb${photoDeletes.has(p.id) ? ' staged-del' : ''}`}>
                                 <a href={p.blobUrl} target="_blank" rel="noreferrer">
                                     <img
                                         src={p.thumbUrl}
@@ -505,8 +530,8 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                         </button>
                                         <Select
                                             className="thumb-move"
-                                            value=""
-                                            onChange={(v) => void movePhoto(p.id, v)}
+                                            value={photoMoves.get(p.id) ?? ''}
+                                            onChange={(v) => stageMove(p.id, v)}
                                             ariaLabel="Move photo to…"
                                             options={[
                                                 { value: '', label: 'Move…', disabled: true },
@@ -518,12 +543,14 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                         />
                                         <button
                                             className="danger small thumb-del"
-                                            onClick={() => removePhoto(p.id)}
-                                            title="Delete photo"
-                                            aria-label="Delete photo"
+                                            onClick={() => toggleDelete(p.id)}
+                                            title={photoDeletes.has(p.id) ? 'Undo delete' : 'Delete photo'}
+                                            aria-label={photoDeletes.has(p.id) ? 'Undo delete' : 'Delete photo'}
                                         >
-                                            <Icon name="trash" size={15} />
-                                            <span className="thumb-del-label">Delete</span>
+                                            <Icon name={photoDeletes.has(p.id) ? 'rotate-cw' : 'trash'} size={15} />
+                                            <span className="thumb-del-label">
+                                                {photoDeletes.has(p.id) ? 'Undo' : 'Delete'}
+                                            </span>
                                         </button>
                                     </>
                                 )}
