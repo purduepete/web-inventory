@@ -237,7 +237,10 @@ public sealed class InventoryRepository
     public async Task<IReadOnlyList<string>> ListTagsAsync(CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);
-        return (await conn.QueryAsync<string>("SELECT Name FROM inv.Tag ORDER BY Name;")).AsList();
+        return (await conn.QueryAsync<string>(
+            @"SELECT t.Name FROM inv.Tag t
+              JOIN inv.ItemTag it ON it.TagId = t.Id
+              GROUP BY t.Name ORDER BY t.Name;")).AsList();
     }
 
     /// <summary>
@@ -287,6 +290,20 @@ public sealed class InventoryRepository
         await conn.ExecuteAsync(
             "UPDATE inv.Photo SET ThumbUrl = @thumbUrl WHERE Id = @photoId;",
             new { photoId, thumbUrl });
+    }
+
+    /// <summary>Rotates a stored photo 90/180/270 degrees, regenerating its thumbnail.</summary>
+    public async Task<bool> RotatePhotoAsync(Guid photoId, int degrees, CancellationToken ct)
+    {
+        await using var conn = await _db.OpenAsync(ct);
+        var row = await conn.QuerySingleOrDefaultAsync<(Guid ContainerId, string BlobUrl)?>(
+            "SELECT ContainerId, BlobUrl FROM inv.Photo WHERE Id = @photoId;", new { photoId });
+        if (row is null) return false;
+        var thumbUrl = await _blob.RotateAsync(row.Value.ContainerId, photoId, row.Value.BlobUrl, degrees, ct);
+        if (thumbUrl is null) return false;
+        await conn.ExecuteAsync(
+            "UPDATE inv.Photo SET ThumbUrl = @thumbUrl WHERE Id = @photoId;", new { photoId, thumbUrl });
+        return true;
     }
 
     public async Task<bool> DeletePhotoAsync(Guid photoId, CancellationToken ct)
