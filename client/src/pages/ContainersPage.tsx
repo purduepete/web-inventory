@@ -86,8 +86,8 @@ export default function ContainersPage() {
             <div className="spread">
                 <h1>Containers</h1>
                 <Link to="/containers/new">
-                    <button className="small">
-                        <Icon name="plus" size={16} /> New
+                    <button className="small icon-btn" title="New container" aria-label="New container">
+                        <Icon name="plus" size={16} />
                     </button>
                 </Link>
             </div>

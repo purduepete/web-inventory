@@ -1166,7 +1166,10 @@ a.card:active {
    theme (light mode otherwise gives the danger button a solid filled box). */
 .tag-list .item-row button.icon-btn,
 :root[data-theme='light'] .tag-list .item-row button.icon-btn,
-:root:not([data-theme='dark']) .tag-list .item-row button.icon-btn {
+:root:not([data-theme='dark']) .tag-list .item-row button.icon-btn,
+.item-actions button.icon-btn,
+:root[data-theme='light'] .item-actions button.icon-btn,
+:root:not([data-theme='dark']) .item-actions button.icon-btn {
     border: none;
     background: transparent;
     box-shadow: none;
@@ -1174,7 +1177,10 @@ a.card:active {
 }
 .tag-list .item-row button.icon-btn.danger,
 :root[data-theme='light'] .tag-list .item-row button.icon-btn.danger,
-:root:not([data-theme='dark']) .tag-list .item-row button.icon-btn.danger {
+:root:not([data-theme='dark']) .tag-list .item-row button.icon-btn.danger,
+.item-actions button.icon-btn.danger,
+:root[data-theme='light'] .item-actions button.icon-btn.danger,
+:root:not([data-theme='dark']) .item-actions button.icon-btn.danger {
     color: var(--red);
 }
 .item-row .grow {
