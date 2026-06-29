@@ -490,15 +490,6 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                 {photosEditing && (
                                     <>
                                         <button
-                                            className="danger small thumb-del"
-                                            onClick={() => removePhoto(p.id)}
-                                            title="Delete photo"
-                                            aria-label="Delete photo"
-                                        >
-                                            <Icon name="trash" size={15} />
-                                            <span className="thumb-del-label">Delete</span>
-                                        </button>
-                                        <button
                                             className="ghost small thumb-rotate"
                                             onClick={() => void rotatePhoto(p.id)}
                                             title="Rotate 90°"
@@ -519,6 +510,15 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                                 })),
                                             ]}
                                         />
+                                        <button
+                                            className="danger small thumb-del"
+                                            onClick={() => removePhoto(p.id)}
+                                            title="Delete photo"
+                                            aria-label="Delete photo"
+                                        >
+                                            <Icon name="trash" size={15} />
+                                            <span className="thumb-del-label">Delete</span>
+                                        </button>
                                     </>
                                 )}
                             </div>
@@ -566,7 +566,9 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                         <img className="qr-img qr-foot" src={qr} alt="container QR" />
                         <button
                             className="small ghost"
-                            onClick={() => printLabel({ number: container.number, name: container.name, qrDataUrl: qr })}
+                            onClick={() =>
+                                printLabel({ number: container.number, name: container.name, qrDataUrl: qr })
+                            }
                         >
                             <Icon name="printer" size={16} /> Print label
                         </button>

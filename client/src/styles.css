@@ -1351,7 +1351,6 @@ a.card:active {
     gap: 6px;
 }
 .thumb-del {
-    margin-top: 6px;
     width: 100%;
     padding: 6px;
     display: inline-flex;
