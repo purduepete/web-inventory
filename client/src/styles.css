@@ -1331,6 +1331,7 @@ a.card:active {
     font-size: 0.8rem;
 }
 .thumb-move .select-trigger {
+    height: 36px;
     padding: 5px 8px;
     font-size: 0.75rem;
 }
@@ -1351,7 +1352,9 @@ a.card:active {
     gap: 6px;
 }
 .thumb-del {
+    margin-top: 18px;
     width: 100%;
+    height: 36px;
     padding: 6px;
     display: inline-flex;
     align-items: center;
@@ -1368,6 +1371,7 @@ a.card:active {
 }
 .thumb-rotate {
     width: 100%;
+    height: 36px;
     padding: 6px;
     display: inline-flex;
     align-items: center;
