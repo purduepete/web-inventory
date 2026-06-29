@@ -30,7 +30,9 @@ function capitalizeFirst(s: string): string {
 
 function fmtDate(iso: string): string {
     const d = new Date(iso);
-    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    return isNaN(d.getTime())
+        ? ''
+        : d.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 export default function ContainerPage({ byToken = false }: { byToken?: boolean }) {
@@ -360,6 +362,13 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         setPhotosEditing(false);
     }
 
+    function cancelPhotoEdits() {
+        setPhotoMoves(new Map());
+        setPhotoDeletes(new Set());
+        setPhotoRotations(new Map());
+        setPhotosEditing(false);
+    }
+
     if (loading) return <Spinner />;
     if (!container) return <div className="center">Container not found.</div>;
 
@@ -506,13 +515,25 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                     <hr className="qr-divider" />
                     <div className="section-head">
                         <h2>Photos</h2>
-                        <button
-                            className={`ghost small icon-btn${photosEditing ? ' ok' : ''}`}
-                            onClick={() => (photosEditing ? void savePhotoEdits() : startPhotosEditing())}
-                            title={photosEditing ? 'Done' : 'Edit photos'}
-                        >
-                            <Icon name={photosEditing ? 'check' : 'pencil'} size={14} />
-                        </button>
+                        <span className="item-actions">
+                            {photosEditing && (
+                                <button
+                                    className="ghost small icon-btn"
+                                    onClick={cancelPhotoEdits}
+                                    title="Cancel"
+                                    aria-label="Cancel"
+                                >
+                                    <Icon name="close" size={14} />
+                                </button>
+                            )}
+                            <button
+                                className={`ghost small icon-btn${photosEditing ? ' ok' : ''}`}
+                                onClick={() => (photosEditing ? void savePhotoEdits() : startPhotosEditing())}
+                                title={photosEditing ? 'Done' : 'Edit photos'}
+                            >
+                                <Icon name={photosEditing ? 'check' : 'pencil'} size={14} />
+                            </button>
+                        </span>
                     </div>
                     <div className="thumbs">
                         {container.photos.map((p) => (
