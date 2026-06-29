@@ -1149,8 +1149,8 @@ function ItemRow({
             )}
             <span className="item-actions">
                 {editing && (
-                    <button className="danger small icon-btn" onClick={remove} title="Remove">
-                        <Icon name="close" size={16} />
+                    <button className="danger small icon-btn" onClick={remove} title="Delete" aria-label="Delete">
+                        <Icon name="trash" size={16} />
                     </button>
                 )}
                 <button
