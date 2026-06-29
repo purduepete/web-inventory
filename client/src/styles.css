@@ -1300,6 +1300,20 @@ button.icon-btn.ok,
     border: none;
     box-shadow: none;
 }
+button.icon-btn.ok:hover,
+button.icon-btn.ok:active,
+button.icon-btn.ok:focus,
+.item-actions button.icon-btn.ok:hover,
+.item-actions button.icon-btn.ok:active,
+.header-editor button.icon-btn.ok:hover,
+.header-editor button.icon-btn.ok:active {
+    background: transparent;
+    color: var(--ok);
+    border: none;
+    box-shadow: none;
+    filter: none;
+    -webkit-tap-highlight-color: transparent;
+}
 .item-row .grow {
     flex: 1;
     min-width: 0;
