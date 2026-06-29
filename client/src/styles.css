@@ -879,7 +879,7 @@ a.card:active {
     transition: transform 0.18s ease;
 }
 .group-chevron.open {
-    transform: rotate(180deg);
+    transform: rotate(90deg);
 }
 .group-name {
     flex: 1;
@@ -931,6 +931,37 @@ a.card:active {
 }
 .tag-add button {
     flex: 0 0 auto;
+}
+/* Inline clear (X) sitting inside a text field, flush to its right edge. */
+.input-clear {
+    position: relative;
+    display: flex;
+    min-width: 0;
+}
+.input-clear input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    padding-right: 38px;
+}
+.input-clear-btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+.input-clear-btn:hover {
+    color: var(--text);
 }
 @media (max-width: 560px) {
     .tag-add {
@@ -1032,7 +1063,7 @@ a.card:active {
     color: var(--muted);
 }
 .collapse-chevron.open {
-    transform: rotate(180deg);
+    transform: rotate(90deg);
 }
 .collapse-filter .filter-row {
     margin-top: 10px;
