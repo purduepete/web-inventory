@@ -61,6 +61,9 @@ export default function NewContainerPage() {
             locationId: locationId || null,
             ownerId: ownerId || null,
             notes: notes.trim(),
+            // Stable idempotency key stamped before the first (online) attempt so a
+            // lost-response create that later replays offline can't duplicate (migration 008).
+            clientMutationId: crypto.randomUUID(),
         };
         try {
             const c = navigator.onLine ? await api.createContainer(input) : await createContainerOffline(input);

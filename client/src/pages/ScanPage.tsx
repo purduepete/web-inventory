@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
+import type { Html5Qrcode } from 'html5-qrcode';
 
 export default function ScanPage() {
     const nav = useNavigate();
@@ -10,41 +10,50 @@ export default function ScanPage() {
 
     useEffect(() => {
         let stopped = false;
-        const elId = 'qr-reader';
-        const scanner = new Html5Qrcode(elId);
-        scannerRef.current = scanner;
+        // Assigned once the scanner is created; a no-op until then so an early
+        // unmount (StrictMode / navigating away during load) is safe.
+        let stop: () => Promise<void> = async () => {};
 
-        // Stop only when the camera is actually scanning/paused; stop() throws
-        // synchronously otherwise (e.g. before start resolves on StrictMode unmount).
-        const safeStop = async () => {
-            try {
-                const state = scanner.getState();
-                if (state === Html5QrcodeScannerState.SCANNING || state === Html5QrcodeScannerState.PAUSED) {
-                    await scanner.stop();
+        // Load the scanner library on demand so it isn't in the initial bundle;
+        // the page chrome renders while it downloads.
+        const startPromise = (async () => {
+            const { Html5Qrcode, Html5QrcodeScannerState } = await import('html5-qrcode');
+            if (stopped) return;
+            const scanner = new Html5Qrcode('qr-reader');
+            scannerRef.current = scanner;
+
+            // Stop only when the camera is actually scanning/paused; stop() throws
+            // synchronously otherwise (e.g. before start resolves on StrictMode unmount).
+            stop = async () => {
+                try {
+                    const state = scanner.getState();
+                    if (state === Html5QrcodeScannerState.SCANNING || state === Html5QrcodeScannerState.PAUSED) {
+                        await scanner.stop();
+                    }
+                } catch {
+                    /* already stopped or never started */
                 }
-            } catch {
-                /* already stopped or never started */
-            }
-        };
+            };
 
-        const startPromise = scanner
-            .start(
-                { facingMode: 'environment' },
-                { fps: 10, qrbox: { width: 240, height: 240 } },
-                (decoded) => {
-                    if (stopped) return;
-                    stopped = true;
-                    void safeStop();
-                    routeTo(decoded);
-                },
-                () => undefined,
-            )
-            .catch(() => setError('Camera unavailable. Grant camera permission and retry.'));
+            await scanner
+                .start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 240, height: 240 } },
+                    (decoded) => {
+                        if (stopped) return;
+                        stopped = true;
+                        void stop();
+                        routeTo(decoded);
+                    },
+                    () => undefined,
+                )
+                .catch(() => setError('Camera unavailable. Grant camera permission and retry.'));
+        })();
 
         return () => {
             stopped = true;
             // Wait for start to settle so we never stop a half-initialized scanner.
-            void startPromise.then(safeStop);
+            void startPromise.then(() => stop());
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

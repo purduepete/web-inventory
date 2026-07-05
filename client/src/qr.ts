@@ -1,7 +1,7 @@
-import QRCode from 'qrcode';
-
 /** Returns a PNG data URL encoding the deep link to a container. */
 export async function makeQrDataUrl(qrToken: string, origin = window.location.origin): Promise<string> {
+    // Loaded on demand so the qrcode library isn't bundled into the container chunk.
+    const { default: QRCode } = await import('qrcode');
     const url = `${origin}/c/${qrToken}`;
     return QRCode.toDataURL(url, { margin: 1, width: 320, errorCorrectionLevel: 'M' });
 }
