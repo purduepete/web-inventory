@@ -55,20 +55,30 @@ public sealed class InventoryRepository
         // is a hard backstop and any loser/deadlock victim simply retries.
         for (var attempt = 0; ; attempt++)
         {
+            // Idempotency (B2): if this create was already applied under the same
+            // client mutation id (an offline-sync replay after a lost response),
+            // return the existing container instead of creating a duplicate.
+            if (input.ClientMutationId is Guid mid)
+            {
+                var existing = await conn.QuerySingleOrDefaultAsync<Container>(
+                    $"{ContainerSelect} WHERE c.ClientMutationId = @mid;", new { mid });
+                if (existing is not null) return existing;
+            }
+
             var id = Guid.NewGuid();
             await using var tx = await conn.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             try
             {
                 await conn.ExecuteAsync(new CommandDefinition(
-                    @"INSERT INTO inv.Container (Id, Number, Name, LocationId, OwnerId, Notes, QrToken)
+                    @"INSERT INTO inv.Container (Id, Number, Name, LocationId, OwnerId, Notes, QrToken, ClientMutationId)
                       SELECT @id,
                              (SELECT MIN(t.n)
                               FROM (SELECT 1 AS n
                                     UNION ALL
                                     SELECT Number + 1 FROM inv.Container) t
                               WHERE NOT EXISTS (SELECT 1 FROM inv.Container c WHERE c.Number = t.n)),
-                             @Name, @LocationId, @OwnerId, @Notes, @token;",
-                    new { id, input.Name, input.LocationId, input.OwnerId, input.Notes, token },
+                             @Name, @LocationId, @OwnerId, @Notes, @token, @ClientMutationId;",
+                    new { id, input.Name, input.LocationId, input.OwnerId, input.Notes, token, input.ClientMutationId },
                     transaction: tx, cancellationToken: ct));
                 await tx.CommitAsync(ct);
                 return await conn.QuerySingleOrDefaultAsync<Container>(
@@ -77,6 +87,8 @@ public sealed class InventoryRepository
             catch (SqlException ex) when (IsRetryable(ex) && attempt < 5)
             {
                 // A deadlock victim (1205) is already rolled back, so guard the rollback.
+                // A unique violation on the mutation-id index means a concurrent replay
+                // won the race; the next loop's idempotency check returns that row.
                 try { await tx.RollbackAsync(ct); } catch { /* already rolled back */ }
                 await Task.Delay(20 * (attempt + 1), ct);
             }
@@ -191,15 +203,34 @@ public sealed class InventoryRepository
     public async Task<Item?> AddItemAsync(Guid containerId, SaveItemInput input, string source, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);
+
+        // Idempotency (B2): a replayed offline-sync create returns the item that was
+        // already inserted under the same client mutation id rather than duplicating it.
+        if (input.ClientMutationId is Guid mid)
+        {
+            var existing = await LoadItemByMutationIdAsync(conn, null, mid, ct);
+            if (existing is not null) return existing;
+        }
+
         await using var tx = await conn.BeginTransactionAsync(ct);
         var id = Guid.NewGuid();
-        var item = await conn.QuerySingleOrDefaultAsync<Item>(new CommandDefinition(
-            @"INSERT INTO inv.Item (Id, ContainerId, Name, Description, Quantity, Source, CategoryId)
-              OUTPUT inserted.Id, inserted.ContainerId, inserted.Name, inserted.Description,
-                     inserted.Quantity, inserted.Source, inserted.CreatedAt, inserted.UpdatedAt, inserted.CategoryId
-              VALUES (@id, @containerId, @Name, @Description, @Quantity, @source, @CategoryId);",
-            new { id, containerId, input.Name, input.Description, Quantity = Math.Max(1, input.Quantity), source, input.CategoryId },
-            transaction: tx, cancellationToken: ct));
+        Item? item;
+        try
+        {
+            item = await conn.QuerySingleOrDefaultAsync<Item>(new CommandDefinition(
+                @"INSERT INTO inv.Item (Id, ContainerId, Name, Description, Quantity, Source, CategoryId, ClientMutationId)
+                  OUTPUT inserted.Id, inserted.ContainerId, inserted.Name, inserted.Description,
+                         inserted.Quantity, inserted.Source, inserted.CreatedAt, inserted.UpdatedAt, inserted.CategoryId
+                  VALUES (@id, @containerId, @Name, @Description, @Quantity, @source, @CategoryId, @ClientMutationId);",
+                new { id, containerId, input.Name, input.Description, Quantity = Math.Max(1, input.Quantity), source, input.CategoryId, input.ClientMutationId },
+                transaction: tx, cancellationToken: ct));
+        }
+        catch (SqlException ex) when (ex.Number is 2627 or 2601 && input.ClientMutationId is Guid raceMid)
+        {
+            // A concurrent replay won the mutation-id race; roll back and return its row.
+            try { await tx.RollbackAsync(ct); } catch { /* already rolled back */ }
+            return await LoadItemByMutationIdAsync(conn, null, raceMid, ct);
+        }
         if (item is null)
         {
             await tx.RollbackAsync(ct);
@@ -209,6 +240,26 @@ public sealed class InventoryRepository
         item.Category = await CategoryNameAsync(conn, tx, item.CategoryId, ct);
         await tx.CommitAsync(ct);
         item.Tags = input.Tags ?? new();
+        return item;
+    }
+
+    // Loads an item (with its tags) by the client mutation id used to create it, for B2
+    // idempotent-replay handling. Returns null when no item carries that id.
+    private static async Task<Item?> LoadItemByMutationIdAsync(SqlConnection conn, DbTransaction? tx, Guid mid, CancellationToken ct)
+    {
+        var item = await conn.QuerySingleOrDefaultAsync<Item>(new CommandDefinition(
+            @"SELECT i.Id, i.ContainerId, i.Name, i.Description, i.Quantity, i.Source, i.CreatedAt, i.UpdatedAt,
+                     i.CategoryId, cat.Name AS Category
+              FROM inv.Item i
+              LEFT JOIN inv.Category cat ON cat.Id = i.CategoryId
+              WHERE i.ClientMutationId = @mid;",
+            new { mid }, transaction: tx, cancellationToken: ct));
+        if (item is null) return null;
+        item.Tags = (await conn.QueryAsync<string>(new CommandDefinition(
+            @"SELECT t.Name FROM inv.ItemTag it
+              JOIN inv.Tag t ON t.Id = it.TagId
+              WHERE it.ItemId = @id ORDER BY t.Name;",
+            new { id = item.Id }, transaction: tx, cancellationToken: ct))).AsList();
         return item;
     }
 

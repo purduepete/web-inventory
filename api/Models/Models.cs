@@ -60,8 +60,8 @@ public record ContainerWithContents(
 public record Lookup(Guid Id, string Name);
 
 // ---- request DTOs ----
-public record CreateContainerInput(string Name, Guid? LocationId, Guid? OwnerId, string? Notes);
-public record SaveItemInput(string Name, string? Description, int Quantity, List<string>? Tags, Guid? CategoryId);
+public record CreateContainerInput(string Name, Guid? LocationId, Guid? OwnerId, string? Notes, Guid? ClientMutationId = null);
+public record SaveItemInput(string Name, string? Description, int Quantity, List<string>? Tags, Guid? CategoryId, Guid? ClientMutationId = null);
 public record MoveItemInput(Guid TargetContainerId);
 public record MovePhotoInput(Guid TargetContainerId);
 
