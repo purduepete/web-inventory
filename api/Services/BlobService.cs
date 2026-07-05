@@ -95,11 +95,13 @@ public sealed class BlobService
         var blob = _container.GetBlobClient(new BlobUriBuilder(uri).BlobName);
         if (!await blob.ExistsAsync(ct)) return null;
 
-        var resp = await blob.DownloadContentAsync(ct);
         byte[] rotated;
         try
         {
-            using var image = Image.Load(resp.Value.Content.ToArray());
+            // Stream the source blob straight into the decoder (P4) rather than
+            // materializing the whole image as a byte[] (LOH pressure).
+            await using var source = await blob.OpenReadAsync(new BlobOpenReadOptions(false), ct);
+            using var image = await Image.LoadAsync(source, ct);
             image.Mutate(x => x.Rotate(degrees));
             using var ms = new MemoryStream();
             await image.SaveAsJpegAsync(ms, new JpegEncoder { Quality = 85 }, ct);

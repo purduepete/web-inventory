@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
+import { getContainersCached } from '../containersCache';
 import {
     enqueue,
     enqueuePhoto,
@@ -167,8 +168,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     useEffect(() => {
         if (!container || container.photos.length === 0 || otherContainersLoaded.current) return;
         otherContainersLoaded.current = true;
-        void api
-            .listContainers()
+        void getContainersCached()
             .then((cs) => setOtherContainers(cs.filter((c) => c.id !== container.id)))
             .catch(() => {
                 otherContainersLoaded.current = false;
@@ -185,8 +185,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     useEffect(() => {
         if (!container || byToken) return;
         let cancelled = false;
-        void api
-            .listContainers()
+        void getContainersCached()
             .then((cs) => {
                 if (cancelled) return;
                 const sameOwner = cs
@@ -777,7 +776,7 @@ function ItemsEditor({
     const ensureOthers = useCallback(() => {
         if (othersLoaded.current) return;
         othersLoaded.current = true;
-        api.listContainers()
+        getContainersCached()
             .then((cs) => setOthers(cs.filter((c) => c.id !== container.id)))
             .catch(() => {
                 othersLoaded.current = false;

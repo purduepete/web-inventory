@@ -19,8 +19,10 @@ public class SearchFunctions
         var q = query["q"];
         var tag = query["tag"];
         Guid? ParseId(string key) => Guid.TryParse(query[key], out var id) ? id : null;
+        var skip = int.TryParse(query["skip"], out var s) ? s : 0;
+        var take = int.TryParse(query["take"], out var t) ? t : InventoryRepository.DefaultSearchTake;
         return await req.Json(await _repo.SearchAsync(
-            q, tag, ParseId("locationId"), ParseId("ownerId"), ParseId("categoryId"), ct));
+            q, tag, ParseId("locationId"), ParseId("ownerId"), ParseId("categoryId"), skip, take, ct));
     }
 
     [Function("ListTags")]

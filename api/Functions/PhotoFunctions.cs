@@ -33,8 +33,7 @@ public class PhotoFunctions
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "containers/{containerId:guid}/photos")] HttpRequestData req,
         Guid containerId, CancellationToken ct)
     {
-        var container = await _repo.GetContainerAsync(containerId, ct);
-        if (container is null) return req.Status(HttpStatusCode.NotFound);
+        if (!await _repo.ContainerExistsAsync(containerId, ct)) return req.Status(HttpStatusCode.NotFound);
 
         // Reject early when the client declares an oversize body.
         if (req.Headers.TryGetValues("Content-Length", out var lenValues)
