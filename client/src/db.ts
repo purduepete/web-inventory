@@ -10,7 +10,8 @@ export type QueuedMutation =
     | { kind: 'deleteItem'; itemId: string }
     | { kind: 'moveItem'; itemId: string; targetContainerId: string }
     | { kind: 'deletePhoto'; photoId: string }
-    | { kind: 'movePhoto'; photoId: string; targetContainerId: string };
+    | { kind: 'movePhoto'; photoId: string; targetContainerId: string }
+    | { kind: 'rotatePhoto'; photoId: string; degrees: number };
 
 export interface QueueRow {
     id?: number;
@@ -331,6 +332,9 @@ async function applyMutation(m: QueuedMutation): Promise<void> {
             break;
         case 'movePhoto':
             await api.movePhoto(m.photoId, m.targetContainerId);
+            break;
+        case 'rotatePhoto':
+            await api.rotatePhoto(m.photoId, m.degrees);
             break;
     }
 }

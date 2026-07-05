@@ -430,6 +430,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             await load(true);
             flash('Photo changes saved.');
         } catch {
+            for (const [id, deg] of rotations) await enqueue({ kind: 'rotatePhoto', photoId: id, degrees: deg });
             for (const id of deletes) await enqueue({ kind: 'deletePhoto', photoId: id });
             for (const [id, target] of moves)
                 await enqueue({ kind: 'movePhoto', photoId: id, targetContainerId: target });
@@ -1314,6 +1315,7 @@ function HeaderEditor({
     const [name, setName] = useState(container.name);
     const [locationId, setLocationId] = useState(container.locationId ?? '');
     const [ownerId, setOwnerId] = useState(container.ownerId ?? '');
+    const [notes, setNotes] = useState(container.notes ?? '');
     const [saving, setSaving] = useState(false);
 
     async function save() {
@@ -1324,7 +1326,7 @@ function HeaderEditor({
                 name: name.trim(),
                 locationId: locationId || null,
                 ownerId: ownerId || null,
-                notes: container.notes ?? '',
+                notes: notes.trim(),
             });
             await onDone(true);
         } catch {
@@ -1364,6 +1366,10 @@ function HeaderEditor({
                         ...locations.map((l) => ({ value: l.id, label: l.name })),
                     ]}
                 />
+            </label>
+            <label>
+                Notes
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
             </label>
             <div className="row header-editor-actions">
                 <button
