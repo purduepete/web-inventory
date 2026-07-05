@@ -1,29 +1,37 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import App from './App';
-import HomePage from './pages/HomePage';
-import ContainersPage from './pages/ContainersPage';
-import NewContainerPage from './pages/NewContainerPage';
-import ContainerPage from './pages/ContainerPage';
-import ScanPage from './pages/ScanPage';
-import ManagePage from './pages/ManagePage';
+import { Spinner } from './Spinner';
 import { DialogProvider } from './Dialog';
 import './pwa';
 import './styles.css';
+
+// Route-level code splitting: pages (and the heavy html5-qrcode scanner) load on
+// demand so the initial PWA shell stays small.
+const HomePage = lazy(() => import('./pages/HomePage'));
+const ContainersPage = lazy(() => import('./pages/ContainersPage'));
+const NewContainerPage = lazy(() => import('./pages/NewContainerPage'));
+const ContainerPage = lazy(() => import('./pages/ContainerPage'));
+const ScanPage = lazy(() => import('./pages/ScanPage'));
+const ManagePage = lazy(() => import('./pages/ManagePage'));
+
+const page = (element: React.ReactNode) => (
+    <Suspense fallback={<Spinner />}>{element}</Suspense>
+);
 
 const router = createBrowserRouter([
     {
         path: '/',
         element: <App />,
         children: [
-            { index: true, element: <HomePage /> },
-            { path: 'containers', element: <ContainersPage /> },
-            { path: 'containers/new', element: <NewContainerPage /> },
-            { path: 'containers/:id', element: <ContainerPage /> },
-            { path: 'c/:token', element: <ContainerPage byToken /> },
-            { path: 'scan', element: <ScanPage /> },
-            { path: 'manage', element: <ManagePage /> },
+            { index: true, element: page(<HomePage />) },
+            { path: 'containers', element: page(<ContainersPage />) },
+            { path: 'containers/new', element: page(<NewContainerPage />) },
+            { path: 'containers/:id', element: page(<ContainerPage />) },
+            { path: 'c/:token', element: page(<ContainerPage byToken />) },
+            { path: 'scan', element: page(<ScanPage />) },
+            { path: 'manage', element: page(<ManagePage />) },
         ],
     },
 ]);
