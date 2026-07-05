@@ -1,4 +1,8 @@
+using System.Data;
+using System.Data.Common;
+using System.Text.Json;
 using Dapper;
+using Microsoft.Data.SqlClient;
 using WebInventory.Api.Models;
 using WebInventory.Api.Services;
 
@@ -14,6 +18,10 @@ public sealed class InventoryRepository
         _db = db;
         _blob = blob;
     }
+
+    // SQL Server error numbers we retry on: unique-constraint (2627), unique-index (2601)
+    // and deadlock victim (1205).
+    private static bool IsRetryable(SqlException ex) => ex.Number is 2627 or 2601 or 1205;
 
     private const string ContainerSelect =
         @"SELECT c.Id, c.Number, c.Name, c.LocationId, l.Name AS Location, c.OwnerId, o.Name AS Owner,
@@ -39,22 +47,40 @@ public sealed class InventoryRepository
     public async Task<Container?> CreateContainerAsync(CreateContainerInput input, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);
-        var id = Guid.NewGuid();
         var token = Guid.NewGuid();
         // Assign the smallest unused positive number so deleted slots get reused
         // (e.g. with 1-3 present, deleting 2 makes the next container 2, then 4).
-        await conn.ExecuteAsync(
-            @"INSERT INTO inv.Container (Id, Number, Name, LocationId, OwnerId, Notes, QrToken)
-              SELECT @id,
-                     (SELECT MIN(t.n)
-                      FROM (SELECT 1 AS n
-                            UNION ALL
-                            SELECT Number + 1 FROM inv.Container) t
-                      WHERE NOT EXISTS (SELECT 1 FROM inv.Container c WHERE c.Number = t.n)),
-                     @Name, @LocationId, @OwnerId, @Notes, @token;",
-            new { id, input.Name, input.LocationId, input.OwnerId, input.Notes, token });
-        return await conn.QuerySingleOrDefaultAsync<Container>(
-            $"{ContainerSelect} WHERE c.Id = @id;", new { id });
+        // The gap scan + insert run in a SERIALIZABLE transaction so concurrent creates
+        // can't compute the same number; the UNIQUE constraint on Number (migration 007)
+        // is a hard backstop and any loser/deadlock victim simply retries.
+        for (var attempt = 0; ; attempt++)
+        {
+            var id = Guid.NewGuid();
+            await using var tx = await conn.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            try
+            {
+                await conn.ExecuteAsync(new CommandDefinition(
+                    @"INSERT INTO inv.Container (Id, Number, Name, LocationId, OwnerId, Notes, QrToken)
+                      SELECT @id,
+                             (SELECT MIN(t.n)
+                              FROM (SELECT 1 AS n
+                                    UNION ALL
+                                    SELECT Number + 1 FROM inv.Container) t
+                              WHERE NOT EXISTS (SELECT 1 FROM inv.Container c WHERE c.Number = t.n)),
+                             @Name, @LocationId, @OwnerId, @Notes, @token;",
+                    new { id, input.Name, input.LocationId, input.OwnerId, input.Notes, token },
+                    transaction: tx, cancellationToken: ct));
+                await tx.CommitAsync(ct);
+                return await conn.QuerySingleOrDefaultAsync<Container>(
+                    $"{ContainerSelect} WHERE c.Id = @id;", new { id });
+            }
+            catch (SqlException ex) when (IsRetryable(ex) && attempt < 5)
+            {
+                // A deadlock victim (1205) is already rolled back, so guard the rollback.
+                try { await tx.RollbackAsync(ct); } catch { /* already rolled back */ }
+                await Task.Delay(20 * (attempt + 1), ct);
+            }
+        }
     }
 
     public async Task<ContainerWithContents?> GetContainerAsync(Guid id, CancellationToken ct)
@@ -125,53 +151,97 @@ public sealed class InventoryRepository
     public async Task DeleteContainerAsync(Guid id, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);
-        await conn.ExecuteAsync(
-            @"DELETE FROM inv.ItemTag WHERE ItemId IN (SELECT Id FROM inv.Item WHERE ContainerId = @id);
-              DELETE FROM inv.Item WHERE ContainerId = @id;
-              DELETE FROM inv.Photo WHERE ContainerId = @id;
-              DELETE FROM inv.Container WHERE Id = @id;",
-            new { id });
+
+        // Capture blob URLs before the rows are gone so storage can be cleaned up after commit.
+        var photoUrls = (await conn.QueryAsync<(string BlobUrl, string ThumbUrl)>(
+            "SELECT BlobUrl, ThumbUrl FROM inv.Photo WHERE ContainerId = @id;", new { id })).AsList();
+
+        await using (var tx = await conn.BeginTransactionAsync(ct))
+        {
+            await conn.ExecuteAsync(new CommandDefinition(
+                @"DELETE FROM inv.ItemTag WHERE ItemId IN (SELECT Id FROM inv.Item WHERE ContainerId = @id);
+                  DELETE FROM inv.Item WHERE ContainerId = @id;
+                  DELETE FROM inv.Photo WHERE ContainerId = @id;
+                  DELETE FROM inv.Container WHERE Id = @id;",
+                new { id }, transaction: tx, cancellationToken: ct));
+            await tx.CommitAsync(ct);
+        }
+
+        // DB is now consistent; best-effort remove the orphaned blobs.
+        await DeleteBlobsBestEffortAsync(photoUrls, ct);
+    }
+
+    // Best-effort blob cleanup used after the DB rows are already gone. Dedupes blob/thumb
+    // pairs and never throws — a failed delete just leaves a recoverable orphan.
+    private async Task DeleteBlobsBestEffortAsync(IEnumerable<(string BlobUrl, string ThumbUrl)> photos, CancellationToken ct)
+    {
+        var urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (blobUrl, thumbUrl) in photos)
+        {
+            if (!string.IsNullOrWhiteSpace(blobUrl)) urls.Add(blobUrl);
+            if (!string.IsNullOrWhiteSpace(thumbUrl)) urls.Add(thumbUrl);
+        }
+        foreach (var url in urls)
+        {
+            try { await _blob.DeleteAsync(url, ct); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { /* leave orphan for later cleanup */ }
+        }
     }
 
     public async Task<Item?> AddItemAsync(Guid containerId, SaveItemInput input, string source, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
         var id = Guid.NewGuid();
-        var item = await conn.QuerySingleOrDefaultAsync<Item>(
+        var item = await conn.QuerySingleOrDefaultAsync<Item>(new CommandDefinition(
             @"INSERT INTO inv.Item (Id, ContainerId, Name, Description, Quantity, Source, CategoryId)
               OUTPUT inserted.Id, inserted.ContainerId, inserted.Name, inserted.Description,
                      inserted.Quantity, inserted.Source, inserted.CreatedAt, inserted.UpdatedAt, inserted.CategoryId
               VALUES (@id, @containerId, @Name, @Description, @Quantity, @source, @CategoryId);",
-            new { id, containerId, input.Name, input.Description, Quantity = Math.Max(1, input.Quantity), source, input.CategoryId });
-        if (item is null) return null;
-        await SetTagsAsync(conn, item.Id, input.Tags ?? new());
+            new { id, containerId, input.Name, input.Description, Quantity = Math.Max(1, input.Quantity), source, input.CategoryId },
+            transaction: tx, cancellationToken: ct));
+        if (item is null)
+        {
+            await tx.RollbackAsync(ct);
+            return null;
+        }
+        await SetTagsAsync(conn, tx, item.Id, input.Tags ?? new(), ct);
+        item.Category = await CategoryNameAsync(conn, tx, item.CategoryId, ct);
+        await tx.CommitAsync(ct);
         item.Tags = input.Tags ?? new();
-        item.Category = await CategoryNameAsync(conn, item.CategoryId);
         return item;
     }
 
     public async Task<Item?> UpdateItemAsync(Guid itemId, SaveItemInput input, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);
-        var item = await conn.QuerySingleOrDefaultAsync<Item>(
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        var item = await conn.QuerySingleOrDefaultAsync<Item>(new CommandDefinition(
             @"UPDATE inv.Item SET Name = @Name, Description = @Description, Quantity = @Quantity,
                      CategoryId = @CategoryId, UpdatedAt = SYSUTCDATETIME()
               OUTPUT inserted.Id, inserted.ContainerId, inserted.Name, inserted.Description,
                      inserted.Quantity, inserted.Source, inserted.CreatedAt, inserted.UpdatedAt, inserted.CategoryId
               WHERE Id = @itemId;",
-            new { itemId, input.Name, input.Description, Quantity = Math.Max(1, input.Quantity), input.CategoryId });
-        if (item is null) return null;
-        await SetTagsAsync(conn, itemId, input.Tags ?? new());
+            new { itemId, input.Name, input.Description, Quantity = Math.Max(1, input.Quantity), input.CategoryId },
+            transaction: tx, cancellationToken: ct));
+        if (item is null)
+        {
+            await tx.RollbackAsync(ct);
+            return null;
+        }
+        await SetTagsAsync(conn, tx, itemId, input.Tags ?? new(), ct);
+        item.Category = await CategoryNameAsync(conn, tx, item.CategoryId, ct);
+        await tx.CommitAsync(ct);
         item.Tags = input.Tags ?? new();
-        item.Category = await CategoryNameAsync(conn, item.CategoryId);
         return item;
     }
 
-    private static async Task<string?> CategoryNameAsync(Microsoft.Data.SqlClient.SqlConnection conn, Guid? categoryId)
+    private static async Task<string?> CategoryNameAsync(SqlConnection conn, DbTransaction? tx, Guid? categoryId, CancellationToken ct)
         => categoryId is null
             ? null
-            : await conn.QuerySingleOrDefaultAsync<string?>(
-                "SELECT Name FROM inv.Category WHERE Id = @categoryId;", new { categoryId });
+            : await conn.QuerySingleOrDefaultAsync<string?>(new CommandDefinition(
+                "SELECT Name FROM inv.Category WHERE Id = @categoryId;", new { categoryId },
+                transaction: tx, cancellationToken: ct));
 
     public async Task<Item?> MoveItemAsync(Guid itemId, Guid targetContainerId, CancellationToken ct)
     {
@@ -187,9 +257,12 @@ public sealed class InventoryRepository
     public async Task DeleteItemAsync(Guid itemId, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);
-        await conn.ExecuteAsync(
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(
             @"DELETE FROM inv.ItemTag WHERE ItemId = @itemId;
-              DELETE FROM inv.Item WHERE Id = @itemId;", new { itemId });
+              DELETE FROM inv.Item WHERE Id = @itemId;", new { itemId },
+            transaction: tx, cancellationToken: ct));
+        await tx.CommitAsync(ct);
     }
 
     // Escape LIKE metacharacters so a user's literal text (%, _, [, \) doesn't act as
@@ -322,32 +395,42 @@ public sealed class InventoryRepository
             "SELECT BlobUrl, ThumbUrl FROM inv.Photo WHERE Id = @photoId;", new { photoId });
         if (urls is null) return false;
 
-        await _blob.DeleteAsync(urls.Value.BlobUrl, ct);
-        if (!string.Equals(urls.Value.ThumbUrl, urls.Value.BlobUrl, StringComparison.OrdinalIgnoreCase))
-            await _blob.DeleteAsync(urls.Value.ThumbUrl, ct);
+        // Remove the DB row FIRST: an orphaned blob is recoverable, but a row pointing at a
+        // deleted blob breaks reads. Blob cleanup is best-effort afterwards.
+        var deleted = await conn.ExecuteAsync("DELETE FROM inv.Photo WHERE Id = @photoId;", new { photoId });
+        if (deleted == 0) return false;
 
-        await conn.ExecuteAsync("DELETE FROM inv.Photo WHERE Id = @photoId;", new { photoId });
+        await DeleteBlobsBestEffortAsync(new[] { (urls.Value.BlobUrl, urls.Value.ThumbUrl) }, ct);
         return true;
     }
 
-    private static async Task SetTagsAsync(Microsoft.Data.SqlClient.SqlConnection conn, Guid itemId, List<string> tags)
+    // Replaces an item's tags in one set-based, transactional round trip. The MERGE ... WITH
+    // (HOLDLOCK) upsert is race-safe: concurrent requests creating the same new tag serialize
+    // instead of colliding on UQ_inv_Tag_Name.
+    private static async Task SetTagsAsync(SqlConnection conn, DbTransaction tx, Guid itemId, List<string> tags, CancellationToken ct)
     {
-        await conn.ExecuteAsync("DELETE FROM inv.ItemTag WHERE ItemId = @itemId;", new { itemId });
-        foreach (var raw in tags.Select(t => t.Trim()).Where(t => t.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            var tagId = await conn.QuerySingleOrDefaultAsync<Guid?>(
-                "SELECT Id FROM inv.Tag WHERE Name = @name;", new { name = raw });
-            if (tagId is null)
-            {
-                tagId = Guid.NewGuid();
-                await conn.ExecuteAsync(
-                    "INSERT INTO inv.Tag (Id, Name) VALUES (@id, @name);",
-                    new { id = tagId, name = raw });
-            }
-            await conn.ExecuteAsync(
-                "INSERT INTO inv.ItemTag (ItemId, TagId) VALUES (@itemId, @tagId);",
-                new { itemId, tagId });
-        }
+        var names = tags.Select(t => t.Trim())
+            .Where(t => t.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var namesJson = JsonSerializer.Serialize(names);
+
+        await conn.ExecuteAsync(new CommandDefinition(
+            @"DELETE FROM inv.ItemTag WHERE ItemId = @itemId;
+
+              IF @namesJson <> '[]'
+              BEGIN
+                  MERGE inv.Tag WITH (UPDLOCK, HOLDLOCK) AS tgt
+                  USING (SELECT DISTINCT LTRIM(RTRIM(value)) AS Name FROM OPENJSON(@namesJson)) AS src
+                        ON tgt.Name = src.Name
+                  WHEN NOT MATCHED THEN INSERT (Id, Name) VALUES (NEWID(), src.Name);
+
+                  INSERT INTO inv.ItemTag (ItemId, TagId)
+                  SELECT @itemId, t.Id
+                  FROM inv.Tag t
+                  WHERE t.Name IN (SELECT DISTINCT LTRIM(RTRIM(value)) FROM OPENJSON(@namesJson));
+              END",
+            new { itemId, namesJson }, transaction: tx, cancellationToken: ct));
     }
 
     // ---- Managed lookup lists (owners / locations / categories) ----
