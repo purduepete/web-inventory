@@ -300,6 +300,7 @@ async function applyMutation(m: QueuedMutation): Promise<void> {
                 const mut = row.mutation;
                 if (mut.kind === 'addItem' && mut.containerId === m.tempId) mut.containerId = real.id;
                 if (mut.kind === 'moveItem' && mut.targetContainerId === m.tempId) mut.targetContainerId = real.id;
+                if (mut.kind === 'movePhoto' && mut.targetContainerId === m.tempId) mut.targetContainerId = real.id;
             });
             await db.pendingPhotos.where('containerId').equals(m.tempId).modify({ containerId: real.id });
             await db.containers.delete(m.tempId);
