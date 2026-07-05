@@ -181,13 +181,25 @@ public sealed class BlobService
 
         var key = await GetDelegationKeyAsync(ct);
         var builder = new BlobUriBuilder(uri);
+
+        // Quantize the SAS validity into fixed time buckets so repeated requests for
+        // the same blob yield an IDENTICAL signed URL within the bucket. This lets the
+        // browser cache photos/thumbnails instead of re-downloading them every load;
+        // the URL rotates once per bucket rather than on every request.
+        var now = DateTimeOffset.UtcNow;
+        var bucket = TimeSpan.FromMinutes(15);
+        var bucketStart = new DateTimeOffset(now.Ticks - (now.Ticks % bucket.Ticks), TimeSpan.Zero);
+        var expiresOn = bucketStart + bucket + TimeSpan.FromHours(1);
+        // Never sign past the delegation key's own expiry, or the SAS would be rejected.
+        if (expiresOn > _udkExpiry) expiresOn = _udkExpiry;
+
         var sas = new BlobSasBuilder
         {
             BlobContainerName = builder.BlobContainerName,
             BlobName = builder.BlobName,
             Resource = "b",
-            StartsOn = DateTimeOffset.UtcNow.AddMinutes(-5),
-            ExpiresOn = DateTimeOffset.UtcNow.AddHours(1),
+            StartsOn = bucketStart - TimeSpan.FromMinutes(5), // clock-skew allowance
+            ExpiresOn = expiresOn,
         };
         sas.SetPermissions(BlobSasPermissions.Read);
         builder.Sas = sas.ToSasQueryParameters(key, _service.AccountName);
