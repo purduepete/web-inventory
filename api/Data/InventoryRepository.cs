@@ -192,6 +192,15 @@ public sealed class InventoryRepository
               DELETE FROM inv.Item WHERE Id = @itemId;", new { itemId });
     }
 
+    // Escape LIKE metacharacters so a user's literal text (%, _, [, \) doesn't act as
+    // a wildcard. Pairs with the ESCAPE '\' clause in SearchAsync.
+    private static string EscapeLike(string? value)
+        => (value ?? string.Empty)
+            .Replace("\\", "\\\\")
+            .Replace("%", "\\%")
+            .Replace("_", "\\_")
+            .Replace("[", "\\[");
+
     public async Task<IReadOnlyList<Item>> SearchAsync(
         string? q, string? tag, Guid? locationId, Guid? ownerId, Guid? categoryId, CancellationToken ct)
     {
@@ -204,7 +213,7 @@ public sealed class InventoryRepository
               LEFT JOIN inv.ItemTag it ON it.ItemId = i.Id
               LEFT JOIN inv.Tag t ON t.Id = it.TagId
               LEFT JOIN inv.Category cat ON cat.Id = i.CategoryId
-              WHERE (@q IS NULL OR i.Name LIKE @like OR i.Description LIKE @like)
+              WHERE (@q IS NULL OR i.Name LIKE @like ESCAPE '\' OR i.Description LIKE @like ESCAPE '\')
                 AND (@tag IS NULL OR t.Name = @tag)
                 AND (@locationId IS NULL OR c.LocationId = @locationId)
                 AND (@ownerId IS NULL OR c.OwnerId = @ownerId)
@@ -213,7 +222,7 @@ public sealed class InventoryRepository
             new
             {
                 q = string.IsNullOrWhiteSpace(q) ? null : q,
-                like = $"%{q}%",
+                like = $"%{EscapeLike(q)}%",
                 tag = string.IsNullOrWhiteSpace(tag) ? null : tag,
                 locationId,
                 ownerId,

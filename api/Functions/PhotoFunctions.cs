@@ -9,6 +9,10 @@ namespace WebInventory.Api.Functions;
 
 public class PhotoFunctions
 {
+    // Client downscales to <=1024px before upload, so a valid JPEG is well under this.
+    // The cap bounds memory use and rejects malicious oversize payloads (DoS).
+    private const long MaxUploadBytes = 15 * 1024 * 1024;
+
     private readonly InventoryRepository _repo;
     private readonly BlobService _blob;
     private readonly VisionService _vision;
@@ -32,8 +36,22 @@ public class PhotoFunctions
         var container = await _repo.GetContainerAsync(containerId, ct);
         if (container is null) return req.Status(HttpStatusCode.NotFound);
 
+        // Reject early when the client declares an oversize body.
+        if (req.Headers.TryGetValues("Content-Length", out var lenValues)
+            && long.TryParse(lenValues.FirstOrDefault(), out var declaredLen)
+            && declaredLen > MaxUploadBytes)
+            return await req.Text("Image exceeds the maximum upload size.", HttpStatusCode.RequestEntityTooLarge);
+
+        // Buffer with a hard cap so a chunked/unknown-length body can't exhaust memory.
         using var ms = new MemoryStream();
-        await req.Body.CopyToAsync(ms, ct);
+        var buffer = new byte[81920];
+        int read;
+        while ((read = await req.Body.ReadAsync(buffer, ct)) > 0)
+        {
+            if (ms.Length + read > MaxUploadBytes)
+                return await req.Text("Image exceeds the maximum upload size.", HttpStatusCode.RequestEntityTooLarge);
+            await ms.WriteAsync(buffer.AsMemory(0, read), ct);
+        }
         var bytes = ms.ToArray();
         if (bytes.Length == 0)
             return await req.Text("Empty image body.", HttpStatusCode.BadRequest);
