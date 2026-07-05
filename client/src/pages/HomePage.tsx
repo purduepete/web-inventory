@@ -35,6 +35,7 @@ export default function HomePage() {
     const [facets, setFacets] = useState<Facet[]>([]);
     const [filters, setFilters] = useState<Filters>(loadFilters);
     const [results, setResults] = useState<Item[]>([]);
+    const [hasMore, setHasMore] = useState(false);
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
     const [ready, setReady] = useState(false);
@@ -112,6 +113,7 @@ export default function HomePage() {
     useEffect(() => {
         if (!q && !tag && !hasFilter) {
             setResults([]);
+            setHasMore(false);
             setSearched(false);
             return;
         }
@@ -127,7 +129,8 @@ export default function HomePage() {
                 .then((r) => {
                     // Ignore a slow older response that resolved after a newer query (B5).
                     if (cancelled) return;
-                    setResults(r);
+                    setResults(r.items);
+                    setHasMore(r.hasMore);
                     setSearched(true);
                 })
                 .catch(() => undefined)
@@ -233,8 +236,13 @@ export default function HomePage() {
             )}
 
             <h2>
-                {loading ? 'Searching…' : searched ? `${results.length} result${results.length === 1 ? '' : 's'}` : ''}
+                {loading ? 'Searching…' : searched ? `${results.length}${hasMore ? '+' : ''} result${results.length === 1 ? '' : 's'}` : ''}
             </h2>
+            {searched && !loading && hasMore && (
+                <div className="muted" style={{ marginBottom: 8 }}>
+                    Showing the first {results.length}. Refine your search or add filters to narrow it down.
+                </div>
+            )}
             <div className="stack card-grid">
                 {results.map((it) => (
                     <Link key={it.id} to={`/containers/${it.containerId}`} className="card">

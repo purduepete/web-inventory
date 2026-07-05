@@ -10,6 +10,7 @@ import type {
     SaveItemInput,
 } from './types';
 import { getClientPrincipal, redirectToLogin } from './auth';
+import { invalidateContainers } from './containersCache';
 
 const BASE = '/api';
 
@@ -65,30 +66,48 @@ export const api = {
 
     getContainerByToken: (token: string) => http<ContainerWithContents>(`/containers/by-token/${token}`),
 
-    createContainer: (input: CreateContainerInput) =>
-        http<Container>('/containers', { method: 'POST', body: JSON.stringify(input) }),
+    createContainer: async (input: CreateContainerInput) => {
+        const r = await http<Container>('/containers', { method: 'POST', body: JSON.stringify(input) });
+        invalidateContainers();
+        return r;
+    },
 
-    updateContainer: (id: string, input: CreateContainerInput) =>
-        http<Container>(`/containers/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
+    updateContainer: async (id: string, input: CreateContainerInput) => {
+        const r = await http<Container>(`/containers/${id}`, { method: 'PUT', body: JSON.stringify(input) });
+        invalidateContainers();
+        return r;
+    },
 
-    deleteContainer: (id: string) => http<void>(`/containers/${id}`, { method: 'DELETE' }),
+    deleteContainer: async (id: string) => {
+        await http<void>(`/containers/${id}`, { method: 'DELETE' });
+        invalidateContainers();
+    },
 
-    addItem: (containerId: string, input: SaveItemInput) =>
-        http<Item>(`/containers/${containerId}/items`, {
+    addItem: async (containerId: string, input: SaveItemInput) => {
+        const r = await http<Item>(`/containers/${containerId}/items`, {
             method: 'POST',
             body: JSON.stringify(input),
-        }),
+        });
+        invalidateContainers();
+        return r;
+    },
 
     updateItem: (itemId: string, input: SaveItemInput) =>
         http<Item>(`/items/${itemId}`, { method: 'PUT', body: JSON.stringify(input) }),
 
-    moveItem: (itemId: string, targetContainerId: string) =>
-        http<Item>(`/items/${itemId}/move`, {
+    moveItem: async (itemId: string, targetContainerId: string) => {
+        const r = await http<Item>(`/items/${itemId}/move`, {
             method: 'POST',
             body: JSON.stringify({ targetContainerId }),
-        }),
+        });
+        invalidateContainers();
+        return r;
+    },
 
-    deleteItem: (itemId: string) => http<void>(`/items/${itemId}`, { method: 'DELETE' }),
+    deleteItem: async (itemId: string) => {
+        await http<void>(`/items/${itemId}`, { method: 'DELETE' });
+        invalidateContainers();
+    },
 
     deletePhoto: (photoId: string) => http<void>(`/photos/${photoId}`, { method: 'DELETE' }),
 
@@ -104,6 +123,7 @@ export const api = {
     searchItems: (
         q: string,
         filters?: { tag?: string; locationId?: string; ownerId?: string; categoryId?: string },
+        paging?: { skip?: number; take?: number },
     ) => {
         const params = new URLSearchParams();
         if (q) params.set('q', q);
@@ -111,7 +131,9 @@ export const api = {
         if (filters?.locationId) params.set('locationId', filters.locationId);
         if (filters?.ownerId) params.set('ownerId', filters.ownerId);
         if (filters?.categoryId) params.set('categoryId', filters.categoryId);
-        return http<Item[]>(`/search?${params.toString()}`);
+        if (paging?.skip) params.set('skip', String(paging.skip));
+        if (paging?.take) params.set('take', String(paging.take));
+        return http<{ items: Item[]; hasMore: boolean }>(`/search?${params.toString()}`);
     },
 
     listTags: () => http<string[]>('/tags'),

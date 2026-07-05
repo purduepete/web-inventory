@@ -4,6 +4,7 @@ import { Icon } from '../Icon';
 import { Spinner } from '../Spinner';
 import { useConfirm, usePrompt } from '../Dialog';
 import { invalidateLookups } from '../lookups';
+import { invalidateContainers } from '../containersCache';
 import { usePersistentToggle } from '../usePersistentToggle';
 import type { Lookup, LookupKind } from '../types';
 
@@ -120,6 +121,8 @@ function LookupSection({
         try {
             await api.renameLookup(kind, item.id, name);
             invalidateLookups(kind);
+            // The container list shows denormalized owner/location names (D1).
+            if (kind === 'owners' || kind === 'locations') invalidateContainers();
             await load();
         } catch {
             setError('Could not rename.');
@@ -137,6 +140,7 @@ function LookupSection({
         try {
             await api.deleteLookup(kind, item.id);
             invalidateLookups(kind);
+            if (kind === 'owners' || kind === 'locations') invalidateContainers();
             await load();
         } catch {
             setError('Could not delete.');

@@ -81,3 +81,7 @@ public sealed class FacetRow
 public record LookupInput(string Name);
 public record DetectedItem(string Name, string? Description, int Quantity);
 public record PhotoUploadResult(Guid PhotoId, List<DetectedItem> Detected);
+
+// Paged search response: Items is capped at the requested page size; HasMore
+// signals the client that the query matched more rows than were returned (P1).
+public record SearchResult(IReadOnlyList<Item> Items, bool HasMore);

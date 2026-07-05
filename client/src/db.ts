@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { ApiError, api } from './api';
+import { invalidateContainers } from './containersCache';
 import type { Container, CreateContainerInput, DetectedItem, Lookup, LookupKind, SaveItemInput } from './types';
 
 export type QueuedMutation =
@@ -104,6 +105,12 @@ export async function enqueue(mutation: QueuedMutation): Promise<void> {
     if (mutation.kind === 'addItem' && !mutation.input.clientMutationId)
         mutation.input.clientMutationId = crypto.randomUUID();
     await db.queue.add({ createdAt: Date.now(), mutation });
+    // These offline mutations change the container set or item counts, so drop the
+    // in-memory container-list cache (D1) — otherwise a temp container created
+    // offline could stay hidden behind an already-resolved list.
+    if (mutation.kind === 'createContainer' || mutation.kind === 'addItem'
+        || mutation.kind === 'deleteItem' || mutation.kind === 'moveItem')
+        invalidateContainers();
     notifyPending();
 }
 

@@ -98,6 +98,15 @@ public sealed class InventoryRepository
     public async Task<ContainerWithContents?> GetContainerAsync(Guid id, CancellationToken ct)
         => await GetContainerCoreAsync("c.Id = @id", new { id }, ct);
 
+    // Lightweight existence check (P2): the photo-upload path only needs to know the
+    // container exists, so avoid GetContainerAsync loading items/photos and signing SAS URLs.
+    public async Task<bool> ContainerExistsAsync(Guid id, CancellationToken ct)
+    {
+        await using var conn = await _db.OpenAsync(ct);
+        return await conn.ExecuteScalarAsync<int?>(new CommandDefinition(
+            "SELECT 1 FROM inv.Container WHERE Id = @id;", new { id }, cancellationToken: ct)) is not null;
+    }
+
     public async Task<ContainerWithContents?> GetContainerByTokenAsync(Guid token, CancellationToken ct)
         => await GetContainerCoreAsync("c.QrToken = @token", new { token }, ct);
 
@@ -325,24 +334,37 @@ public sealed class InventoryRepository
             .Replace("_", "\\_")
             .Replace("[", "\\[");
 
-    public async Task<IReadOnlyList<Item>> SearchAsync(
-        string? q, string? tag, Guid? locationId, Guid? ownerId, Guid? categoryId, CancellationToken ct)
+    // Search is paged (P1): an unbounded LIKE '%term%' over a growing item table
+    // could return thousands of rows plus a tag fetch. Callers pass skip/take; we
+    // read one extra row to report HasMore without a second COUNT query. The tag
+    // filter uses EXISTS (not a join) so no DISTINCT is needed and OFFSET/FETCH
+    // pages deterministically (ORDER BY Name, Id).
+    public const int DefaultSearchTake = 100;
+    public const int MaxSearchTake = 200;
+
+    public async Task<SearchResult> SearchAsync(
+        string? q, string? tag, Guid? locationId, Guid? ownerId, Guid? categoryId,
+        int skip, int take, CancellationToken ct)
     {
+        if (skip < 0) skip = 0;
+        take = Math.Clamp(take, 1, MaxSearchTake);
+
         await using var conn = await _db.OpenAsync(ct);
-        var items = (await conn.QueryAsync<Item>(
-            @"SELECT DISTINCT i.Id, i.ContainerId, i.Name, i.Description, i.Quantity, i.Source, i.CreatedAt, i.UpdatedAt,
+        var rows = (await conn.QueryAsync<Item>(
+            @"SELECT i.Id, i.ContainerId, i.Name, i.Description, i.Quantity, i.Source, i.CreatedAt, i.UpdatedAt,
                      i.CategoryId, cat.Name AS Category
               FROM inv.Item i
               JOIN inv.Container c ON c.Id = i.ContainerId
-              LEFT JOIN inv.ItemTag it ON it.ItemId = i.Id
-              LEFT JOIN inv.Tag t ON t.Id = it.TagId
               LEFT JOIN inv.Category cat ON cat.Id = i.CategoryId
               WHERE (@q IS NULL OR i.Name LIKE @like ESCAPE '\' OR i.Description LIKE @like ESCAPE '\')
-                AND (@tag IS NULL OR t.Name = @tag)
+                AND (@tag IS NULL OR EXISTS (
+                        SELECT 1 FROM inv.ItemTag it JOIN inv.Tag t ON t.Id = it.TagId
+                        WHERE it.ItemId = i.Id AND t.Name = @tag))
                 AND (@locationId IS NULL OR c.LocationId = @locationId)
                 AND (@ownerId IS NULL OR c.OwnerId = @ownerId)
                 AND (@categoryId IS NULL OR i.CategoryId = @categoryId)
-              ORDER BY i.Name;",
+              ORDER BY i.Name, i.Id
+              OFFSET @skip ROWS FETCH NEXT @takePlusOne ROWS ONLY;",
             new
             {
                 q = string.IsNullOrWhiteSpace(q) ? null : q,
@@ -351,8 +373,13 @@ public sealed class InventoryRepository
                 locationId,
                 ownerId,
                 categoryId,
+                skip,
+                takePlusOne = take + 1,
             }))
             .AsList();
+
+        var hasMore = rows.Count > take;
+        var items = hasMore ? rows.GetRange(0, take) : rows;
 
         if (items.Count > 0)
         {
@@ -364,7 +391,7 @@ public sealed class InventoryRepository
             foreach (var item in items)
                 if (map.TryGetValue(item.Id, out var tg)) item.Tags = tg;
         }
-        return items;
+        return new SearchResult(items, hasMore);
     }
 
     public async Task<IReadOnlyList<string>> ListTagsAsync(CancellationToken ct)

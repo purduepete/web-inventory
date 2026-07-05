@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api';
+import { getContainersCached } from '../containersCache';
 import { replaceCachedContainers, db, pendingContainerIds, suggestionContainerIds } from '../db';
 import { Icon } from '../Icon';
 import { Spinner } from '../Spinner';
@@ -25,7 +25,7 @@ export default function ContainersPage() {
 
     useEffect(() => {
         let active = true;
-        api.listContainers()
+        getContainersCached()
             .then((c) => {
                 if (!active) return;
                 setContainers(c);
