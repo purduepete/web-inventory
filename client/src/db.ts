@@ -96,6 +96,13 @@ function notifyPending(): void {
 }
 
 export async function enqueue(mutation: QueuedMutation): Promise<void> {
+    // Stamp create mutations with a stable idempotency key so a lost response
+    // can't duplicate the record when the mutation is replayed on the next sync
+    // (the server dedupes on it — see B2).
+    if (mutation.kind === 'createContainer' && !mutation.input.clientMutationId)
+        mutation.input.clientMutationId = crypto.randomUUID();
+    if (mutation.kind === 'addItem' && !mutation.input.clientMutationId)
+        mutation.input.clientMutationId = crypto.randomUUID();
     await db.queue.add({ createdAt: Date.now(), mutation });
     notifyPending();
 }
@@ -173,9 +180,13 @@ function notifySuggestions(containerId: string): void {
 
 export async function addPendingSuggestions(containerId: string, items: DetectedItem[]): Promise<void> {
     if (!items.length) return;
-    const existing = await db.pendingSuggestions.get(containerId);
-    const merged = existing ? [...existing.items, ...items] : items;
-    await db.pendingSuggestions.put({ containerId, items: merged, createdAt: Date.now() });
+    // Read-modify-write in a transaction so concurrent photo syncs for the same
+    // container can't clobber each other's suggestions (R6).
+    await db.transaction('rw', db.pendingSuggestions, async () => {
+        const existing = await db.pendingSuggestions.get(containerId);
+        const merged = existing ? [...existing.items, ...items] : items;
+        await db.pendingSuggestions.put({ containerId, items: merged, createdAt: Date.now() });
+    });
     notifySuggestions(containerId);
     notifyPending();
 }
@@ -203,11 +214,15 @@ export async function removePendingSuggestion(containerId: string, item: Detecte
 
 let syncing = false;
 
-/** A 4xx (except auth) is permanent — replaying it will never succeed, so drop
- * the offending item rather than letting it wedge the whole queue forever. A
- * network error or 5xx is transient: stop and retry on the next sync. */
+/** A 4xx (except auth + a few transient ones) is permanent — replaying it will
+ * never succeed, so drop the offending item rather than letting it wedge the
+ * whole queue forever. A network error, 5xx, or a transient 4xx (408 Request
+ * Timeout, 409 Conflict, 425 Too Early, 429 Too Many Requests) is retryable:
+ * stop and retry on the next sync. */
 function isPermanent(e: unknown): boolean {
-    return e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 401;
+    if (!(e instanceof ApiError)) return false;
+    const transient = e.status === 401 || e.status === 408 || e.status === 409 || e.status === 425 || e.status === 429;
+    return e.status >= 400 && e.status < 500 && !transient;
 }
 
 /** Replay queued mutations + photo uploads when connectivity returns. */

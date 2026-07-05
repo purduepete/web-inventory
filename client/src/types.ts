@@ -65,6 +65,9 @@ export interface CreateContainerInput {
     locationId?: string | null;
     ownerId?: string | null;
     notes?: string;
+    /** Stable idempotency key for offline-queued creates so a replayed mutation
+     *  can't create a duplicate container (the server dedupes on it). */
+    clientMutationId?: string;
 }
 
 export interface SaveItemInput {
@@ -73,4 +76,6 @@ export interface SaveItemInput {
     quantity: number;
     tags: string[];
     categoryId?: string | null;
+    /** Stable idempotency key for offline-queued item creates (see above). */
+    clientMutationId?: string;
 }

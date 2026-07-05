@@ -115,6 +115,7 @@ export default function HomePage() {
             setSearched(false);
             return;
         }
+        let cancelled = false;
         const t = setTimeout(() => {
             setLoading(true);
             api.searchItems(q, {
@@ -124,13 +125,20 @@ export default function HomePage() {
                 categoryId: filters.categoryId || undefined,
             })
                 .then((r) => {
+                    // Ignore a slow older response that resolved after a newer query (B5).
+                    if (cancelled) return;
                     setResults(r);
                     setSearched(true);
                 })
                 .catch(() => undefined)
-                .finally(() => setLoading(false));
+                .finally(() => {
+                    if (!cancelled) setLoading(false);
+                });
         }, 250);
-        return () => clearTimeout(t);
+        return () => {
+            cancelled = true;
+            clearTimeout(t);
+        };
     }, [q, tag, filters, hasFilter]);
 
     if (!ready) return <Spinner />;
