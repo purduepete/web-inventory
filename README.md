@@ -103,6 +103,33 @@ and is granted the `member` role.
 
 Google login can be added later on the SWA Standard tier via a custom OIDC provider.
 
+### Backend API access protection (do not remove)
+
+The API is a **bring-your-own (linked) Azure Functions backend**, so it has its own public
+URL (`https://webinv-api-xkedjb.azurewebsites.net`). It is *not* left open: linking the
+Function App to the Static Web App automatically created an **App Service Authentication
+("Easy Auth") identity provider named _Azure Static Web Apps (Linked)_** on the Function
+App, with `requireAuthentication = true`. That platform gate — not application code — is
+what stops direct access:
+
+- A direct call to the Function URL returns **401** even with a forged `x-ms-client-principal`
+  header (verified). Easy Auth runs before the worker, so the header can't be spoofed.
+- Functions therefore stay at `AuthorizationLevel.Anonymous` **on purpose**. Do **not**
+  switch them to `Function`/key auth — SWA does **not** forward function keys to a
+  bring-your-own backend, so that would break the app. And do **not** add
+  `x-ms-client-principal`-trusting middleware — it would be spoofable and give false security.
+- Network-isolated (VNet/private-endpoint) backends are **not supported** for SWA linked
+  backends, so isolation is not an option.
+
+**Runbook — if the API starts returning 401 through the site, or you unlink/relink the
+backend:** re-linking recreates the identity provider; unlinking deliberately leaves it in
+place. If it was deleted, the Function App would accept anonymous direct traffic. Restore it
+by re-linking the backend (SWA portal → APIs → Link), or re-add the *Azure Static Web Apps
+(Linked)* identity provider under the Function App's **Authentication** blade with
+"Require authentication" on. The Bicep intentionally does **not** declare these auth
+settings — a bad `authsettingsV2` deploy could lock the app out of its own API, and there is
+no non-prod environment to test against.
+
 ## Cost guardrails
 
 - Photos are downscaled client-side (max 1024px) before upload + AI.
