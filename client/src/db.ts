@@ -25,6 +25,8 @@ export interface PendingPhoto {
     createdAt: number;
     /** Whether to run AI detection on upload. Absent = legacy rows = true. */
     analyze?: boolean;
+    /** Stable idempotency key so a replayed upload doesn't duplicate the photo (#10). */
+    clientMutationId?: string;
 }
 
 export interface CachedContainer extends Container {
@@ -114,8 +116,13 @@ export async function enqueue(mutation: QueuedMutation): Promise<void> {
     notifyPending();
 }
 
-export async function enqueuePhoto(containerId: string, blob: Blob, analyze = true): Promise<void> {
-    await db.pendingPhotos.add({ containerId, blob, createdAt: Date.now(), analyze });
+export async function enqueuePhoto(
+    containerId: string,
+    blob: Blob,
+    analyze = true,
+    clientMutationId: string = crypto.randomUUID(),
+): Promise<void> {
+    await db.pendingPhotos.add({ containerId, blob, createdAt: Date.now(), analyze, clientMutationId });
     notifyPending();
 }
 
@@ -267,7 +274,7 @@ export async function syncNow(): Promise<{ synced: number; failed: number; error
                 // suggestions so the container page can prompt the user to confirm them.
                 // Honor 'add photo only' (analyze=false): don't detect on sync.
                 const analyze = p.analyze !== false;
-                const { detected } = await api.uploadPhoto(p.containerId, p.blob, analyze);
+                const { detected } = await api.uploadPhoto(p.containerId, p.blob, analyze, p.clientMutationId);
                 if (p.id != null) await db.pendingPhotos.delete(p.id);
                 if (detected?.length) await addPendingSuggestions(p.containerId, detected);
                 synced++;

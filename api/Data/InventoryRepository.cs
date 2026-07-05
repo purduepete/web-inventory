@@ -416,14 +416,49 @@ public sealed class InventoryRepository
               JOIN inv.Item i ON i.ContainerId = c.Id;")).AsList();
     }
 
-    public async Task AddPhotoAsync(Guid photoId, Guid containerId, string blobUrl, string thumbUrl, CancellationToken ct)
+    public async Task<Guid> AddPhotoAsync(Guid photoId, Guid containerId, string blobUrl, string thumbUrl, Guid? clientMutationId, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);
-        await conn.ExecuteAsync(
-            @"INSERT INTO inv.Photo (Id, ContainerId, BlobUrl, ThumbUrl, ProcessedAt)
-              VALUES (@photoId, @containerId, @blobUrl, @thumbUrl, SYSUTCDATETIME());",
-            new { photoId, containerId, blobUrl, thumbUrl });
+
+        // Idempotency (#10): a replayed offline-sync upload returns the photo already
+        // stored under the same client mutation id rather than inserting a duplicate.
+        if (clientMutationId is Guid mid)
+        {
+            var existing = await PhotoIdByMutationIdAsync(conn, mid, ct);
+            if (existing is Guid e) return e;
+        }
+
+        try
+        {
+            await conn.ExecuteAsync(new CommandDefinition(
+                @"INSERT INTO inv.Photo (Id, ContainerId, BlobUrl, ThumbUrl, ProcessedAt, ClientMutationId)
+                  VALUES (@photoId, @containerId, @blobUrl, @thumbUrl, SYSUTCDATETIME(), @clientMutationId);",
+                new { photoId, containerId, blobUrl, thumbUrl, clientMutationId }, cancellationToken: ct));
+            return photoId;
+        }
+        catch (SqlException ex) when (ex.Number is 2627 or 2601 && clientMutationId is Guid raceMid)
+        {
+            // A concurrent replay won the mutation-id race; return its row. The caller's
+            // just-uploaded blob is now an orphan and is cleaned up best-effort there.
+            var existing = await PhotoIdByMutationIdAsync(conn, raceMid, ct);
+            return existing ?? photoId;
+        }
     }
+
+    /// <summary>
+    /// Returns the id of the photo stored under a given client mutation id, for #10
+    /// idempotent-replay handling; null when no photo carries that id.
+    /// </summary>
+    public async Task<Guid?> GetPhotoIdByMutationIdAsync(Guid clientMutationId, CancellationToken ct)
+    {
+        await using var conn = await _db.OpenAsync(ct);
+        return await PhotoIdByMutationIdAsync(conn, clientMutationId, ct);
+    }
+
+    private static async Task<Guid?> PhotoIdByMutationIdAsync(SqlConnection conn, Guid mid, CancellationToken ct)
+        => await conn.QuerySingleOrDefaultAsync<Guid?>(new CommandDefinition(
+            "SELECT Id FROM inv.Photo WHERE ClientMutationId = @mid;",
+            new { mid }, cancellationToken: ct));
 
     public async Task<bool> MovePhotoAsync(Guid photoId, Guid targetContainerId, CancellationToken ct)
     {
