@@ -277,10 +277,13 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         const analyze = analyzeOnUpload.current;
         analyzeOnUpload.current = true; // reset to default for next time
         setBusy(true);
+        // One stable idempotency key per photo action, reused across the online attempt
+        // and any offline enqueue, so a retried/replayed upload can't duplicate (#10).
+        const photoMutationId = crypto.randomUUID();
         try {
             const small = await downscaleImage(file);
             if (!navigator.onLine) {
-                await enqueuePhoto(container.id, small, analyze);
+                await enqueuePhoto(container.id, small, analyze, photoMutationId);
                 flash(
                     analyze
                         ? 'Photo saved — will analyze when back online.'
@@ -289,18 +292,19 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 return;
             }
             if (analyze) {
-                const { detected } = await api.uploadPhoto(container.id, small);
+                const { detected } = await api.uploadPhoto(container.id, small, true, photoMutationId);
                 setSuggestions(detected.length ? detected : []);
                 if (!detected.length) flash('No items detected — add them manually.');
             } else {
-                await api.uploadPhoto(container.id, small, false);
+                await api.uploadPhoto(container.id, small, false, photoMutationId);
                 flash('Photo added.');
             }
             await load(true);
         } catch {
-            // Network died mid-upload: queue it.
+            // Network died mid-upload: queue it under the same id so a partially-applied
+            // online attempt is deduped on replay.
             const small = await downscaleImage(file);
-            await enqueuePhoto(container.id, small, analyze);
+            await enqueuePhoto(container.id, small, analyze, photoMutationId);
             flash('Photo queued for upload.');
         } finally {
             setBusy(false);
@@ -927,14 +931,16 @@ function AddItemModal({
         // The optional photo is attached to the container (no AI analysis — the
         // user is entering the item by hand).
         if (photo) {
+            // Stable idempotency key shared by the online attempt and offline fallback (#10).
+            const photoMutationId = crypto.randomUUID();
             try {
                 const small = await downscaleImage(photo);
-                if (!navigator.onLine) await enqueuePhoto(container.id, small);
-                else await api.uploadPhoto(container.id, small, false);
+                if (!navigator.onLine) await enqueuePhoto(container.id, small, true, photoMutationId);
+                else await api.uploadPhoto(container.id, small, false, photoMutationId);
             } catch {
                 try {
                     const small = await downscaleImage(photo);
-                    await enqueuePhoto(container.id, small);
+                    await enqueuePhoto(container.id, small, true, photoMutationId);
                     flash('Photo queued for upload.');
                 } catch {
                     flash('Could not attach photo.');

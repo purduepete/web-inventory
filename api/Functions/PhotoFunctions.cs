@@ -55,9 +55,27 @@ public class PhotoFunctions
         if (bytes.Length == 0)
             return await req.Text("Empty image body.", HttpStatusCode.BadRequest);
 
+        // Idempotency (#10): a stable client mutation id lets a retried/replayed upload
+        // (lost response, offline sync) resolve to the original photo instead of storing
+        // a duplicate. Check first so a pure replay never re-uploads the blob or re-runs AI.
+        Guid? clientMutationId = req.Headers.TryGetValues("X-Client-Mutation-Id", out var midValues)
+            && Guid.TryParse(midValues.FirstOrDefault(), out var parsedMid)
+                ? parsedMid : null;
+        if (clientMutationId is Guid replayMid
+            && await _repo.GetPhotoIdByMutationIdAsync(replayMid, ct) is Guid existingId)
+            return await req.Json(new PhotoUploadResult(existingId, new List<DetectedItem>()), HttpStatusCode.OK);
+
         var photoId = Guid.NewGuid();
         var (blobUrl, thumbUrl) = await _blob.UploadAsync(containerId, photoId, bytes, ct);
-        await _repo.AddPhotoAsync(photoId, containerId, blobUrl, thumbUrl, ct);
+        var storedId = await _repo.AddPhotoAsync(photoId, containerId, blobUrl, thumbUrl, clientMutationId, ct);
+        if (storedId != photoId)
+        {
+            // A concurrent replay won the mutation-id race; the blob we just uploaded is
+            // orphaned. Remove it best-effort and return the winning photo.
+            await _blob.DeleteAsync(blobUrl, ct);
+            if (thumbUrl != blobUrl) await _blob.DeleteAsync(thumbUrl, ct);
+            return await req.Json(new PhotoUploadResult(storedId, new List<DetectedItem>()), HttpStatusCode.OK);
+        }
 
         // Callers can skip AI detection (e.g. "Add photo only") with ?analyze=false.
         var analyze = !string.Equals(

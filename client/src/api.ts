@@ -157,13 +157,17 @@ export const api = {
         containerId: string,
         blob: Blob,
         analyze = true,
+        clientMutationId?: string,
     ): Promise<{ photoId: string; detected: DetectedItem[] }> => {
         const qs = analyze ? '' : '?analyze=false';
+        const headers: Record<string, string> = { 'Content-Type': 'image/jpeg' };
+        // Stable id lets the server dedupe a retried/replayed upload (#10).
+        if (clientMutationId) headers['X-Client-Mutation-Id'] = clientMutationId;
         let res: Response;
         try {
             res = await fetch(`${BASE}/containers/${containerId}/photos${qs}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'image/jpeg' },
+                headers,
                 body: blob,
             });
         } catch (err) {
