@@ -396,8 +396,12 @@ body {
     display: none;
 }
 
-/* ---------- Large screens (iPad 13" / desktop): left sidebar rail ---------- */
-@media (min-width: 1024px) {
+/* ---------- Large screens (desktop / 13" iPad landscape): left sidebar rail ----------
+   Kept above the iPad range (portrait ≤1024px and the common iPad landscape widths
+   ~1180–1194px) so those devices use the centered, bottom-tab mobile layout instead
+   of a 240px left rail that would shove the content column — and its inputs — off to
+   the right of screen centre. */
+@media (min-width: 1280px) {
     .app {
         padding-left: 240px;
     }
