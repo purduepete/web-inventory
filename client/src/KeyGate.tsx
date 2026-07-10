@@ -1,18 +1,29 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
-import { setKey } from './api';
+import { setKey, validateKey } from './api';
 
 /**
  * Access-key gate. Shown when there's no stored key (or the API rejected the
- * current one). The key is saved to localStorage and validated on the next API
- * call — an invalid key simply bounces back here.
+ * current one). The entered key is validated against the server before we let
+ * it through, so an invalid key shows an error here instead of briefly flashing
+ * the app.
  */
 export function KeyGate({ onSaved }: { onSaved: () => void }) {
     const [value, setValue] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    function save() {
+    async function save() {
         const key = value.trim();
-        if (!key) return;
+        if (!key || busy) return;
+        setBusy(true);
+        setError(null);
+        const ok = await validateKey(key);
+        if (!ok) {
+            setError('That access key was not accepted.');
+            setBusy(false);
+            return;
+        }
         setKey(key);
         onSaved();
     }
@@ -31,12 +42,21 @@ export function KeyGate({ onSaved }: { onSaved: () => void }) {
                         autoFocus
                         placeholder="Access key"
                         value={value}
-                        onChange={(e) => setValue(e.target.value)}
+                        onChange={(e) => {
+                            setValue(e.target.value);
+                            if (error) setError(null);
+                        }}
                         onKeyDown={(e) => e.key === 'Enter' && save()}
                         aria-label="Access key"
+                        disabled={busy}
                     />
-                    <button type="button" onClick={save} disabled={!value.trim()}>
-                        Continue
+                    {error && (
+                        <p className="gate-error" role="alert">
+                            {error}
+                        </p>
+                    )}
+                    <button type="button" onClick={save} disabled={!value.trim() || busy}>
+                        {busy ? 'Checking…' : 'Continue'}
                     </button>
                 </div>
             </main>

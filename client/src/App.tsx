@@ -4,16 +4,20 @@ import { pendingCount, syncNow } from './db';
 import { Icon } from './Icon';
 import { HelpDialog } from './HelpDialog';
 import { KeyGate } from './KeyGate';
-import { clearKey, getKey, KEY_INVALID_EVENT } from './api';
+import { clearKey, getKey, validateKey, KEY_INVALID_EVENT } from './api';
 
 export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
     const [pending, setPending] = useState(0);
     const [syncing, setSyncing] = useState(false);
     const [syncMsg, setSyncMsg] = useState<string | null>(null);
-    // Signed in once a valid-looking key is stored; the API validates it on the
-    // next call and, on a 401, fires KEY_INVALID_EVENT to bounce back to the gate.
-    const [authed, setAuthed] = useState(() => Boolean(getKey()));
+    // Access state: 'checking' while we validate a stored key against the server,
+    // 'authed' once it's confirmed, 'gate' when there's no valid key. Starting in
+    // 'checking' (when a key exists) means the app UI never paints before the key
+    // is verified — an invalid/stale key drops straight to the gate.
+    const [authState, setAuthState] = useState<'checking' | 'authed' | 'gate'>(() =>
+        getKey() ? 'checking' : 'gate',
+    );
     const location = useLocation();
     const [reloadKey, setReloadKey] = useState(0);
     const [reloading, setReloading] = useState(false);
@@ -52,15 +56,37 @@ export default function App() {
         (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
     useEffect(() => {
+        // Validate a stored key on load before showing the app. No key → gate;
+        // rejected key → forget it and show the gate.
+        if (!getKey()) {
+            setAuthState('gate');
+            return;
+        }
+        let cancelled = false;
+        void validateKey().then((ok) => {
+            if (cancelled) return;
+            if (ok) {
+                setAuthState('authed');
+            } else {
+                clearKey();
+                setAuthState('gate');
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
         // When any API call gets a 401 the key has been cleared; drop to the gate.
-        const onInvalid = () => setAuthed(false);
+        const onInvalid = () => setAuthState('gate');
         window.addEventListener(KEY_INVALID_EVENT, onInvalid);
         return () => window.removeEventListener(KEY_INVALID_EVENT, onInvalid);
     }, []);
 
     function signOut() {
         clearKey();
-        setAuthed(false);
+        setAuthState('gate');
     }
 
     useEffect(() => {
@@ -117,9 +143,25 @@ export default function App() {
         return () => clearTimeout(t);
     }, [syncMsg]);
 
-    // Show the access-key gate until a key is stored.
-    if (!authed) {
-        return <KeyGate onSaved={() => setAuthed(true)} />;
+    // While validating a stored key, show a minimal splash — never the app UI.
+    if (authState === 'checking') {
+        return (
+            <div className="app">
+                <main className="content gate">
+                    <div className="gate-card">
+                        <span className="brand-mark gate-mark">
+                            <Icon name="lock" size={22} />
+                        </span>
+                        <p className="muted gate-sub">Checking access…</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    // Show the access-key gate until a valid key is confirmed.
+    if (authState !== 'authed') {
+        return <KeyGate onSaved={() => setAuthState('authed')} />;
     }
 
     return (

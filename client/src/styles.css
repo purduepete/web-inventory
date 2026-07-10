@@ -308,6 +308,17 @@ body {
 .gate-card button {
     width: 100%;
 }
+.gate-error {
+    width: 100%;
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--danger-soft);
+    color: var(--danger-text);
+    border: 1px solid var(--danger-soft);
+    font-size: 0.875rem;
+    text-align: center;
+}
 
 /* ---------- Page transitions ---------- */
 .page {

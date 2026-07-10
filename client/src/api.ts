@@ -32,6 +32,25 @@ export function clearKey(): void {
     localStorage.removeItem(KEY_STORAGE);
 }
 
+/**
+ * Verify a key with the server before we let it through the gate. Uses a cheap
+ * authenticated GET and reports success purely from the status (no side effects,
+ * so a bad candidate key doesn't clear the stored one). If we're offline and the
+ * request can't complete, we optimistically accept — an offline PWA with a
+ * previously-good key must still open, and a truly bad key gets bounced on the
+ * next online call.
+ */
+export async function validateKey(key?: string): Promise<boolean> {
+    const k = key ?? getKey();
+    if (!k) return false;
+    try {
+        const res = await fetch(`${BASE}/tags`, { headers: { 'x-api-key': k } });
+        return res.status !== 401;
+    } catch {
+        return true;
+    }
+}
+
 /** Called on a 401: forget the bad key and ask the app to show the gate again. */
 function onUnauthorized(): void {
     clearKey();
