@@ -7,7 +7,9 @@
     "BlobAccountUrl": "https://<your-storage-account>.blob.core.windows.net",
     "BlobContainerName": "photos",
     "OpenAiEndpoint": "https://<your-openai-resource>.openai.azure.com/",
-    "OpenAiDeployment": "gpt-5-mini"
+    "OpenAiDeployment": "gpt-5-mini",
+    "_comment_WEBINV_ALLOW_SWA_PRINCIPAL": "Transition only: 'true' (default) also accepts a valid SWA x-ms-client-principal so Entra users aren't 401'd during cutover. Set 'false' once the key-based frontend is fully deployed. Access keys live in inv.AccessKey — mint one with scripts/New-AccessKey.ps1.",
+    "WEBINV_ALLOW_SWA_PRINCIPAL": "true"
   },
   "Host": {
     "CORS": "*"

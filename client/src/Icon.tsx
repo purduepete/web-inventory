@@ -27,6 +27,7 @@ export type IconName =
     | 'pin'
     | 'cloud'
     | 'cloud-off'
+    | 'lock'
     | 'help';
 
 const paths: Record<IconName, JSX.Element> = {
@@ -218,6 +219,12 @@ const paths: Record<IconName, JSX.Element> = {
             <circle cx="12" cy="12" r="9" />
             <path d="M9.1 9.2a3 3 0 0 1 5.8 1c0 2-3 2.7-3 4" />
             <path d="M12 17.5h.01" />
+        </>
+    ),
+    lock: (
+        <>
+            <rect x="4" y="11" width="16" height="10" rx="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
         </>
     ),
 };

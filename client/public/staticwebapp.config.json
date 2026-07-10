@@ -4,33 +4,10 @@
         "rewrite": "/index.html",
         "exclude": ["/assets/*", "/*.{png,jpg,svg,webmanifest,ico}"]
     },
-    "routes": [
-        {
-            "route": "/api/*",
-            "allowedRoles": ["member"]
-        },
-        {
-            "route": "/login",
-            "rewrite": "/.auth/login/aad"
-        },
-        {
-            "route": "/logout",
-            "rewrite": "/.auth/logout"
-        },
-        {
-            "route": "/*",
-            "allowedRoles": ["member"]
-        }
-    ],
-    "responseOverrides": {
-        "401": {
-            "redirect": "/.auth/login/aad",
-            "statusCode": 302
-        }
-    },
     "globalHeaders": {
         "X-Content-Type-Options": "nosniff",
-        "Referrer-Policy": "strict-origin-when-cross-origin"
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.blob.core.windows.net; connect-src 'self'; font-src 'self'; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
     },
     "mimeTypes": {
         ".webmanifest": "application/manifest+json"

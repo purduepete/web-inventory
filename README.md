@@ -13,7 +13,7 @@ photo grid. Works offline and syncs when reconnected.
 | Client  | React + TypeScript + Vite, PWA (`vite-plugin-pwa`), Dexie (offline), html5-qrcode, qrcode |
 | API     | C# .NET 8 isolated Azure Functions, Dapper                                                |
 | Hosting | Azure Static Web Apps (Standard) + linked Function App (Consumption)                      |
-| Auth    | Static Web Apps built-in auth (Microsoft Entra), `member` role gating                     |
+| Auth    | Access keys — DB-backed, SHA-256 hashed (`inv.AccessKey`); `x-api-key` header enforced by `KeyAuthMiddleware` |
 | Data    | Existing Azure SQL `webportfolio` DB, new `inv` schema                                    |
 | Images  | New Azure Storage account (Blob), managed identity                                        |
 | AI      | New Azure OpenAI resource, `gpt-5-mini` deployment                                        |
@@ -44,6 +44,14 @@ npm run dev                                           # http://localhost:5173 (p
 
 Local auth/SQL/Blob/OpenAI use `DefaultAzureCredential` — run `az login` so your developer
 identity is used. Grant your account access to the SQL DB and resources (see below).
+
+The API requires an access key even locally. Generate one (writes the hash to
+`inv.AccessKey`, prints the raw key once) and enter it when the app shows the key gate:
+
+```powershell
+cd scripts
+./New-AccessKey.ps1 -Name "dev-local"
+```
 
 ## Provisioning (one-time)
 
@@ -87,48 +95,59 @@ Two workflows deploy on push to `main`:
 
 ## Household access
 
-Auth uses Static Web Apps' built-in Microsoft Entra login, and every route requires the
-`member` role. To give someone access, add them as a guest (external) user in the Entra
-tenant, then grant them the `member` role via the SWA invitation flow:
+Access is gated by **access keys** (not Entra login). Any active key grants full
+access; give each person (or device) their own so keys can be revoked individually.
+Keys are generated locally — only the SHA-256 hash is stored in `inv.AccessKey`, so
+the raw key is shown exactly once. Share the printed key over a secure channel; the
+recipient enters it on the app's key gate (it's kept in the browser's `localStorage`).
 
 ```powershell
-az staticwebapp users invite --name webinv-web --resource-group webinv-rg `
-  --authentication-provider aad --user-details "person@example.com" `
-  --domain "polite-mushroom-086a4b20f.7.azurestaticapps.net" `
-  --roles member --invitation-expiration-in-hours 168 --query invitationUrl -o tsv
+cd scripts
+az login                                  # SQL uses your Entra identity
+./New-AccessKey.ps1 -Name "jane-iphone"   # prints the raw key once — copy it
+./New-AccessKey.ps1 -List                 # id, name, state, last-used (never prints hashes)
+./New-AccessKey.ps1 -Disable <id>         # revoke a key (copy the id from -List)
 ```
 
-Share the returned single-use link; the person opens it while signed in with that account
-and is granted the `member` role.
+There are no scopes — every active key is full access. Revoking (`-Disable`) takes
+effect within a few minutes (the API caches validation results briefly).
 
-Google login can be added later on the SWA Standard tier via a custom OIDC provider.
+### Backend API access protection
 
-### Backend API access protection (do not remove)
+The API is a **bring-your-own (linked) Azure Functions backend** with its own public
+URL. Access is enforced in application code by **`KeyAuthMiddleware`** (see
+`api/Middleware/KeyAuthMiddleware.cs`), which requires a valid `x-api-key` on every
+HTTP-triggered function and returns **401** otherwise. Functions stay at
+`AuthorizationLevel.Anonymous` — the middleware is the single choke point.
 
-The API is a **bring-your-own (linked) Azure Functions backend**, so it has its own public
-URL (`https://webinv-api-xkedjb.azurewebsites.net`). It is *not* left open: linking the
-Function App to the Static Web App automatically created an **App Service Authentication
-("Easy Auth") identity provider named _Azure Static Web Apps (Linked)_** on the Function
-App, with `requireAuthentication = true`. That platform gate — not application code — is
-what stops direct access:
+Because keys are the gate, the linked Function App's App Service Authentication
+("Easy Auth") is set to **allow unauthenticated requests**
+(`unauthenticatedClientAction = AllowAnonymous`) so requests reach the worker where
+the middleware runs. Do **not** delete the *Azure Static Web Apps (Linked)* identity
+provider; just leave it in allow-anonymous mode. The Bicep intentionally does **not**
+declare `authsettingsV2`.
 
-- A direct call to the Function URL returns **401** even with a forged `x-ms-client-principal`
-  header (verified). Easy Auth runs before the worker, so the header can't be spoofed.
-- Functions therefore stay at `AuthorizationLevel.Anonymous` **on purpose**. Do **not**
-  switch them to `Function`/key auth — SWA does **not** forward function keys to a
-  bring-your-own backend, so that would break the app. And do **not** add
-  `x-ms-client-principal`-trusting middleware — it would be spoofable and give false security.
-- Network-isolated (VNet/private-endpoint) backends are **not supported** for SWA linked
-  backends, so isolation is not an option.
+**Consequence:** the direct Function URL is reachable by anyone, so the middleware is
+the *sole* protection — it is deliberately **fail-closed** (missing/invalid key → 401)
+and must never be removed or bypassed. A short-lived `IMemoryCache` fronts the DB key
+lookup to blunt brute-force/DoS against the shared SQL database.
 
-**Runbook — if the API starts returning 401 through the site, or you unlink/relink the
-backend:** re-linking recreates the identity provider; unlinking deliberately leaves it in
-place. If it was deleted, the Function App would accept anonymous direct traffic. Restore it
-by re-linking the backend (SWA portal → APIs → Link), or re-add the *Azure Static Web Apps
-(Linked)* identity provider under the Function App's **Authentication** blade with
-"Require authentication" on. The Bicep intentionally does **not** declare these auth
-settings — a bad `authsettingsV2` deploy could lock the app out of its own API, and there is
-no non-prod environment to test against.
+**Runbook — smoke tests** (run after any auth-related change):
+
+```powershell
+# through the SWA hostname
+curl -i https://<swa-host>/api/containers                     # -> 401 (no key)
+curl -i -H "x-api-key: <key>" https://<swa-host>/api/containers   # -> 200
+# direct Function URL
+curl -i https://<func-host>/api/containers                    # -> 401 (no key)
+curl -i -H "x-api-key: <key>" https://<func-host>/api/containers  # -> 200
+```
+
+> **Transition note:** during the cutover from Entra, `KeyAuthMiddleware` also accepts
+> a request bearing a valid SWA `x-ms-client-principal` (the platform-injected,
+> un-spoofable principal) so signed-in users aren't 401'd before the key frontend is
+> live. Remove this by setting `WEBINV_ALLOW_SWA_PRINCIPAL=false` (or deleting the
+> branch) once the key-based frontend is fully deployed.
 
 ## Cost guardrails
 

@@ -9,38 +9,48 @@ import type {
     LookupKind,
     SaveItemInput,
 } from './types';
-import { getClientPrincipal, redirectToLogin } from './auth';
 import { invalidateContainers } from './containersCache';
 
 const BASE = '/api';
 
-/**
- * Detects an expired/absent auth session after an API call has already failed.
- * When the SWA `member` gate rejects a request it answers with a 302 to
- * `/.auth/login/aad`; a cross-origin redirect makes `fetch` throw
- * `TypeError: Failed to fetch` (or, occasionally, surfaces a 401). Confirm via
- * `/.auth/me` and, if there is no signed-in principal, send the user to sign in.
- * (The app also checks auth proactively on startup — see auth.ts / App.tsx —
- * so this is the mid-session safety net.)
- */
-async function redirectToLoginIfSignedOut(): Promise<void> {
-    const principal = await getClientPrincipal();
-    if (principal === null) redirectToLogin();
+// The access key gates every API call. It's stored in localStorage and sent as the
+// `x-api-key` header; the API validates it (see api/Middleware/KeyAuthMiddleware).
+const KEY_STORAGE = 'webinventory_key';
+// Broadcast when the API rejects our key (missing/invalid/revoked) so the app can
+// drop back to the key gate without a hard reload.
+export const KEY_INVALID_EVENT = 'webinventory:key-invalid';
+
+export function getKey(): string | null {
+    return localStorage.getItem(KEY_STORAGE);
+}
+
+export function setKey(key: string): void {
+    localStorage.setItem(KEY_STORAGE, key);
+}
+
+export function clearKey(): void {
+    localStorage.removeItem(KEY_STORAGE);
+}
+
+/** Called on a 401: forget the bad key and ask the app to show the gate again. */
+function onUnauthorized(): void {
+    clearKey();
+    window.dispatchEvent(new Event(KEY_INVALID_EVENT));
+}
+
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+    const headers: Record<string, string> = { ...extra };
+    const key = getKey();
+    if (key) headers['x-api-key'] = key;
+    return headers;
 }
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
-    let res: Response;
-    try {
-        res = await fetch(`${BASE}${path}`, {
-            headers: { 'Content-Type': 'application/json' },
-            ...init,
-        });
-    } catch (err) {
-        // A failed fetch is often the cross-origin auth redirect, not a real outage.
-        await redirectToLoginIfSignedOut();
-        throw new ApiError(0, err instanceof Error ? err.message : 'Network error');
-    }
-    if (res.status === 401) await redirectToLoginIfSignedOut();
+    const res = await fetch(`${BASE}${path}`, {
+        ...init,
+        headers: authHeaders({ 'Content-Type': 'application/json', ...(init?.headers as Record<string, string>) }),
+    });
+    if (res.status === 401) onUnauthorized();
     if (!res.ok) {
         const body = await res.text().catch(() => '');
         throw new ApiError(res.status, body || res.statusText);
@@ -163,18 +173,12 @@ export const api = {
         const headers: Record<string, string> = { 'Content-Type': 'image/jpeg' };
         // Stable id lets the server dedupe a retried/replayed upload (#10).
         if (clientMutationId) headers['X-Client-Mutation-Id'] = clientMutationId;
-        let res: Response;
-        try {
-            res = await fetch(`${BASE}/containers/${containerId}/photos${qs}`, {
-                method: 'POST',
-                headers,
-                body: blob,
-            });
-        } catch (err) {
-            await redirectToLoginIfSignedOut();
-            throw new ApiError(0, err instanceof Error ? err.message : 'Network error');
-        }
-        if (res.status === 401) await redirectToLoginIfSignedOut();
+        const res = await fetch(`${BASE}/containers/${containerId}/photos${qs}`, {
+            method: 'POST',
+            headers: authHeaders(headers),
+            body: blob,
+        });
+        if (res.status === 401) onUnauthorized();
         if (!res.ok) {
             const body = await res.text().catch(() => '');
             throw new ApiError(res.status, body || res.statusText);

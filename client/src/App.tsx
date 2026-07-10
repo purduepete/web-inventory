@@ -3,18 +3,17 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { pendingCount, syncNow } from './db';
 import { Icon } from './Icon';
 import { HelpDialog } from './HelpDialog';
-import { Spinner } from './Spinner';
-import { getClientPrincipal, redirectToLogin } from './auth';
+import { KeyGate } from './KeyGate';
+import { clearKey, getKey, KEY_INVALID_EVENT } from './api';
 
 export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
     const [pending, setPending] = useState(0);
     const [syncing, setSyncing] = useState(false);
     const [syncMsg, setSyncMsg] = useState<string | null>(null);
-    // 'checking' until we know whether there's a signed-in session; 'redirecting'
-    // while we bounce to the AAD login; 'ok' once authenticated (or offline, where
-    // we can't tell and let the cached/offline app run).
-    const [authState, setAuthState] = useState<'checking' | 'ok' | 'redirecting'>('checking');
+    // Signed in once a valid-looking key is stored; the API validates it on the
+    // next call and, on a 401, fires KEY_INVALID_EVENT to bounce back to the gate.
+    const [authed, setAuthed] = useState(() => Boolean(getKey()));
     const location = useLocation();
     const [reloadKey, setReloadKey] = useState(0);
     const [reloading, setReloading] = useState(false);
@@ -53,29 +52,16 @@ export default function App() {
         (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
     useEffect(() => {
-        let active = true;
-        // Proactively confirm there's a signed-in session on startup. If the SWA
-        // session has expired, bounce straight to the AAD login instead of
-        // rendering an app whose every API call silently fails (empty pages).
-        // When offline we can't tell, so we let the cached app run.
-        if (!navigator.onLine) {
-            setAuthState('ok');
-        } else {
-            void getClientPrincipal().then((principal) => {
-                if (!active) return;
-                if (principal === null) {
-                    setAuthState('redirecting');
-                    redirectToLogin();
-                } else {
-                    // Signed in, or status unknown (treat as ok so the app still loads).
-                    setAuthState('ok');
-                }
-            });
-        }
-        return () => {
-            active = false;
-        };
+        // When any API call gets a 401 the key has been cleared; drop to the gate.
+        const onInvalid = () => setAuthed(false);
+        window.addEventListener(KEY_INVALID_EVENT, onInvalid);
+        return () => window.removeEventListener(KEY_INVALID_EVENT, onInvalid);
     }, []);
+
+    function signOut() {
+        clearKey();
+        setAuthed(false);
+    }
 
     useEffect(() => {
         const refresh = () => void pendingCount().then(setPending);
@@ -131,16 +117,9 @@ export default function App() {
         return () => clearTimeout(t);
     }, [syncMsg]);
 
-    // Block the app shell until we know the auth state, and show a clear message
-    // while bouncing to sign in — the user never lands on a broken/empty app.
-    if (authState !== 'ok') {
-        return (
-            <div className="app">
-                <main className="content">
-                    <Spinner label={authState === 'redirecting' ? 'Redirecting to sign in…' : 'Loading…'} />
-                </main>
-            </div>
-        );
+    // Show the access-key gate until a key is stored.
+    if (!authed) {
+        return <KeyGate onSaved={() => setAuthed(true)} />;
     }
 
     return (
@@ -190,6 +169,14 @@ export default function App() {
                         aria-label="Help and key concepts"
                     >
                         <Icon name="help" size={18} />
+                    </button>
+                    <button
+                        className="theme-toggle"
+                        onClick={signOut}
+                        title="Sign out"
+                        aria-label="Sign out"
+                    >
+                        <Icon name="lock" size={18} />
                     </button>
                     <button
                         className="theme-toggle"
