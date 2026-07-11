@@ -44,7 +44,10 @@ export async function validateKey(key?: string): Promise<boolean> {
     const k = key ?? getKey();
     if (!k) return false;
     try {
-        const res = await fetch(`${BASE}/tags`, { headers: { 'x-api-key': k } });
+        // Hit a zero-work auth-check endpoint (204 on success) rather than a data
+        // endpoint like /tags — the server still validates the key in middleware,
+        // but skips an extra DB query + payload, so the gate check is much faster.
+        const res = await fetch(`${BASE}/auth/check`, { headers: { 'x-api-key': k } });
         return res.status !== 401;
     } catch {
         return true;
