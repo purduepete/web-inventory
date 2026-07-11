@@ -264,6 +264,12 @@ body {
 }
 
 /* ---------- Access-key gate ---------- */
+/* The gate/splash renders its own .app shell with no nav rail, so the desktop
+   rail's left padding must never apply here — the key entry stays centered on
+   every form factor (this wins via specificity over the .app padding rule). */
+.app.app-gate {
+    padding-left: 0;
+}
 .content.gate {
     display: flex;
     align-items: center;

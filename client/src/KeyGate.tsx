@@ -29,7 +29,7 @@ export function KeyGate({ onSaved }: { onSaved: () => void }) {
     }
 
     return (
-        <div className="app">
+        <div className="app app-gate">
             <main className="content gate">
                 <div className="gate-card">
                     <span className="brand-mark gate-mark">
