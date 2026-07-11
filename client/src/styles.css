@@ -1957,6 +1957,33 @@ button.icon-btn.ok:focus,
     color: var(--accent);
     border: 1px solid var(--accent);
 }
+/* Sign-out lives at the bottom of Help, behind a confirm, so it's deliberate. */
+.help-signout {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+}
+.signout-start {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    margin-top: 10px;
+}
+.signout-confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+}
+.signout-confirm-text {
+    font-weight: 600;
+}
+.signout-confirm-actions {
+    display: flex;
+    gap: 8px;
+}
 /* Add-item modal: qty + category on one row, and the photo preview. */
 .add-item-backdrop {
     align-items: flex-start;

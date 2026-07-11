@@ -214,14 +214,6 @@ export default function App() {
                     </button>
                     <button
                         className="theme-toggle"
-                        onClick={signOut}
-                        title="Sign out"
-                        aria-label="Sign out"
-                    >
-                        <Icon name="lock" size={18} />
-                    </button>
-                    <button
-                        className="theme-toggle"
                         onClick={toggleTheme}
                         title={effectiveTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
                         aria-label="Toggle color theme"
@@ -270,7 +262,7 @@ export default function App() {
                 </NavLink>
             </nav>
 
-            <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+            <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} onSignOut={signOut} />
         </div>
     );
 }

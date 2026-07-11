@@ -1,12 +1,25 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from './Icon';
 
 /**
  * A simple help / "key concepts" overlay. Self-contained: it renders its own
  * backdrop and closes on Escape or backdrop click. The most important section
  * is how offline sync works, since unsynced changes live only on the device.
+ *
+ * Sign-out is deliberately tucked away here (behind a confirm) rather than in
+ * the toolbar, so it can't be triggered by an accidental tap.
  */
-export function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function HelpDialog({
+    open,
+    onClose,
+    onSignOut,
+}: {
+    open: boolean;
+    onClose: () => void;
+    onSignOut: () => void;
+}) {
+    const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+
     useEffect(() => {
         if (!open) return;
         function onKey(e: KeyboardEvent) {
@@ -15,6 +28,11 @@ export function HelpDialog({ open, onClose }: { open: boolean; onClose: () => vo
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [open, onClose]);
+
+    // Always reopen in the safe (non-confirming) state.
+    useEffect(() => {
+        if (!open) setConfirmingSignOut(false);
+    }, [open]);
 
     if (!open) return null;
 
@@ -123,6 +141,50 @@ export function HelpDialog({ open, onClose }: { open: boolean; onClose: () => vo
                             different from <em>sync</em>, which pushes your own queued changes up. Use reload to pull
                             the latest; the sync badge handles sending your edits.
                         </p>
+                    </section>
+
+                    <section className="help-section help-signout">
+                        <h3>
+                            <Icon name="lock" size={17} />
+                            Access &amp; sign out
+                        </h3>
+                        <p>
+                            This app is protected by an access key. <strong>Signing out</strong> forgets the key on this
+                            device — you’ll need to enter it again to get back in. Make sure everything has synced first.
+                        </p>
+                        {confirmingSignOut ? (
+                            <div className="signout-confirm">
+                                <span className="signout-confirm-text">Sign out of Web Inventory?</span>
+                                <div className="signout-confirm-actions">
+                                    <button
+                                        type="button"
+                                        className="ghost small"
+                                        onClick={() => setConfirmingSignOut(false)}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="danger small"
+                                        onClick={() => {
+                                            onClose();
+                                            onSignOut();
+                                        }}
+                                    >
+                                        Sign out
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                className="ghost small signout-start"
+                                onClick={() => setConfirmingSignOut(true)}
+                            >
+                                <Icon name="lock" size={15} />
+                                Sign out
+                            </button>
+                        )}
                     </section>
                 </div>
 
