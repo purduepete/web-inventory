@@ -18,6 +18,10 @@ export default function App() {
     const [authState, setAuthState] = useState<'checking' | 'authed' | 'gate'>(() =>
         getKey() ? 'checking' : 'gate',
     );
+    // The checking splash stays hidden until the viewport stops resizing, so the
+    // centred card is never seen shifting during the iOS standalone launch
+    // resettle. `splashReady` flips to true once dimensions are stable (or a cap).
+    const [splashReady, setSplashReady] = useState(false);
     const location = useLocation();
     const [reloadKey, setReloadKey] = useState(0);
     const [reloading, setReloading] = useState(false);
@@ -54,6 +58,33 @@ export default function App() {
     const effectiveTheme =
         theme ??
         (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+    useEffect(() => {
+        // Reveal the checking splash only after the viewport has stopped changing
+        // (2 stable frames) or a safety cap — masks the iOS launch resettle jump.
+        if (authState !== 'checking') return;
+        let raf = 0;
+        let stable = 0;
+        const start = performance.now();
+        const dims = () =>
+            `${window.innerWidth}x${window.innerHeight}:${Math.round(
+                window.visualViewport?.width ?? 0,
+            )}x${Math.round(window.visualViewport?.height ?? 0)}`;
+        let last = dims();
+        const tick = () => {
+            const now = dims();
+            stable = now === last ? stable + 1 : 0;
+            last = now;
+            const elapsed = performance.now() - start;
+            if ((elapsed > 250 && stable >= 2) || elapsed > 800) {
+                setSplashReady(true);
+                return;
+            }
+            raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [authState]);
 
     useEffect(() => {
         // Validate a stored key on load before showing the app. No key → gate;
@@ -146,7 +177,7 @@ export default function App() {
     // While validating a stored key, show a minimal splash — never the app UI.
     if (authState === 'checking') {
         return (
-            <div className="app-splash">
+            <div className={`app-splash${splashReady ? ' ready' : ''}`}>
                 <div className="gate-card">
                     <span className="brand-mark gate-mark">
                         <Icon name="lock" size={22} />

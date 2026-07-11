@@ -291,19 +291,17 @@ body {
     padding: 24px;
     box-sizing: border-box;
     /* The card is centred within the current viewport (fixed inset:0). On an iOS
-       standalone PWA the viewport itself resizes for a beat right after launch
-       (launch-image hand-off + safe-area settle), so ANY centred element — flow
-       or fixed — tracks the moving centre and appears to jump down-and-right
-       before settling. We can't stop the resettle, so we hide the splash until
-       it's over: stay invisible for ~320ms, then fade in already dead-centred.
-       If access validates faster than that, nothing flashes at all. */
+       standalone PWA the viewport resizes for a beat after every cold launch
+       (launch-image hand-off + safe-area settle), so a centred element tracks
+       the moving centre and appears to jump down-and-right before settling.
+       We can't stop the resettle, so we hide the splash until the viewport has
+       actually stopped changing (JS adds .ready — see App.tsx), then fade the
+       card in already dead-centred. If access validates first, nothing flashes. */
     opacity: 0;
-    animation: splash-reveal 220ms ease-out 320ms forwards;
 }
-@keyframes splash-reveal {
-    to {
-        opacity: 1;
-    }
+.app-splash.ready {
+    opacity: 1;
+    transition: opacity 180ms ease-out;
 }
 .gate-card {
     width: 100%;
