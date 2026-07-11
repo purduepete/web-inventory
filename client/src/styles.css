@@ -277,6 +277,20 @@ body {
     min-height: 70vh;
     padding-bottom: 18px;
 }
+/* Checking-access splash: a fixed, full-viewport overlay so the card stays
+   dead-centred through the iOS standalone dynamic-viewport / safe-area resettle
+   at launch. Document-flow centring (min-height: vh) briefly centres inside a
+   taller/wider box, making the card appear down-and-right before it snaps to
+   centre; a fixed inset:0 box always equals the current viewport and resizes
+   with it, so the card never moves. */
+.app-splash {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    box-sizing: border-box;
+}
 .gate-card {
     width: 100%;
     max-width: 340px;

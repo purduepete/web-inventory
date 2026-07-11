@@ -146,15 +146,13 @@ export default function App() {
     // While validating a stored key, show a minimal splash — never the app UI.
     if (authState === 'checking') {
         return (
-            <div className="app app-gate">
-                <main className="content gate">
-                    <div className="gate-card">
-                        <span className="brand-mark gate-mark">
-                            <Icon name="lock" size={22} />
-                        </span>
-                        <p className="muted gate-sub">Checking access…</p>
-                    </div>
-                </main>
+            <div className="app-splash">
+                <div className="gate-card">
+                    <span className="brand-mark gate-mark">
+                        <Icon name="lock" size={22} />
+                    </span>
+                    <p className="muted gate-sub">Checking access…</p>
+                </div>
             </div>
         );
     }
