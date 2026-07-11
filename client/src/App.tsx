@@ -18,10 +18,11 @@ export default function App() {
     const [authState, setAuthState] = useState<'checking' | 'authed' | 'gate'>(() =>
         getKey() ? 'checking' : 'gate',
     );
-    // The checking splash stays hidden until the viewport stops resizing, so the
-    // centred card is never seen shifting during the iOS standalone launch
-    // resettle. `splashReady` flips to true once dimensions are stable (or a cap).
-    const [splashReady, setSplashReady] = useState(false);
+    // During the initial key check we render only the themed background — no
+    // positioned card — so nothing can appear off-centre while the iOS standalone
+    // launch viewport resettles. A loader card is revealed ONLY if the check runs
+    // long (by which point the viewport has long since settled).
+    const [slowCheck, setSlowCheck] = useState(false);
     const location = useLocation();
     const [reloadKey, setReloadKey] = useState(0);
     const [reloading, setReloading] = useState(false);
@@ -60,30 +61,12 @@ export default function App() {
         (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
     useEffect(() => {
-        // Reveal the checking splash only after the viewport has stopped changing
-        // (2 stable frames) or a safety cap — masks the iOS launch resettle jump.
+        // Only surface a loader card if the key check is slow. The delay is long
+        // enough that the iOS standalone launch viewport has fully settled, so the
+        // centred card can never be seen mid-resettle.
         if (authState !== 'checking') return;
-        let raf = 0;
-        let stable = 0;
-        const start = performance.now();
-        const dims = () =>
-            `${window.innerWidth}x${window.innerHeight}:${Math.round(
-                window.visualViewport?.width ?? 0,
-            )}x${Math.round(window.visualViewport?.height ?? 0)}`;
-        let last = dims();
-        const tick = () => {
-            const now = dims();
-            stable = now === last ? stable + 1 : 0;
-            last = now;
-            const elapsed = performance.now() - start;
-            if ((elapsed > 250 && stable >= 2) || elapsed > 800) {
-                setSplashReady(true);
-                return;
-            }
-            raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(raf);
+        const t = setTimeout(() => setSlowCheck(true), 900);
+        return () => clearTimeout(t);
     }, [authState]);
 
     useEffect(() => {
@@ -174,16 +157,20 @@ export default function App() {
         return () => clearTimeout(t);
     }, [syncMsg]);
 
-    // While validating a stored key, show a minimal splash — never the app UI.
+    // While validating a stored key, render only the themed background so nothing
+    // is painted (and nothing can jump) during the iOS launch viewport resettle.
+    // A centred loader card appears only if the check is slow (see `slowCheck`).
     if (authState === 'checking') {
         return (
-            <div className={`app-splash${splashReady ? ' ready' : ''}`}>
-                <div className="gate-card">
-                    <span className="brand-mark gate-mark">
-                        <Icon name="lock" size={22} />
-                    </span>
-                    <p className="muted gate-sub">Checking access…</p>
-                </div>
+            <div className="app-splash" aria-hidden="true">
+                {slowCheck && (
+                    <div className="gate-card">
+                        <span className="brand-mark gate-mark">
+                            <Icon name="lock" size={22} />
+                        </span>
+                        <p className="muted gate-sub">Checking access…</p>
+                    </div>
+                )}
             </div>
         );
     }

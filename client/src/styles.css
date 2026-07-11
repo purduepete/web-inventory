@@ -277,12 +277,11 @@ body {
     min-height: 70vh;
     padding-bottom: 18px;
 }
-/* Checking-access splash: a fixed, full-viewport overlay so the card stays
-   dead-centred through the iOS standalone dynamic-viewport / safe-area resettle
-   at launch. Document-flow centring (min-height: vh) briefly centres inside a
-   taller/wider box, making the card appear down-and-right before it snaps to
-   centre; a fixed inset:0 box always equals the current viewport and resizes
-   with it, so the card never moves. */
+/* Checking-access splash: while the stored key is validated we render ONLY this
+   themed, empty full-viewport background — no positioned content — so nothing can
+   be painted off-centre while the iOS standalone launch viewport resettles. A
+   loader card is mounted inside it only if the check is slow (App.tsx `slowCheck`,
+   ~900ms), long after the viewport has settled, and fades in via `splash-in`. */
 .app-splash {
     position: fixed;
     inset: 0;
@@ -290,18 +289,17 @@ body {
     place-items: center;
     padding: 24px;
     box-sizing: border-box;
-    /* The card is centred within the current viewport (fixed inset:0). On an iOS
-       standalone PWA the viewport resizes for a beat after every cold launch
-       (launch-image hand-off + safe-area settle), so a centred element tracks
-       the moving centre and appears to jump down-and-right before settling.
-       We can't stop the resettle, so we hide the splash until the viewport has
-       actually stopped changing (JS adds .ready — see App.tsx), then fade the
-       card in already dead-centred. If access validates first, nothing flashes. */
-    opacity: 0;
 }
-.app-splash.ready {
-    opacity: 1;
-    transition: opacity 180ms ease-out;
+.app-splash .gate-card {
+    animation: splash-in 200ms ease-out both;
+}
+@keyframes splash-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 .gate-card {
     width: 100%;
@@ -1987,6 +1985,14 @@ button.icon-btn.ok:focus,
 .help-signout {
     border-top: 1px solid var(--border);
     padding-top: 16px;
+}
+.build-tag {
+    margin: 14px 0 0;
+    text-align: center;
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    opacity: 0.7;
 }
 .signout-start {
     display: inline-flex;

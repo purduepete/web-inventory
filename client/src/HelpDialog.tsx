@@ -186,6 +186,7 @@ export function HelpDialog({
                             </button>
                         )}
                     </section>
+                    <p className="build-tag">Build {__BUILD_SHA__}</p>
                 </div>
 
                 <div className="modal-actions">

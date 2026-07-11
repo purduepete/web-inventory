@@ -4,6 +4,20 @@
         "rewrite": "/index.html",
         "exclude": ["/assets/*", "/*.{png,jpg,svg,webmanifest,ico}"]
     },
+    "routes": [
+        {
+            "route": "/sw.js",
+            "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
+        },
+        {
+            "route": "/index.html",
+            "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
+        },
+        {
+            "route": "/manifest.webmanifest",
+            "headers": { "Cache-Control": "no-cache, must-revalidate" }
+        }
+    ],
     "globalHeaders": {
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "strict-origin-when-cross-origin",

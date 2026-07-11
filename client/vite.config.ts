@@ -1,10 +1,24 @@
 import { defineConfig } from 'vite';
+import { execSync } from 'node:child_process';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+
+// Short git SHA of the build, surfaced in the UI so we can confirm which bundle a
+// device is actually running (falls back to CI's GITHUB_SHA, then 'dev').
+function buildSha(): string {
+    try {
+        return execSync('git rev-parse --short HEAD').toString().trim();
+    } catch {
+        return (process.env.GITHUB_SHA ?? 'dev').slice(0, 7);
+    }
+}
 
 // During local dev the SWA emulator / Functions host proxies /api.
 // In production, Azure Static Web Apps routes /api to the linked Functions app.
 export default defineConfig({
+    define: {
+        __BUILD_SHA__: JSON.stringify(buildSha()),
+    },
     plugins: [
         react(),
         VitePWA({
@@ -30,6 +44,14 @@ export default defineConfig({
                 ],
             },
             workbox: {
+                // A newly-deployed service worker should take over as soon as it
+                // installs (skipWaiting) and control existing clients immediately
+                // (clientsClaim), and old precaches should be dropped. Combined with
+                // the controllerchange reload in src/pwa.ts, this stops installed
+                // standalone PWAs (notably iOS) from lingering on a stale shell.
+                skipWaiting: true,
+                clientsClaim: true,
+                cleanupOutdatedCaches: true,
                 // Let the network/platform handle anything that isn't an app route:
                 // - /api/* → Functions backend (queued offline via Dexie). Access is
                 //   gated by the `x-api-key` header, not a platform login.

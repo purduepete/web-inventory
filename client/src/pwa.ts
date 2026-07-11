@@ -12,6 +12,18 @@ import { registerSW } from 'virtual:pwa-register';
 //   - every time the app returns to the foreground (the reliable trigger on iOS).
 const UPDATE_INTERVAL_MS = 60 * 1000;
 
+// When a freshly-installed service worker takes control, reload once so the
+// running page swaps to the new app shell immediately instead of lingering on
+// the old bundle until the next cold start. The guard prevents reload loops.
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloading) return;
+        reloading = true;
+        window.location.reload();
+    });
+}
+
 registerSW({
     immediate: true,
     onRegisteredSW(_swUrl, registration) {
