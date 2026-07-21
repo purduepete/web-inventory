@@ -7,6 +7,12 @@ param openAiLocation string
 param sqlServerName string
 param sqlDatabaseName string
 
+@description('Name of the shared Log Analytics workspace to reuse for App Insights.')
+param sharedLogAnalyticsName string = 'loggkhw25ijhyzzy'
+
+@description('Resource group of the shared Log Analytics workspace.')
+param sharedLogAnalyticsResourceGroup string = 'investmentportfolio'
+
 var suffix = uniqueString(resourceGroup().id)
 var storageName = toLower('st${namePrefix}${substring(suffix, 0, 8)}')
 var functionAppName = '${namePrefix}-api-${substring(suffix, 0, 6)}'
@@ -14,7 +20,6 @@ var planName = '${namePrefix}-plan'
 var openAiName = '${namePrefix}-openai-${substring(suffix, 0, 6)}'
 var swaName = '${namePrefix}-web'
 var aiName = '${namePrefix}-ai'
-var logName = '${namePrefix}-logs'
 
 // ---------------------------------------------------------------- Storage
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
@@ -40,13 +45,12 @@ resource photosContainer 'Microsoft.Storage/storageAccounts/blobServices/contain
 }
 
 // ---------------------------------------------------------------- App Insights
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: logName
-  location: location
-  properties: {
-    sku: { name: 'PerGB2018' }
-    retentionInDays: 30
-  }
+// Cost consolidation: reuse the shared Log Analytics workspace in the
+// investmentportfolio RG (1 GB/day cap) instead of a per-app workspace. The
+// old per-app `${namePrefix}-logs` workspace was deleted.
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+  name: sharedLogAnalyticsName
+  scope: resourceGroup(sharedLogAnalyticsResourceGroup)
 }
 
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -108,7 +112,11 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       cors: {
-        allowedOrigins: [ 'https://${swaName}.azurestaticapps.net', 'http://localhost:5173' ]
+        // Free SWA: the SPA calls this Function cross-origin, so allow the SWA's
+        // (auto-generated) hostname. Referencing swa.properties.defaultHostname is
+        // now possible because the linkedBackend (which created a circular dep) is
+        // gone. supportCredentials stays false — auth is the x-api-key header.
+        allowedOrigins: [ 'https://${swa.properties.defaultHostname}', 'http://localhost:5173' ]
       }
       appSettings: [
         { name: 'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}' }
@@ -128,21 +136,14 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 }
 
 // ---------------------------------------------------------------- Static Web App (Free)
+// Free SKU: no linked backend (that requires Standard). The SPA calls the
+// Function App directly (cross-origin) via VITE_API_BASE; the Function's CORS
+// allows this SWA's origin and the SPA CSP connect-src includes the Function.
 resource swa 'Microsoft.Web/staticSites@2023-12-01' = {
   name: swaName
   location: swaLocation
-  sku: { name: 'Standard', tier: 'Standard' }
+  sku: { name: 'Free', tier: 'Free' }
   properties: {}
-}
-
-// Link the standalone Function App as the SWA's API backend.
-resource swaBackend 'Microsoft.Web/staticSites/linkedBackends@2023-12-01' = {
-  parent: swa
-  name: 'api'
-  properties: {
-    backendResourceId: functionApp.id
-    region: location
-  }
 }
 
 // ---------------------------------------------------------------- Role assignments
