@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import { getContainersCached } from '../containersCache';
 import {
     enqueue,
@@ -300,12 +300,18 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 flash('Photo added.');
             }
             await load(true);
-        } catch {
+        } catch (e) {
             // Network died mid-upload: queue it under the same id so a partially-applied
             // online attempt is deduped on replay.
             const small = await downscaleImage(file);
             await enqueuePhoto(container.id, small, analyze, photoMutationId);
-            flash('Photo queued for upload.');
+            // A server that answered with an error is not an offline situation, so name
+            // the failure instead of implying the photo is only waiting on connectivity.
+            flash(
+                e instanceof ApiError
+                    ? `Upload failed (${e.status}). Photo saved and will retry.`
+                    : 'Photo queued for upload.',
+            );
         } finally {
             setBusy(false);
         }
