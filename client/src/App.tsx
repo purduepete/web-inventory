@@ -38,7 +38,7 @@ export default function App() {
         const effective = theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         document
             .querySelector('meta[name="theme-color"]')
-            ?.setAttribute('content', effective === 'light' ? '#f6f8fa' : '#1a1b26');
+            ?.setAttribute('content', effective === 'light' ? '#f6f8fa' : '#020617');
     }, [theme]);
 
     function toggleTheme() {

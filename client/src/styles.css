@@ -1,17 +1,19 @@
 :root {
-    /* ---------- Dark (default) — Tokyo Night palette ---------- */
-    --bg: #1a1b26;
-    --card: #1f2335;
-    --card2: #24283b;
-    --border: #2f3449;
-    --text: #c0caf5;
-    --muted: #7982a9;
+    /* ---------- Dark (default) — slate neutrals, Tokyo Night accents ----------
+       Neutrals match ferry_tracker and webportfolio so the three apps share one
+       dark surface; the accent hues stay on this app's blue/purple. */
+    --bg: #020617;
+    --card: #0f172a;
+    --card2: #172033;
+    --border: #293548;
+    --text: #f8fafc;
+    --muted: #94a3b8;
     --accent: #7aa2f7;
     --green: #9ece6a;
     --red: #f7768e;
     --amber: #e0af68;
     --proj: #bb9af7;
-    --on-accent: #1a1b26;
+    --on-accent: #020617;
     --font: 'Roboto Flex', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
