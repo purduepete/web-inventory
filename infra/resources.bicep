@@ -2,10 +2,12 @@
 param namePrefix string
 
 param location string
-param swaLocation string
 param openAiLocation string
 param sqlServerName string
 param sqlDatabaseName string
+
+@description('Suffix in the live resource names. Pinned because the stack predates this template and uniqueString() does not reproduce it.')
+param resourceSuffix string = 'xkedjbjx'
 
 @description('Name of the shared Log Analytics workspace to reuse for App Insights.')
 param sharedLogAnalyticsName string = 'loggkhw25ijhyzzy'
@@ -13,11 +15,10 @@ param sharedLogAnalyticsName string = 'loggkhw25ijhyzzy'
 @description('Resource group of the shared Log Analytics workspace.')
 param sharedLogAnalyticsResourceGroup string = 'investmentportfolio'
 
-var suffix = uniqueString(resourceGroup().id)
-var storageName = toLower('st${namePrefix}${substring(suffix, 0, 8)}')
-var functionAppName = '${namePrefix}-api-${substring(suffix, 0, 6)}'
+var storageName = toLower('st${namePrefix}${substring(resourceSuffix, 0, 8)}')
+var functionAppName = '${namePrefix}-api-${substring(resourceSuffix, 0, 6)}'
 var planName = '${namePrefix}-plan'
-var openAiName = '${namePrefix}-openai-${substring(suffix, 0, 6)}'
+var openAiName = '${namePrefix}-openai-${substring(resourceSuffix, 0, 6)}'
 var swaName = '${namePrefix}-web'
 var aiName = '${namePrefix}-ai'
 
@@ -130,6 +131,9 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'BlobContainerName', value: 'photos' }
         { name: 'OpenAiEndpoint', value: openAi.properties.endpoint }
         { name: 'OpenAiDeployment', value: 'gpt-5-mini' }
+        // KeyAuthMiddleware defaults this to true when absent, which would re-accept the
+        // SWA principal. Declared so a deploy cannot silently widen auth.
+        { name: 'WEBINV_ALLOW_SWA_PRINCIPAL', value: 'false' }
       ]
     }
   }
@@ -139,11 +143,10 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 // Free SKU: no linked backend (that requires Standard). The SPA calls the
 // Function App directly (cross-origin) via VITE_API_BASE; the Function's CORS
 // allows this SWA's origin and the SPA CSP connect-src includes the Function.
-resource swa 'Microsoft.Web/staticSites@2023-12-01' = {
+// Read-only: the GitHub integration owns repositoryUrl/branch/provider, and declaring
+// the site here would strip them on every deploy.
+resource swa 'Microsoft.Web/staticSites@2023-12-01' existing = {
   name: swaName
-  location: swaLocation
-  sku: { name: 'Free', tier: 'Free' }
-  properties: {}
 }
 
 // ---------------------------------------------------------------- Role assignments

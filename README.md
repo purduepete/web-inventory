@@ -29,7 +29,7 @@ Re-install from the URL above after any such move.
 ```
 client/   React PWA
 api/      .NET isolated Functions API
-infra/    Bicep (subscription-scoped: new RG + resources)
+infra/    Bicep (subscription-scoped, deploys into an existing RG)
 sql/      Schema scripts for the inv schema
 .github/  CI/CD workflows
 ```
@@ -59,10 +59,17 @@ cd scripts
 ./New-AccessKey.ps1 -Name "dev-local"
 ```
 
-## Provisioning (one-time)
+## Provisioning
+
+The template reconciles the existing stack in `jimbpersonal-rg`. Resource names are
+pinned by the `resourceSuffix` parameter, so always run what-if first and read it.
 
 ```powershell
 az login
+az deployment sub what-if `
+  --location eastus `
+  --template-file infra/main.bicep `
+  --parameters namePrefix=webinv
 az deployment sub create `
   --location eastus `
   --template-file infra/main.bicep `
@@ -72,6 +79,9 @@ az deployment sub create `
 Outputs include the Static Web App name, Function App name, storage account, and OpenAI
 endpoint. The Bicep also grants the Function App's managed identity **Storage Blob Data
 Contributor** and **Cognitive Services OpenAI User**.
+
+The Static Web App is declared `existing`. Its `repositoryUrl`, `branch`, and `provider`
+belong to the GitHub integration, and declaring the resource here would delete them.
 
 ### Apply the database schema
 

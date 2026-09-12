@@ -6,9 +6,6 @@ param namePrefix string = 'webinv'
 @description('Location for new resources.')
 param location string = 'eastus'
 
-@description('Location for the Static Web App (limited region set).')
-param swaLocation string = 'eastus2'
-
 @description('Azure OpenAI location that has gpt-5-mini capacity.')
 param openAiLocation string = 'eastus'
 
@@ -18,11 +15,11 @@ param sqlServerName string = 'sqlgkhw25ijhyzzy'
 @description('Existing SQL database name.')
 param sqlDatabaseName string = 'webportfolio'
 
-var rgName = '${namePrefix}-rg'
+@description('Resource group that already holds the stack.')
+param rgName string = 'jimbpersonal-rg'
 
-resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' existing = {
   name: rgName
-  location: location
 }
 
 module resources 'resources.bicep' = {
@@ -31,7 +28,6 @@ module resources 'resources.bicep' = {
   params: {
     namePrefix: namePrefix
     location: location
-    swaLocation: swaLocation
     openAiLocation: openAiLocation
     sqlServerName: sqlServerName
     sqlDatabaseName: sqlDatabaseName
