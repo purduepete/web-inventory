@@ -43,7 +43,7 @@ public sealed class BlobService
         Guid containerId, Guid photoId, byte[] bytes, CancellationToken ct)
     {
         if (!_enabled)
-            return ($"about:blank#{photoId}", $"about:blank#{photoId}");
+            throw new InvalidOperationException("Blob storage is not configured; set BlobAccountUrl.");
 
         var blob = _container.GetBlobClient($"{containerId}/{photoId}.jpg");
         await blob.UploadAsync(new MemoryStream(bytes), new BlobUploadOptions

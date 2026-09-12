@@ -35,6 +35,11 @@ public class PhotoFunctions
     {
         if (!await _repo.ContainerExistsAsync(containerId, ct)) return req.Status(HttpStatusCode.NotFound);
 
+        // Without storage there is nowhere to put the image, and storing the row anyway
+        // leaves a photo that can never load. Fail instead of faking success.
+        if (!_blob.Enabled)
+            return await req.Text("Photo storage is not configured.", HttpStatusCode.ServiceUnavailable);
+
         // Reject early when the client declares an oversize body.
         if (req.Headers.TryGetValues("Content-Length", out var lenValues)
             && long.TryParse(lenValues.FirstOrDefault(), out var declaredLen)
