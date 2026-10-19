@@ -11,13 +11,9 @@ import type {
 } from './types';
 import { invalidateContainers } from './containersCache';
 
-// Same-origin '/api' in local dev (Vite proxy). In production the SPA is hosted
-// on a Free Static Web App with no linked backend, so it calls the Function App
-// directly via VITE_API_BASE (e.g. https://webinv-api-xkedjb.azurewebsites.net/api);
-// that cross-origin call needs the Function's CORS to allow this origin and the
-// x-api-key header, and the SWA CSP connect-src to include the Function origin.
+// The local host serves the PWA and API at the same origin.
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? '/api';
-export const platformAuth = import.meta.env.VITE_AUTH_MODE === 'access';
+export const platformAuth = (import.meta.env.VITE_AUTH_MODE ?? 'access') === 'access';
 
 // The access key gates every API call. It's stored in localStorage and sent as the
 // `x-api-key` header; the API validates it (see api/Middleware/KeyAuthMiddleware).

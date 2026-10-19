@@ -20,8 +20,10 @@ app.UseExceptionHandler(handler => handler.Run(async context =>
 app.Use(async (context, next) =>
 {
     var origin = context.Request.Headers.Origin.ToString();
+    var developmentOrigin = app.Environment.IsDevelopment() &&
+        origin is "http://localhost:5173" or "http://127.0.0.1:5173";
     if (origin.Length > 0 && origin != "https://web-inventory.jimlertech.com" &&
-        origin != "https://jimbrownhome1.tail8ad282.ts.net:8795")
+        origin != "https://jimbrownhome1.tail8ad282.ts.net:8795" && !developmentOrigin)
     {
         context.Response.StatusCode = 403;
         return;

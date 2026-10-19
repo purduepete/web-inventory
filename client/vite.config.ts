@@ -13,8 +13,7 @@ function buildSha(): string {
     }
 }
 
-// During local dev the SWA emulator / Functions host proxies /api.
-// In production, Azure Static Web Apps routes /api to the linked Functions app.
+// Development requests use the same ASP.NET API as production.
 export default defineConfig({
     define: {
         __BUILD_SHA__: JSON.stringify(buildSha()),
@@ -53,8 +52,7 @@ export default defineConfig({
                 clientsClaim: true,
                 cleanupOutdatedCaches: true,
                 // Let the network/platform handle anything that isn't an app route:
-                // - /api/* → Functions backend (queued offline via Dexie). Access is
-                //   gated by the `x-api-key` header, not a platform login.
+                // - /api/* is queued offline via Dexie and uses platform access.
                 // Without this, the service worker's navigation fallback would serve
                 // the cached app shell for API requests.
                 navigateFallbackDenylist: [/^\/api/],
@@ -72,7 +70,7 @@ export default defineConfig({
         port: 5173,
         proxy: {
             '/api': {
-                target: 'http://localhost:7071',
+                target: 'http://127.0.0.1:18795',
                 changeOrigin: true,
             },
         },

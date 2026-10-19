@@ -38,6 +38,11 @@ on the host. Start it through `Start-InventoryService.ps1`, which loads protecte
 settings then runs the executable with output in `shared\logs\web-inventory.log`.
 This native .NET boot task is separate from the framework's Node/Python watchdog.
 
+For local development, set `ImageDirectory`, `PostgresConnectionString` and
+`ASPNETCORE_ENVIRONMENT=Development`, then run `dotnet run --project api`.
+Run `npm run dev` in `client` in another terminal; Vite proxies `/api` to 18795.
+Only development mode accepts the two loopback Vite origins on port 5173.
+
 `shared\secrets\settings.json` requires `PostgresConnectionString`,
 `ImageDirectory`, `OpenAiEndpoint`, `OpenAiDeployment`, and `OpenAiKey`.
 Only SYSTEM, administrators and LOCAL SERVICE may read it. Keep secrets out of
