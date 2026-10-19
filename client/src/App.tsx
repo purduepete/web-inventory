@@ -192,7 +192,7 @@ export default function App() {
                     <span className="brand-mark">
                         <Icon name="box" size={18} />
                     </span>
-                    Inventory
+                    Web Inventory
                 </span>
                 <div className="topbar-actions">
                     {(!online || pending > 0 || syncing) && (

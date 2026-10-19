@@ -29,7 +29,7 @@ export default defineConfig({
             includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
             manifest: {
                 name: 'Web Inventory',
-                short_name: 'Inventory',
+                short_name: 'Web Inventory',
                 description: 'Photograph, label and search the contents of your containers.',
                 theme_color: '#020617',
                 background_color: '#020617',
