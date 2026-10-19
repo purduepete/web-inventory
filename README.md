@@ -1,5 +1,30 @@
 # Web Inventory
 
+## Current deployment
+
+Migrated to jimbrownhome1 on October 18, 2026:
+
+- Public: https://web-inventory.jimlertech.com/
+- Private: https://jimbrownhome1.tail8ad282.ts.net:8795/
+- Database: PostgreSQL `web_inventory`, `public` schema.
+- Images: `D:\SolutionDeploy\apps\web-inventory\images`.
+- API/PWA: self-contained .NET 10 ASP.NET Core, loopback port 18795.
+- Authentication: Google or Microsoft through Cloudflare Access; private access
+  uses Tailscale controls. The duplicate application key prompt is removed.
+- Azure OpenAI remains an outbound integration with credentials in the protected
+  runtime settings file.
+
+All 88 database rows were compared before import commit. All 12 original image
+files matched the final Azure downloads by SHA-256. Original IDs and QR tokens
+remain unchanged. Reinstall the PWA from the new public hostname; browser-local
+offline queues and cached data belong to the previous origin and don't transfer.
+
+See [the current deployment runbook](deploy/README.md). The previous Azure API
+is stopped and automatic Azure deployment workflows are removed. Shared Azure
+SQL data and source Blob images remain as backups.
+
+## Previous Azure deployment (historical reference)
+
 An installable PWA (iPhone-first) to inventory the contents of physical containers.
 Photograph a container's contents → Azure OpenAI (gpt-5-mini vision) suggests items →
 you confirm/edit → items are saved and fully editable over time. Containers get printable

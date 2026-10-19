@@ -1,13 +1,13 @@
 using System.Net;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.AspNetCore.Mvc;
 using WebInventory.Api.Data;
 using WebInventory.Api.Models;
 using WebInventory.Api.Services;
 
 namespace WebInventory.Api.Functions;
 
-public class PhotoFunctions
+[ApiController]
+public class PhotoFunctions : ControllerBase
 {
     // Client downscales to <=1024px before upload, so a valid JPEG is well under this.
     // The cap bounds memory use and rejects malicious oversize payloads (DoS).
@@ -28,47 +28,46 @@ public class PhotoFunctions
     /// Accepts a raw JPEG body, stores it in Blob Storage, runs AI item detection,
     /// and returns the suggested items for the user to confirm.
     /// </summary>
-    [Function("UploadPhoto")]
-    public async Task<HttpResponseData> Upload(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "containers/{containerId:guid}/photos")] HttpRequestData req,
+    [HttpPost("/api/containers/{containerId:guid}/photos")]
+    public async Task<IActionResult> Upload(
         Guid containerId, CancellationToken ct)
     {
-        if (!await _repo.ContainerExistsAsync(containerId, ct)) return req.Status(HttpStatusCode.NotFound);
+        if (!await _repo.ContainerExistsAsync(containerId, ct)) return Request.Status(HttpStatusCode.NotFound);
 
         // Without storage there is nowhere to put the image, and storing the row anyway
         // leaves a photo that can never load. Fail instead of faking success.
         if (!_blob.Enabled)
-            return await req.Text("Photo storage is not configured.", HttpStatusCode.ServiceUnavailable);
+            return await Request.Text("Photo storage is not configured.", HttpStatusCode.ServiceUnavailable);
 
         // Reject early when the client declares an oversize body.
-        if (req.Headers.TryGetValues("Content-Length", out var lenValues)
+        if (Request.Headers.TryGetValue("Content-Length", out var lenValues)
             && long.TryParse(lenValues.FirstOrDefault(), out var declaredLen)
             && declaredLen > MaxUploadBytes)
-            return await req.Text("Image exceeds the maximum upload size.", HttpStatusCode.RequestEntityTooLarge);
+            return await Request.Text("Image exceeds the maximum upload size.", HttpStatusCode.RequestEntityTooLarge);
 
         // Buffer with a hard cap so a chunked/unknown-length body can't exhaust memory.
         using var ms = new MemoryStream();
         var buffer = new byte[81920];
         int read;
-        while ((read = await req.Body.ReadAsync(buffer, ct)) > 0)
+        while ((read = await Request.Body.ReadAsync(buffer, ct)) > 0)
         {
             if (ms.Length + read > MaxUploadBytes)
-                return await req.Text("Image exceeds the maximum upload size.", HttpStatusCode.RequestEntityTooLarge);
+                return await Request.Text("Image exceeds the maximum upload size.", HttpStatusCode.RequestEntityTooLarge);
             await ms.WriteAsync(buffer.AsMemory(0, read), ct);
         }
         var bytes = ms.ToArray();
         if (bytes.Length == 0)
-            return await req.Text("Empty image body.", HttpStatusCode.BadRequest);
+            return await Request.Text("Empty image body.", HttpStatusCode.BadRequest);
 
         // Idempotency (#10): a stable client mutation id lets a retried/replayed upload
         // (lost response, offline sync) resolve to the original photo instead of storing
         // a duplicate. Check first so a pure replay never re-uploads the blob or re-runs AI.
-        Guid? clientMutationId = req.Headers.TryGetValues("X-Client-Mutation-Id", out var midValues)
+        Guid? clientMutationId = Request.Headers.TryGetValue("X-Client-Mutation-Id", out var midValues)
             && Guid.TryParse(midValues.FirstOrDefault(), out var parsedMid)
                 ? parsedMid : null;
         if (clientMutationId is Guid replayMid
             && await _repo.GetPhotoIdByMutationIdAsync(replayMid, ct) is Guid existingId)
-            return await req.Json(new PhotoUploadResult(existingId, new List<DetectedItem>()), HttpStatusCode.OK);
+            return await Request.Json(new PhotoUploadResult(existingId, new List<DetectedItem>()), HttpStatusCode.OK);
 
         var photoId = Guid.NewGuid();
         var (blobUrl, thumbUrl) = await _blob.UploadAsync(containerId, photoId, bytes, ct);
@@ -79,53 +78,50 @@ public class PhotoFunctions
             // orphaned. Remove it best-effort and return the winning photo.
             await _blob.DeleteAsync(blobUrl, ct);
             if (thumbUrl != blobUrl) await _blob.DeleteAsync(thumbUrl, ct);
-            return await req.Json(new PhotoUploadResult(storedId, new List<DetectedItem>()), HttpStatusCode.OK);
+            return await Request.Json(new PhotoUploadResult(storedId, new List<DetectedItem>()), HttpStatusCode.OK);
         }
 
         // Callers can skip AI detection (e.g. "Add photo only") with ?analyze=false.
         var analyze = !string.Equals(
-            System.Web.HttpUtility.ParseQueryString(req.Url.Query)["analyze"],
+            System.Web.HttpUtility.ParseQueryString(Request.QueryString.Value ?? "")["analyze"],
             "false",
             StringComparison.OrdinalIgnoreCase);
 
         var detected = analyze
             ? await _vision.DetectAsync(bytes, ct)
             : new List<DetectedItem>();
-        return await req.Json(new PhotoUploadResult(photoId, detected), HttpStatusCode.Created);
+        return await Request.Json(new PhotoUploadResult(photoId, detected), HttpStatusCode.Created);
     }
 
-    [Function("DeletePhoto")]
-    public async Task<HttpResponseData> Delete(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "photos/{id:guid}")] HttpRequestData req,
+    [HttpDelete("/api/photos/{id:guid}")]
+    public async Task<IActionResult> Delete(
         Guid id, CancellationToken ct)
     {
         var deleted = await _repo.DeletePhotoAsync(id, ct);
-        return req.Status(deleted ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
+        return Request.Status(deleted ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
     }
 
-    [Function("MovePhoto")]
-    public async Task<HttpResponseData> Move(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "photos/{id:guid}/move")] HttpRequestData req,
+    [HttpPost("/api/photos/{id:guid}/move")]
+    public async Task<IActionResult> Move(
         Guid id, CancellationToken ct)
     {
-        var input = await req.ReadFromJsonAsync<MovePhotoInput>();
+        var input = await Request.ReadFromJsonAsync<MovePhotoInput>();
         if (input is null || input.TargetContainerId == Guid.Empty)
-            return await req.Text("targetContainerId is required.", HttpStatusCode.BadRequest);
+            return await Request.Text("targetContainerId is required.", HttpStatusCode.BadRequest);
         var moved = await _repo.MovePhotoAsync(id, input.TargetContainerId, ct);
-        return req.Status(moved ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
+        return Request.Status(moved ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
     }
 
-    [Function("RotatePhoto")]
-    public async Task<HttpResponseData> Rotate(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "photos/{id:guid}/rotate")] HttpRequestData req,
+    [HttpPost("/api/photos/{id:guid}/rotate")]
+    public async Task<IActionResult> Rotate(
         Guid id, CancellationToken ct)
     {
-        var raw = System.Web.HttpUtility.ParseQueryString(req.Url.Query)["degrees"];
+        var raw = System.Web.HttpUtility.ParseQueryString(Request.QueryString.Value ?? "")["degrees"];
         var degrees = int.TryParse(raw, out var d) ? ((d % 360) + 360) % 360 : 90;
         if (degrees is not (90 or 180 or 270))
-            return await req.Text("degrees must be 90, 180, or 270.", HttpStatusCode.BadRequest);
+            return await Request.Text("degrees must be 90, 180, or 270.", HttpStatusCode.BadRequest);
         var rotated = await _repo.RotatePhotoAsync(id, degrees, ct);
-        return req.Status(rotated ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
+        return Request.Status(rotated ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -133,9 +129,8 @@ public class PhotoFunctions
     /// thumbnails existed (where ThumbUrl still equals the full BlobUrl). Idempotent —
     /// already-processed photos are skipped on subsequent runs.
     /// </summary>
-    [Function("BackfillThumbnails")]
-    public async Task<HttpResponseData> BackfillThumbnails(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "admin/backfill-thumbnails")] HttpRequestData req,
+    [HttpPost("/api/admin/backfill-thumbnails")]
+    public async Task<IActionResult> BackfillThumbnails(
         CancellationToken ct)
     {
         var photos = await _repo.ListPhotosNeedingThumbnailAsync(ct);
@@ -153,6 +148,6 @@ public class PhotoFunctions
                 failed++;
             }
         }
-        return await req.Json(new { total = photos.Count, updated, failed });
+        return await Request.Json(new { total = photos.Count, updated, failed });
     }
 }

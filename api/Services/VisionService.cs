@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using Azure;
 using OpenAI.Chat;
 using WebInventory.Api.Models;
 
@@ -21,8 +22,11 @@ public sealed class VisionService
         "packaging fillers, and background. Respond ONLY as JSON of the form " +
         "{\"items\":[{\"name\":string,\"description\":string,\"quantity\":number}]}.";
 
-    public VisionService()
+    private readonly ILogger<VisionService> _logger;
+
+    public VisionService(ILogger<VisionService> logger)
     {
+        _logger = logger;
         var endpoint = Environment.GetEnvironmentVariable("OpenAiEndpoint");
         var deployment = Environment.GetEnvironmentVariable("OpenAiDeployment") ?? "gpt-5-mini";
         if (string.IsNullOrWhiteSpace(endpoint) || endpoint.Contains("<your-"))
@@ -30,7 +34,10 @@ public sealed class VisionService
             _chat = null;
             return;
         }
-        var client = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential());
+        var key = Environment.GetEnvironmentVariable("OpenAiKey");
+        var client = string.IsNullOrWhiteSpace(key)
+            ? new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential())
+            : new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(key));
         _chat = client.GetChatClient(deployment);
     }
 
@@ -60,9 +67,10 @@ public sealed class VisionService
             var text = response.Value.Content.Count > 0 ? response.Value.Content[0].Text : "{}";
             return Parse(text);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return new();
+            _logger.LogError(ex, "Inventory image analysis failed.");
+            throw;
         }
     }
 

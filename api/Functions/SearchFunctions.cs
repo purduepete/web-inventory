@@ -1,39 +1,36 @@
 using System.Net;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.AspNetCore.Mvc;
 using WebInventory.Api.Data;
 
 namespace WebInventory.Api.Functions;
 
-public class SearchFunctions
+[ApiController]
+public class SearchFunctions : ControllerBase
 {
     private readonly InventoryRepository _repo;
     public SearchFunctions(InventoryRepository repo) => _repo = repo;
 
-    [Function("Search")]
-    public async Task<HttpResponseData> Search(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "search")] HttpRequestData req,
+    [HttpGet("/api/search")]
+    public async Task<IActionResult> Search(
         CancellationToken ct)
     {
-        var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+        var query = System.Web.HttpUtility.ParseQueryString(Request.QueryString.Value ?? "");
         var q = query["q"];
         var tag = query["tag"];
         Guid? ParseId(string key) => Guid.TryParse(query[key], out var id) ? id : null;
         var skip = int.TryParse(query["skip"], out var s) ? s : 0;
         var take = int.TryParse(query["take"], out var t) ? t : InventoryRepository.DefaultSearchTake;
-        return await req.Json(await _repo.SearchAsync(
+        return await Request.Json(await _repo.SearchAsync(
             q, tag, ParseId("locationId"), ParseId("ownerId"), ParseId("categoryId"), skip, take, ct));
     }
 
-    [Function("ListTags")]
-    public async Task<HttpResponseData> Tags(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "tags")] HttpRequestData req,
+    [HttpGet("/api/tags")]
+    public async Task<IActionResult> Tags(
         CancellationToken ct)
-        => await req.Json(await _repo.ListTagsAsync(ct));
+        => await Request.Json(await _repo.ListTagsAsync(ct));
 
-    [Function("ListFacets")]
-    public async Task<HttpResponseData> Facets(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "facets")] HttpRequestData req,
+    [HttpGet("/api/facets")]
+    public async Task<IActionResult> Facets(
         CancellationToken ct)
-        => await req.Json(await _repo.ListFacetsAsync(ct));
+        => await Request.Json(await _repo.ListFacetsAsync(ct));
 }

@@ -4,7 +4,7 @@ import { pendingCount, syncNow } from './db';
 import { Icon } from './Icon';
 import { HelpDialog } from './HelpDialog';
 import { KeyGate } from './KeyGate';
-import { clearKey, getKey, validateKey, KEY_INVALID_EVENT } from './api';
+import { clearKey, getKey, validateKey, KEY_INVALID_EVENT, platformAuth } from './api';
 
 export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
@@ -16,7 +16,7 @@ export default function App() {
     // 'checking' (when a key exists) means the app UI never paints before the key
     // is verified — an invalid/stale key drops straight to the gate.
     const [authState, setAuthState] = useState<'checking' | 'authed' | 'gate'>(() =>
-        getKey() ? 'checking' : 'gate',
+        platformAuth || getKey() ? 'checking' : 'gate',
     );
     // During the initial key check we render only the themed background — no
     // positioned card — so nothing can appear off-centre while the iOS standalone
@@ -72,7 +72,7 @@ export default function App() {
     useEffect(() => {
         // Validate a stored key on load before showing the app. No key → gate;
         // rejected key → forget it and show the gate.
-        if (!getKey()) {
+        if (!platformAuth && !getKey()) {
             setAuthState('gate');
             return;
         }
@@ -99,6 +99,10 @@ export default function App() {
     }, []);
 
     function signOut() {
+        if (platformAuth) {
+            window.location.assign('/cdn-cgi/access/logout');
+            return;
+        }
         clearKey();
         setAuthState('gate');
     }
@@ -177,6 +181,7 @@ export default function App() {
 
     // Show the access-key gate until a valid key is confirmed.
     if (authState !== 'authed') {
+        if (platformAuth) return <main className="page"><h1>Sign-in required</h1><p>Refresh to sign in through Cloudflare Access. Private access requires Tailscale.</p><button onClick={() => window.location.reload()}>Refresh</button></main>;
         return <KeyGate onSaved={() => setAuthState('authed')} />;
     }
 

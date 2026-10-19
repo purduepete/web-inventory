@@ -1,70 +1,64 @@
 using System.Net;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.AspNetCore.Mvc;
 using WebInventory.Api.Data;
 using WebInventory.Api.Models;
 
 namespace WebInventory.Api.Functions;
 
-public class ContainerFunctions
+[ApiController]
+public class ContainerFunctions : ControllerBase
 {
     private readonly InventoryRepository _repo;
     public ContainerFunctions(InventoryRepository repo) => _repo = repo;
 
-    [Function("ListContainers")]
-    public async Task<HttpResponseData> List(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "containers")] HttpRequestData req,
+    [HttpGet("/api/containers")]
+    public async Task<IActionResult> List(
         CancellationToken ct)
-        => await req.Json(await _repo.ListContainersAsync(ct));
+        => await Request.Json(await _repo.ListContainersAsync(ct));
 
-    [Function("CreateContainer")]
-    public async Task<HttpResponseData> Create(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "containers")] HttpRequestData req,
+    [HttpPost("/api/containers")]
+    public async Task<IActionResult> Create(
         CancellationToken ct)
     {
-        var input = await req.ReadFromJsonAsync<CreateContainerInput>();
+        var input = await Request.ReadFromJsonAsync<CreateContainerInput>();
         if (input is null || string.IsNullOrWhiteSpace(input.Name))
-            return await req.Text("Name is required.", HttpStatusCode.BadRequest);
+            return await Request.Text("Name is required.", HttpStatusCode.BadRequest);
         var created = await _repo.CreateContainerAsync(input, ct);
-        return await req.Json(created, HttpStatusCode.Created);
+        return await Request.Json(created, HttpStatusCode.Created);
     }
 
-    [Function("GetContainer")]
-    public async Task<HttpResponseData> Get(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "containers/{id:guid}")] HttpRequestData req,
+    [HttpGet("/api/containers/{id:guid}")]
+    public async Task<IActionResult> Get(
         Guid id, CancellationToken ct)
     {
         var c = await _repo.GetContainerAsync(id, ct);
-        return c is null ? req.Status(HttpStatusCode.NotFound) : await req.Json(c);
+        return c is null ? Request.Status(HttpStatusCode.NotFound) : await Request.Json(c);
     }
 
-    [Function("GetContainerByToken")]
-    public async Task<HttpResponseData> GetByToken(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "containers/by-token/{token:guid}")] HttpRequestData req,
+    [HttpGet("/api/containers/by-token/{token:guid}")]
+    public async Task<IActionResult> GetByToken(
         Guid token, CancellationToken ct)
     {
         var c = await _repo.GetContainerByTokenAsync(token, ct);
-        return c is null ? req.Status(HttpStatusCode.NotFound) : await req.Json(c);
+        return c is null ? Request.Status(HttpStatusCode.NotFound) : await Request.Json(c);
     }
 
-    [Function("UpdateContainer")]
-    public async Task<HttpResponseData> Update(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "containers/{id:guid}")] HttpRequestData req,
+    [HttpPut("/api/containers/{id:guid}")]
+    public async Task<IActionResult> Update(
         Guid id, CancellationToken ct)
     {
-        var input = await req.ReadFromJsonAsync<CreateContainerInput>();
+        var input = await Request.ReadFromJsonAsync<CreateContainerInput>();
         if (input is null || string.IsNullOrWhiteSpace(input.Name))
-            return await req.Text("Name is required.", HttpStatusCode.BadRequest);
+            return await Request.Text("Name is required.", HttpStatusCode.BadRequest);
         var updated = await _repo.UpdateContainerAsync(id, input, ct);
-        return updated is null ? req.Status(HttpStatusCode.NotFound) : await req.Json(updated);
+        return updated is null ? Request.Status(HttpStatusCode.NotFound) : await Request.Json(updated);
     }
 
-    [Function("DeleteContainer")]
-    public async Task<HttpResponseData> Delete(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "containers/{id:guid}")] HttpRequestData req,
+    [HttpDelete("/api/containers/{id:guid}")]
+    public async Task<IActionResult> Delete(
         Guid id, CancellationToken ct)
     {
         await _repo.DeleteContainerAsync(id, ct);
-        return req.Status(HttpStatusCode.NoContent);
+        return Request.Status(HttpStatusCode.NoContent);
     }
 }

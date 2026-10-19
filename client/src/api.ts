@@ -17,6 +17,7 @@ import { invalidateContainers } from './containersCache';
 // that cross-origin call needs the Function's CORS to allow this origin and the
 // x-api-key header, and the SWA CSP connect-src to include the Function origin.
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? '/api';
+export const platformAuth = import.meta.env.VITE_AUTH_MODE === 'access';
 
 // The access key gates every API call. It's stored in localStorage and sent as the
 // `x-api-key` header; the API validates it (see api/Middleware/KeyAuthMiddleware).
@@ -47,13 +48,13 @@ export function clearKey(): void {
  */
 export async function validateKey(key?: string): Promise<boolean> {
     const k = key ?? getKey();
-    if (!k) return false;
+    if (!platformAuth && !k) return false;
     try {
         // Hit a zero-work auth-check endpoint (204 on success) rather than a data
         // endpoint like /tags — the server still validates the key in middleware,
         // but skips an extra DB query + payload, so the gate check is much faster.
-        const res = await fetch(`${BASE}/auth/check`, { headers: { 'x-api-key': k } });
-        return res.status !== 401;
+        const res = await fetch(`${BASE}/auth/check`, { headers: platformAuth ? {} : { 'x-api-key': k! } });
+        return platformAuth ? res.status === 204 : res.status !== 401;
     } catch {
         return true;
     }
@@ -68,7 +69,7 @@ function onUnauthorized(): void {
 function authHeaders(extra?: Record<string, string>): Record<string, string> {
     const headers: Record<string, string> = { ...extra };
     const key = getKey();
-    if (key) headers['x-api-key'] = key;
+    if (key && !platformAuth) headers['x-api-key'] = key;
     return headers;
 }
 

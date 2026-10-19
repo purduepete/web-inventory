@@ -1,36 +1,56 @@
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Azure.Core.Serialization;
-using System.Text.Json;
+using Microsoft.Extensions.FileProviders;
 using WebInventory.Api.Data;
-using WebInventory.Api.Middleware;
 using WebInventory.Api.Services;
 
-var host = new HostBuilder()
-    .ConfigureFunctionsWorkerDefaults(builder =>
+var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://127.0.0.1:18795");
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 15 * 1024 * 1024);
+builder.Services.AddControllers().AddJsonOptions(options =>
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase);
+builder.Services.AddSingleton<Database>();
+builder.Services.AddSingleton<InventoryRepository>();
+builder.Services.AddSingleton<BlobService>();
+builder.Services.AddSingleton<VisionService>();
+var app = builder.Build();
+app.UseExceptionHandler(handler => handler.Run(async context =>
+{
+    context.Response.StatusCode = 500;
+    await context.Response.WriteAsJsonAsync(new { error = "Request failed; inspect server logs." });
+}));
+app.Use(async (context, next) =>
+{
+    var origin = context.Request.Headers.Origin.ToString();
+    if (origin.Length > 0 && origin != "https://web-inventory.jimlertech.com" &&
+        origin != "https://jimbrownhome1.tail8ad282.ts.net:8795")
     {
-        // Gate every HTTP function behind an access key (see KeyAuthMiddleware).
-        builder.UseMiddleware<KeyAuthMiddleware>();
-    })
-    .ConfigureServices(services =>
+        context.Response.StatusCode = 403;
+        return;
+    }
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    await next();
+});
+var imageRoot = app.Services.GetRequiredService<BlobService>().Root;
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(imageRoot),
+    RequestPath = "/images",
+    OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "private, max-age=3600"
+});
+app.UseDefaultFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
     {
-        services.Configure<WorkerOptions>(o =>
-        {
-            o.Serializer = new JsonObjectSerializer(new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        });
-
-        services.AddApplicationInsightsTelemetryWorkerService();
-        services.ConfigureFunctionsApplicationInsights();
-
-        services.AddMemoryCache();
-
-        services.AddSingleton<Database>();
-        services.AddSingleton<AccessKeyRepository>();
-        services.AddSingleton<InventoryRepository>();
-        services.AddSingleton<BlobService>();
-        services.AddSingleton<VisionService>();
-    })
-    .Build();
-
-host.Run();
+        if (context.File.Name is "index.html" or "sw.js" or "manifest.webmanifest")
+            context.Context.Response.Headers.CacheControl = "no-cache";
+    }
+});
+app.MapControllers();
+app.MapGet("/healthz", async (Database database, CancellationToken ct) =>
+{
+    await using var connection = await database.OpenAsync(ct);
+    return Results.Ok(new { ok = true, service = "web-inventory" });
+});
+app.MapFallback("/api/{**path}", () => Results.NotFound());
+app.MapFallbackToFile("index.html");
+app.Run();

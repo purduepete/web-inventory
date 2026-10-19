@@ -1,6 +1,5 @@
 using System.Net;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.AspNetCore.Mvc;
 using WebInventory.Api.Data;
 using WebInventory.Api.Models;
 
@@ -11,7 +10,8 @@ namespace WebInventory.Api.Functions;
 /// owners, locations and item categories. The {kind} segment is
 /// constrained to those three values.
 /// </summary>
-public class ManageFunctions
+[ApiController]
+public class ManageFunctions : ControllerBase
 {
     private static readonly HashSet<string> Kinds = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -21,50 +21,46 @@ public class ManageFunctions
     private readonly InventoryRepository _repo;
     public ManageFunctions(InventoryRepository repo) => _repo = repo;
 
-    [Function("ListLookups")]
-    public async Task<HttpResponseData> List(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lookups/{kind}")] HttpRequestData req,
+    [HttpGet("/api/lookups/{kind}")]
+    public async Task<IActionResult> List(
         string kind, CancellationToken ct)
     {
-        if (!Kinds.Contains(kind)) return req.Status(HttpStatusCode.NotFound);
-        return await req.Json(await _repo.ListLookupAsync(kind.ToLowerInvariant(), ct));
+        if (!Kinds.Contains(kind)) return Request.Status(HttpStatusCode.NotFound);
+        return await Request.Json(await _repo.ListLookupAsync(kind.ToLowerInvariant(), ct));
     }
 
-    [Function("CreateLookup")]
-    public async Task<HttpResponseData> Create(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "lookups/{kind}")] HttpRequestData req,
+    [HttpPost("/api/lookups/{kind}")]
+    public async Task<IActionResult> Create(
         string kind, CancellationToken ct)
     {
-        if (!Kinds.Contains(kind)) return req.Status(HttpStatusCode.NotFound);
-        var input = await req.ReadFromJsonAsync<LookupInput>();
+        if (!Kinds.Contains(kind)) return Request.Status(HttpStatusCode.NotFound);
+        var input = await Request.ReadFromJsonAsync<LookupInput>();
         if (input is null || string.IsNullOrWhiteSpace(input.Name))
-            return await req.Text("Name is required.", HttpStatusCode.BadRequest);
+            return await Request.Text("Name is required.", HttpStatusCode.BadRequest);
         var created = await _repo.CreateLookupAsync(kind.ToLowerInvariant(), input.Name, ct);
         return created is null
-            ? await req.Text("Name is required.", HttpStatusCode.BadRequest)
-            : await req.Json(created, HttpStatusCode.Created);
+            ? await Request.Text("Name is required.", HttpStatusCode.BadRequest)
+            : await Request.Json(created, HttpStatusCode.Created);
     }
 
-    [Function("RenameLookup")]
-    public async Task<HttpResponseData> Rename(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "lookups/{kind}/{id:guid}")] HttpRequestData req,
+    [HttpPut("/api/lookups/{kind}/{id:guid}")]
+    public async Task<IActionResult> Rename(
         string kind, Guid id, CancellationToken ct)
     {
-        if (!Kinds.Contains(kind)) return req.Status(HttpStatusCode.NotFound);
-        var input = await req.ReadFromJsonAsync<LookupInput>();
+        if (!Kinds.Contains(kind)) return Request.Status(HttpStatusCode.NotFound);
+        var input = await Request.ReadFromJsonAsync<LookupInput>();
         if (input is null || string.IsNullOrWhiteSpace(input.Name))
-            return await req.Text("Name is required.", HttpStatusCode.BadRequest);
+            return await Request.Text("Name is required.", HttpStatusCode.BadRequest);
         var renamed = await _repo.RenameLookupAsync(kind.ToLowerInvariant(), id, input.Name, ct);
-        return renamed is null ? req.Status(HttpStatusCode.NotFound) : await req.Json(renamed);
+        return renamed is null ? Request.Status(HttpStatusCode.NotFound) : await Request.Json(renamed);
     }
 
-    [Function("DeleteLookup")]
-    public async Task<HttpResponseData> Delete(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "lookups/{kind}/{id:guid}")] HttpRequestData req,
+    [HttpDelete("/api/lookups/{kind}/{id:guid}")]
+    public async Task<IActionResult> Delete(
         string kind, Guid id, CancellationToken ct)
     {
-        if (!Kinds.Contains(kind)) return req.Status(HttpStatusCode.NotFound);
+        if (!Kinds.Contains(kind)) return Request.Status(HttpStatusCode.NotFound);
         var deleted = await _repo.DeleteLookupAsync(kind.ToLowerInvariant(), id, ct);
-        return req.Status(deleted ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
+        return Request.Status(deleted ? HttpStatusCode.NoContent : HttpStatusCode.NotFound);
     }
 }

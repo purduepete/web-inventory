@@ -1,58 +1,54 @@
 using System.Net;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.AspNetCore.Mvc;
 using WebInventory.Api.Data;
 using WebInventory.Api.Models;
 
 namespace WebInventory.Api.Functions;
 
-public class ItemFunctions
+[ApiController]
+public class ItemFunctions : ControllerBase
 {
     private readonly InventoryRepository _repo;
     public ItemFunctions(InventoryRepository repo) => _repo = repo;
 
-    [Function("AddItem")]
-    public async Task<HttpResponseData> Add(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "containers/{containerId:guid}/items")] HttpRequestData req,
+    [HttpPost("/api/containers/{containerId:guid}/items")]
+    public async Task<IActionResult> Add(
         Guid containerId, CancellationToken ct)
     {
-        var input = await req.ReadFromJsonAsync<SaveItemInput>();
+        var input = await Request.ReadFromJsonAsync<SaveItemInput>();
         if (input is null || string.IsNullOrWhiteSpace(input.Name))
-            return await req.Text("Name is required.", HttpStatusCode.BadRequest);
+            return await Request.Text("Name is required.", HttpStatusCode.BadRequest);
         var item = await _repo.AddItemAsync(containerId, input, "manual", ct);
-        return item is null ? req.Status(HttpStatusCode.NotFound) : await req.Json(item, HttpStatusCode.Created);
+        return item is null ? Request.Status(HttpStatusCode.NotFound) : await Request.Json(item, HttpStatusCode.Created);
     }
 
-    [Function("UpdateItem")]
-    public async Task<HttpResponseData> Update(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "items/{id:guid}")] HttpRequestData req,
+    [HttpPut("/api/items/{id:guid}")]
+    public async Task<IActionResult> Update(
         Guid id, CancellationToken ct)
     {
-        var input = await req.ReadFromJsonAsync<SaveItemInput>();
+        var input = await Request.ReadFromJsonAsync<SaveItemInput>();
         if (input is null || string.IsNullOrWhiteSpace(input.Name))
-            return await req.Text("Name is required.", HttpStatusCode.BadRequest);
+            return await Request.Text("Name is required.", HttpStatusCode.BadRequest);
         var item = await _repo.UpdateItemAsync(id, input, ct);
-        return item is null ? req.Status(HttpStatusCode.NotFound) : await req.Json(item);
+        return item is null ? Request.Status(HttpStatusCode.NotFound) : await Request.Json(item);
     }
 
-    [Function("MoveItem")]
-    public async Task<HttpResponseData> Move(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "items/{id:guid}/move")] HttpRequestData req,
+    [HttpPost("/api/items/{id:guid}/move")]
+    public async Task<IActionResult> Move(
         Guid id, CancellationToken ct)
     {
-        var input = await req.ReadFromJsonAsync<MoveItemInput>();
+        var input = await Request.ReadFromJsonAsync<MoveItemInput>();
         if (input is null || input.TargetContainerId == Guid.Empty)
-            return await req.Text("targetContainerId is required.", HttpStatusCode.BadRequest);
+            return await Request.Text("targetContainerId is required.", HttpStatusCode.BadRequest);
         var item = await _repo.MoveItemAsync(id, input.TargetContainerId, ct);
-        return item is null ? req.Status(HttpStatusCode.NotFound) : await req.Json(item);
+        return item is null ? Request.Status(HttpStatusCode.NotFound) : await Request.Json(item);
     }
 
-    [Function("DeleteItem")]
-    public async Task<HttpResponseData> Delete(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "items/{id:guid}")] HttpRequestData req,
+    [HttpDelete("/api/items/{id:guid}")]
+    public async Task<IActionResult> Delete(
         Guid id, CancellationToken ct)
     {
         await _repo.DeleteItemAsync(id, ct);
-        return req.Status(HttpStatusCode.NoContent);
+        return Request.Status(HttpStatusCode.NoContent);
     }
 }

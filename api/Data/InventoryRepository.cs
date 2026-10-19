@@ -1,8 +1,7 @@
 using System.Data;
 using System.Data.Common;
-using System.Text.Json;
 using Dapper;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using WebInventory.Api.Models;
 using WebInventory.Api.Services;
 
@@ -19,16 +18,16 @@ public sealed class InventoryRepository
         _blob = blob;
     }
 
-    // SQL Server error numbers we retry on: unique-constraint (2627), unique-index (2601)
-    // and deadlock victim (1205).
-    private static bool IsRetryable(SqlException ex) => ex.Number is 2627 or 2601 or 1205;
+    // PostgreSQL errors we retry on: unique violation, serialization failure and deadlock.
+    private static bool IsRetryable(PostgresException ex) => ex.SqlState is
+        PostgresErrorCodes.UniqueViolation or PostgresErrorCodes.SerializationFailure or PostgresErrorCodes.DeadlockDetected;
 
     private const string ContainerSelect =
         @"SELECT c.Id, c.Number, c.Name, c.LocationId, l.Name AS Location, c.OwnerId, o.Name AS Owner,
                  c.Notes, c.QrToken, c.CreatedAt, c.UpdatedAt
-          FROM inv.Container c
-          LEFT JOIN inv.Location l ON l.Id = c.LocationId
-          LEFT JOIN inv.Owner o ON o.Id = c.OwnerId";
+          FROM public.Container c
+          LEFT JOIN public.Location l ON l.Id = c.LocationId
+          LEFT JOIN public.Owner o ON o.Id = c.OwnerId";
 
     public async Task<IReadOnlyList<Container>> ListContainersAsync(CancellationToken ct)
     {
@@ -36,10 +35,10 @@ public sealed class InventoryRepository
         var rows = await conn.QueryAsync<Container>(
             @"SELECT c.Id, c.Number, c.Name, c.LocationId, l.Name AS Location, c.OwnerId, o.Name AS Owner,
                      c.Notes, c.QrToken, c.CreatedAt, c.UpdatedAt,
-                     (SELECT COUNT(*) FROM inv.Item i WHERE i.ContainerId = c.Id) AS ItemCount
-              FROM inv.Container c
-              LEFT JOIN inv.Location l ON l.Id = c.LocationId
-              LEFT JOIN inv.Owner o ON o.Id = c.OwnerId
+                     (SELECT COUNT(*)::int FROM public.Item i WHERE i.ContainerId = c.Id) AS ItemCount
+              FROM public.Container c
+              LEFT JOIN public.Location l ON l.Id = c.LocationId
+              LEFT JOIN public.Owner o ON o.Id = c.OwnerId
               ORDER BY c.Number;");
         return rows.AsList();
     }
@@ -70,13 +69,13 @@ public sealed class InventoryRepository
             try
             {
                 await conn.ExecuteAsync(new CommandDefinition(
-                    @"INSERT INTO inv.Container (Id, Number, Name, LocationId, OwnerId, Notes, QrToken, ClientMutationId)
+                    @"INSERT INTO public.Container (Id, Number, Name, LocationId, OwnerId, Notes, QrToken, ClientMutationId)
                       SELECT @id,
                              (SELECT MIN(t.n)
                               FROM (SELECT 1 AS n
                                     UNION ALL
-                                    SELECT Number + 1 FROM inv.Container) t
-                              WHERE NOT EXISTS (SELECT 1 FROM inv.Container c WHERE c.Number = t.n)),
+                                    SELECT Number + 1 FROM public.Container) t
+                              WHERE NOT EXISTS (SELECT 1 FROM public.Container c WHERE c.Number = t.n)),
                              @Name, @LocationId, @OwnerId, @Notes, @token, @ClientMutationId;",
                     new { id, input.Name, input.LocationId, input.OwnerId, input.Notes, token, input.ClientMutationId },
                     transaction: tx, cancellationToken: ct));
@@ -84,9 +83,9 @@ public sealed class InventoryRepository
                 return await conn.QuerySingleOrDefaultAsync<Container>(
                     $"{ContainerSelect} WHERE c.Id = @id;", new { id });
             }
-            catch (SqlException ex) when (IsRetryable(ex) && attempt < 5)
+            catch (PostgresException ex) when (IsRetryable(ex) && attempt < 5)
             {
-                // A deadlock victim (1205) is already rolled back, so guard the rollback.
+                // A deadlock or serialization victim is already rolled back, so guard the rollback.
                 // A unique violation on the mutation-id index means a concurrent replay
                 // won the race; the next loop's idempotency check returns that row.
                 try { await tx.RollbackAsync(ct); } catch { /* already rolled back */ }
@@ -104,7 +103,7 @@ public sealed class InventoryRepository
     {
         await using var conn = await _db.OpenAsync(ct);
         return await conn.ExecuteScalarAsync<int?>(new CommandDefinition(
-            "SELECT 1 FROM inv.Container WHERE Id = @id;", new { id }, cancellationToken: ct)) is not null;
+            "SELECT 1 FROM public.Container WHERE Id = @id;", new { id }, cancellationToken: ct)) is not null;
     }
 
     public async Task<ContainerWithContents?> GetContainerByTokenAsync(Guid token, CancellationToken ct)
@@ -120,16 +119,16 @@ public sealed class InventoryRepository
         var items = (await conn.QueryAsync<Item>(
             @"SELECT i.Id, i.ContainerId, i.Name, i.Description, i.Quantity, i.Source, i.CreatedAt, i.UpdatedAt,
                      i.CategoryId, cat.Name AS Category
-              FROM inv.Item i
-              LEFT JOIN inv.Category cat ON cat.Id = i.CategoryId
-              WHERE i.ContainerId = @id ORDER BY i.Name;",
+              FROM public.Item i
+              LEFT JOIN public.Category cat ON cat.Id = i.CategoryId
+              WHERE i.ContainerId = @id ORDER BY lower(i.Name), i.Name;",
             new { id = container.Id })).AsList();
 
         var tagRows = await conn.QueryAsync<(Guid ItemId, string Name)>(
             @"SELECT it.ItemId, t.Name
-              FROM inv.ItemTag it
-              JOIN inv.Tag t ON t.Id = it.TagId
-              JOIN inv.Item i ON i.Id = it.ItemId
+              FROM public.ItemTag it
+              JOIN public.Tag t ON t.Id = it.TagId
+              JOIN public.Item i ON i.Id = it.ItemId
               WHERE i.ContainerId = @id;",
             new { id = container.Id });
         var tagsByItem = tagRows.GroupBy(r => r.ItemId)
@@ -139,7 +138,7 @@ public sealed class InventoryRepository
 
         var photos = (await conn.QueryAsync<Photo>(
             @"SELECT Id, ContainerId, BlobUrl, ThumbUrl, TakenAt, ProcessedAt
-              FROM inv.Photo WHERE ContainerId = @id ORDER BY TakenAt DESC;",
+              FROM public.Photo WHERE ContainerId = @id ORDER BY TakenAt DESC;",
             new { id = container.Id })).AsList();
 
         // Hand the browser short-lived SAS URLs so the (private) blobs can render.
@@ -160,8 +159,8 @@ public sealed class InventoryRepository
     {
         await using var conn = await _db.OpenAsync(ct);
         var affected = await conn.ExecuteAsync(
-            @"UPDATE inv.Container
-              SET Name = @Name, LocationId = @LocationId, OwnerId = @OwnerId, Notes = @Notes, UpdatedAt = SYSUTCDATETIME()
+            @"UPDATE public.Container
+              SET Name = @Name, LocationId = @LocationId, OwnerId = @OwnerId, Notes = @Notes, UpdatedAt = now()
               WHERE Id = @id;",
             new { id, input.Name, input.LocationId, input.OwnerId, input.Notes });
         if (affected == 0) return null;
@@ -175,15 +174,15 @@ public sealed class InventoryRepository
 
         // Capture blob URLs before the rows are gone so storage can be cleaned up after commit.
         var photoUrls = (await conn.QueryAsync<(string BlobUrl, string ThumbUrl)>(
-            "SELECT BlobUrl, ThumbUrl FROM inv.Photo WHERE ContainerId = @id;", new { id })).AsList();
+            "SELECT BlobUrl, ThumbUrl FROM public.Photo WHERE ContainerId = @id;", new { id })).AsList();
 
         await using (var tx = await conn.BeginTransactionAsync(ct))
         {
             await conn.ExecuteAsync(new CommandDefinition(
-                @"DELETE FROM inv.ItemTag WHERE ItemId IN (SELECT Id FROM inv.Item WHERE ContainerId = @id);
-                  DELETE FROM inv.Item WHERE ContainerId = @id;
-                  DELETE FROM inv.Photo WHERE ContainerId = @id;
-                  DELETE FROM inv.Container WHERE Id = @id;",
+                @"DELETE FROM public.ItemTag WHERE ItemId IN (SELECT Id FROM public.Item WHERE ContainerId = @id);
+                  DELETE FROM public.Item WHERE ContainerId = @id;
+                  DELETE FROM public.Photo WHERE ContainerId = @id;
+                  DELETE FROM public.Container WHERE Id = @id;",
                 new { id }, transaction: tx, cancellationToken: ct));
             await tx.CommitAsync(ct);
         }
@@ -227,14 +226,13 @@ public sealed class InventoryRepository
         try
         {
             item = await conn.QuerySingleOrDefaultAsync<Item>(new CommandDefinition(
-                @"INSERT INTO inv.Item (Id, ContainerId, Name, Description, Quantity, Source, CategoryId, ClientMutationId)
-                  OUTPUT inserted.Id, inserted.ContainerId, inserted.Name, inserted.Description,
-                         inserted.Quantity, inserted.Source, inserted.CreatedAt, inserted.UpdatedAt, inserted.CategoryId
-                  VALUES (@id, @containerId, @Name, @Description, @Quantity, @source, @CategoryId, @ClientMutationId);",
+                @"INSERT INTO public.Item (Id, ContainerId, Name, Description, Quantity, Source, CategoryId, ClientMutationId)
+                  VALUES (@id, @containerId, @Name, @Description, @Quantity, @source, @CategoryId, @ClientMutationId)
+                  RETURNING Id, ContainerId, Name, Description, Quantity, Source, CreatedAt, UpdatedAt, CategoryId;",
                 new { id, containerId, input.Name, input.Description, Quantity = Math.Max(1, input.Quantity), source, input.CategoryId, input.ClientMutationId },
                 transaction: tx, cancellationToken: ct));
         }
-        catch (SqlException ex) when (ex.Number is 2627 or 2601 && input.ClientMutationId is Guid raceMid)
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation && input.ClientMutationId is Guid raceMid)
         {
             // A concurrent replay won the mutation-id race; roll back and return its row.
             try { await tx.RollbackAsync(ct); } catch { /* already rolled back */ }
@@ -254,20 +252,20 @@ public sealed class InventoryRepository
 
     // Loads an item (with its tags) by the client mutation id used to create it, for B2
     // idempotent-replay handling. Returns null when no item carries that id.
-    private static async Task<Item?> LoadItemByMutationIdAsync(SqlConnection conn, DbTransaction? tx, Guid mid, CancellationToken ct)
+    private static async Task<Item?> LoadItemByMutationIdAsync(NpgsqlConnection conn, DbTransaction? tx, Guid mid, CancellationToken ct)
     {
         var item = await conn.QuerySingleOrDefaultAsync<Item>(new CommandDefinition(
             @"SELECT i.Id, i.ContainerId, i.Name, i.Description, i.Quantity, i.Source, i.CreatedAt, i.UpdatedAt,
                      i.CategoryId, cat.Name AS Category
-              FROM inv.Item i
-              LEFT JOIN inv.Category cat ON cat.Id = i.CategoryId
+              FROM public.Item i
+              LEFT JOIN public.Category cat ON cat.Id = i.CategoryId
               WHERE i.ClientMutationId = @mid;",
             new { mid }, transaction: tx, cancellationToken: ct));
         if (item is null) return null;
         item.Tags = (await conn.QueryAsync<string>(new CommandDefinition(
-            @"SELECT t.Name FROM inv.ItemTag it
-              JOIN inv.Tag t ON t.Id = it.TagId
-              WHERE it.ItemId = @id ORDER BY t.Name;",
+            @"SELECT t.Name FROM public.ItemTag it
+              JOIN public.Tag t ON t.Id = it.TagId
+              WHERE it.ItemId = @id ORDER BY lower(t.Name), t.Name;",
             new { id = item.Id }, transaction: tx, cancellationToken: ct))).AsList();
         return item;
     }
@@ -277,11 +275,10 @@ public sealed class InventoryRepository
         await using var conn = await _db.OpenAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
         var item = await conn.QuerySingleOrDefaultAsync<Item>(new CommandDefinition(
-            @"UPDATE inv.Item SET Name = @Name, Description = @Description, Quantity = @Quantity,
-                     CategoryId = @CategoryId, UpdatedAt = SYSUTCDATETIME()
-              OUTPUT inserted.Id, inserted.ContainerId, inserted.Name, inserted.Description,
-                     inserted.Quantity, inserted.Source, inserted.CreatedAt, inserted.UpdatedAt, inserted.CategoryId
-              WHERE Id = @itemId;",
+            @"UPDATE public.Item SET Name = @Name, Description = @Description, Quantity = @Quantity,
+                     CategoryId = @CategoryId, UpdatedAt = now()
+              WHERE Id = @itemId
+              RETURNING Id, ContainerId, Name, Description, Quantity, Source, CreatedAt, UpdatedAt, CategoryId;",
             new { itemId, input.Name, input.Description, Quantity = Math.Max(1, input.Quantity), input.CategoryId },
             transaction: tx, cancellationToken: ct));
         if (item is null)
@@ -296,21 +293,20 @@ public sealed class InventoryRepository
         return item;
     }
 
-    private static async Task<string?> CategoryNameAsync(SqlConnection conn, DbTransaction? tx, Guid? categoryId, CancellationToken ct)
+    private static async Task<string?> CategoryNameAsync(NpgsqlConnection conn, DbTransaction? tx, Guid? categoryId, CancellationToken ct)
         => categoryId is null
             ? null
             : await conn.QuerySingleOrDefaultAsync<string?>(new CommandDefinition(
-                "SELECT Name FROM inv.Category WHERE Id = @categoryId;", new { categoryId },
+                "SELECT Name FROM public.Category WHERE Id = @categoryId;", new { categoryId },
                 transaction: tx, cancellationToken: ct));
 
     public async Task<Item?> MoveItemAsync(Guid itemId, Guid targetContainerId, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);
         return await conn.QuerySingleOrDefaultAsync<Item>(
-            @"UPDATE inv.Item SET ContainerId = @targetContainerId, UpdatedAt = SYSUTCDATETIME()
-              OUTPUT inserted.Id, inserted.ContainerId, inserted.Name, inserted.Description,
-                     inserted.Quantity, inserted.Source, inserted.CreatedAt, inserted.UpdatedAt
-              WHERE Id = @itemId AND EXISTS (SELECT 1 FROM inv.Container WHERE Id = @targetContainerId);",
+            @"UPDATE public.Item SET ContainerId = @targetContainerId, UpdatedAt = now()
+              WHERE Id = @itemId AND EXISTS (SELECT 1 FROM public.Container WHERE Id = @targetContainerId)
+              RETURNING Id, ContainerId, Name, Description, Quantity, Source, CreatedAt, UpdatedAt;",
             new { itemId, targetContainerId });
     }
 
@@ -319,8 +315,8 @@ public sealed class InventoryRepository
         await using var conn = await _db.OpenAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
         await conn.ExecuteAsync(new CommandDefinition(
-            @"DELETE FROM inv.ItemTag WHERE ItemId = @itemId;
-              DELETE FROM inv.Item WHERE Id = @itemId;", new { itemId },
+            @"DELETE FROM public.ItemTag WHERE ItemId = @itemId;
+              DELETE FROM public.Item WHERE Id = @itemId;", new { itemId },
             transaction: tx, cancellationToken: ct));
         await tx.CommitAsync(ct);
     }
@@ -334,11 +330,11 @@ public sealed class InventoryRepository
             .Replace("_", "\\_")
             .Replace("[", "\\[");
 
-    // Search is paged (P1): an unbounded LIKE '%term%' over a growing item table
+    // Search is paged (P1): an unbounded ILIKE '%term%' over a growing item table
     // could return thousands of rows plus a tag fetch. Callers pass skip/take; we
     // read one extra row to report HasMore without a second COUNT query. The tag
     // filter uses EXISTS (not a join) so no DISTINCT is needed and OFFSET/FETCH
-    // pages deterministically (ORDER BY Name, Id).
+    // pages deterministically (ORDER BY lower(Name), Name, Id).
     public const int DefaultSearchTake = 100;
     public const int MaxSearchTake = 200;
 
@@ -353,18 +349,18 @@ public sealed class InventoryRepository
         var rows = (await conn.QueryAsync<Item>(
             @"SELECT i.Id, i.ContainerId, i.Name, i.Description, i.Quantity, i.Source, i.CreatedAt, i.UpdatedAt,
                      i.CategoryId, cat.Name AS Category
-              FROM inv.Item i
-              JOIN inv.Container c ON c.Id = i.ContainerId
-              LEFT JOIN inv.Category cat ON cat.Id = i.CategoryId
-              WHERE (@q IS NULL OR i.Name LIKE @like ESCAPE '\' OR i.Description LIKE @like ESCAPE '\')
-                AND (@tag IS NULL OR EXISTS (
-                        SELECT 1 FROM inv.ItemTag it JOIN inv.Tag t ON t.Id = it.TagId
-                        WHERE it.ItemId = i.Id AND t.Name = @tag))
-                AND (@locationId IS NULL OR c.LocationId = @locationId)
-                AND (@ownerId IS NULL OR c.OwnerId = @ownerId)
-                AND (@categoryId IS NULL OR i.CategoryId = @categoryId)
-              ORDER BY i.Name, i.Id
-              OFFSET @skip ROWS FETCH NEXT @takePlusOne ROWS ONLY;",
+              FROM public.Item i
+              JOIN public.Container c ON c.Id = i.ContainerId
+              LEFT JOIN public.Category cat ON cat.Id = i.CategoryId
+              WHERE (@q::text IS NULL OR i.Name ILIKE @like ESCAPE '\' OR i.Description ILIKE @like ESCAPE '\')
+                AND (@tag::text IS NULL OR EXISTS (
+                        SELECT 1 FROM public.ItemTag it JOIN public.Tag t ON t.Id = it.TagId
+                        WHERE it.ItemId = i.Id AND lower(t.Name) = lower(@tag)))
+                AND (@locationId::uuid IS NULL OR c.LocationId = @locationId)
+                AND (@ownerId::uuid IS NULL OR c.OwnerId = @ownerId)
+                AND (@categoryId::uuid IS NULL OR i.CategoryId = @categoryId)
+              ORDER BY lower(i.Name), i.Name, i.Id
+              OFFSET @skip LIMIT @takePlusOne;",
             new
             {
                 q = string.IsNullOrWhiteSpace(q) ? null : q,
@@ -385,8 +381,8 @@ public sealed class InventoryRepository
         {
             var ids = items.Select(i => i.Id).ToArray();
             var tagRows = await conn.QueryAsync<(Guid ItemId, string Name)>(
-                @"SELECT it.ItemId, t.Name FROM inv.ItemTag it JOIN inv.Tag t ON t.Id = it.TagId
-                  WHERE it.ItemId IN @ids;", new { ids });
+                @"SELECT it.ItemId, t.Name FROM public.ItemTag it JOIN public.Tag t ON t.Id = it.TagId
+                  WHERE it.ItemId = ANY(@ids);", new { ids });
             var map = tagRows.GroupBy(r => r.ItemId).ToDictionary(g => g.Key, g => g.Select(x => x.Name).ToList());
             foreach (var item in items)
                 if (map.TryGetValue(item.Id, out var tg)) item.Tags = tg;
@@ -398,9 +394,9 @@ public sealed class InventoryRepository
     {
         await using var conn = await _db.OpenAsync(ct);
         return (await conn.QueryAsync<string>(
-            @"SELECT t.Name FROM inv.Tag t
-              JOIN inv.ItemTag it ON it.TagId = t.Id
-              GROUP BY t.Name ORDER BY t.Name;")).AsList();
+            @"SELECT t.Name FROM public.Tag t
+              JOIN public.ItemTag it ON it.TagId = t.Id
+              GROUP BY t.Name ORDER BY lower(t.Name), t.Name;")).AsList();
     }
 
     /// <summary>
@@ -412,8 +408,8 @@ public sealed class InventoryRepository
         await using var conn = await _db.OpenAsync(ct);
         return (await conn.QueryAsync<FacetRow>(
             @"SELECT DISTINCT c.OwnerId, c.LocationId, i.CategoryId
-              FROM inv.Container c
-              JOIN inv.Item i ON i.ContainerId = c.Id;")).AsList();
+              FROM public.Container c
+              JOIN public.Item i ON i.ContainerId = c.Id;")).AsList();
     }
 
     public async Task<Guid> AddPhotoAsync(Guid photoId, Guid containerId, string blobUrl, string thumbUrl, Guid? clientMutationId, CancellationToken ct)
@@ -431,12 +427,12 @@ public sealed class InventoryRepository
         try
         {
             await conn.ExecuteAsync(new CommandDefinition(
-                @"INSERT INTO inv.Photo (Id, ContainerId, BlobUrl, ThumbUrl, ProcessedAt, ClientMutationId)
-                  VALUES (@photoId, @containerId, @blobUrl, @thumbUrl, SYSUTCDATETIME(), @clientMutationId);",
+                @"INSERT INTO public.Photo (Id, ContainerId, BlobUrl, ThumbUrl, ProcessedAt, ClientMutationId)
+                  VALUES (@photoId, @containerId, @blobUrl, @thumbUrl, now(), @clientMutationId);",
                 new { photoId, containerId, blobUrl, thumbUrl, clientMutationId }, cancellationToken: ct));
             return photoId;
         }
-        catch (SqlException ex) when (ex.Number is 2627 or 2601 && clientMutationId is Guid raceMid)
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation && clientMutationId is Guid raceMid)
         {
             // A concurrent replay won the mutation-id race; return its row. The caller's
             // just-uploaded blob is now an orphan and is cleaned up best-effort there.
@@ -455,17 +451,17 @@ public sealed class InventoryRepository
         return await PhotoIdByMutationIdAsync(conn, clientMutationId, ct);
     }
 
-    private static async Task<Guid?> PhotoIdByMutationIdAsync(SqlConnection conn, Guid mid, CancellationToken ct)
+    private static async Task<Guid?> PhotoIdByMutationIdAsync(NpgsqlConnection conn, Guid mid, CancellationToken ct)
         => await conn.QuerySingleOrDefaultAsync<Guid?>(new CommandDefinition(
-            "SELECT Id FROM inv.Photo WHERE ClientMutationId = @mid;",
+            "SELECT Id FROM public.Photo WHERE ClientMutationId = @mid;",
             new { mid }, cancellationToken: ct));
 
     public async Task<bool> MovePhotoAsync(Guid photoId, Guid targetContainerId, CancellationToken ct)
     {
         await using var conn = await _db.OpenAsync(ct);
         var rows = await conn.ExecuteAsync(
-            @"UPDATE inv.Photo SET ContainerId = @targetContainerId
-              WHERE Id = @photoId AND EXISTS (SELECT 1 FROM inv.Container WHERE Id = @targetContainerId);",
+            @"UPDATE public.Photo SET ContainerId = @targetContainerId
+              WHERE Id = @photoId AND EXISTS (SELECT 1 FROM public.Container WHERE Id = @targetContainerId);",
             new { photoId, targetContainerId });
         return rows > 0;
     }
@@ -475,7 +471,7 @@ public sealed class InventoryRepository
     {
         await using var conn = await _db.OpenAsync(ct);
         return (await conn.QueryAsync<PhotoBackfillRow>(
-            @"SELECT Id, ContainerId, BlobUrl FROM inv.Photo
+            @"SELECT Id, ContainerId, BlobUrl FROM public.Photo
               WHERE ThumbUrl = BlobUrl AND BlobUrl LIKE 'http%';")).AsList();
     }
 
@@ -483,7 +479,7 @@ public sealed class InventoryRepository
     {
         await using var conn = await _db.OpenAsync(ct);
         await conn.ExecuteAsync(
-            "UPDATE inv.Photo SET ThumbUrl = @thumbUrl WHERE Id = @photoId;",
+            "UPDATE public.Photo SET ThumbUrl = @thumbUrl WHERE Id = @photoId;",
             new { photoId, thumbUrl });
     }
 
@@ -492,12 +488,12 @@ public sealed class InventoryRepository
     {
         await using var conn = await _db.OpenAsync(ct);
         var row = await conn.QuerySingleOrDefaultAsync<(Guid ContainerId, string BlobUrl)?>(
-            "SELECT ContainerId, BlobUrl FROM inv.Photo WHERE Id = @photoId;", new { photoId });
+            "SELECT ContainerId, BlobUrl FROM public.Photo WHERE Id = @photoId;", new { photoId });
         if (row is null) return false;
         var thumbUrl = await _blob.RotateAsync(row.Value.ContainerId, photoId, row.Value.BlobUrl, degrees, ct);
         if (thumbUrl is null) return false;
         await conn.ExecuteAsync(
-            "UPDATE inv.Photo SET ThumbUrl = @thumbUrl WHERE Id = @photoId;", new { photoId, thumbUrl });
+            "UPDATE public.Photo SET ThumbUrl = @thumbUrl WHERE Id = @photoId;", new { photoId, thumbUrl });
         return true;
     }
 
@@ -505,54 +501,52 @@ public sealed class InventoryRepository
     {
         await using var conn = await _db.OpenAsync(ct);
         var urls = await conn.QuerySingleOrDefaultAsync<(string BlobUrl, string ThumbUrl)?>(
-            "SELECT BlobUrl, ThumbUrl FROM inv.Photo WHERE Id = @photoId;", new { photoId });
+            "SELECT BlobUrl, ThumbUrl FROM public.Photo WHERE Id = @photoId;", new { photoId });
         if (urls is null) return false;
 
         // Remove the DB row FIRST: an orphaned blob is recoverable, but a row pointing at a
         // deleted blob breaks reads. Blob cleanup is best-effort afterwards.
-        var deleted = await conn.ExecuteAsync("DELETE FROM inv.Photo WHERE Id = @photoId;", new { photoId });
+        var deleted = await conn.ExecuteAsync("DELETE FROM public.Photo WHERE Id = @photoId;", new { photoId });
         if (deleted == 0) return false;
 
         await DeleteBlobsBestEffortAsync(new[] { (urls.Value.BlobUrl, urls.Value.ThumbUrl) }, ct);
         return true;
     }
 
-    // Replaces an item's tags in one set-based, transactional round trip. The MERGE ... WITH
-    // (HOLDLOCK) upsert is race-safe: concurrent requests creating the same new tag serialize
-    // instead of colliding on UQ_inv_Tag_Name.
-    private static async Task SetTagsAsync(SqlConnection conn, DbTransaction tx, Guid itemId, List<string> tags, CancellationToken ct)
+    // Replaces an item's tags in one transactional round trip. INSERT ... ON CONFLICT on the
+    // lower(name) unique index is race-safe: concurrent requests creating the same new tag
+    // (in any letter case) reuse one row instead of failing on uq_tag_name.
+    private static async Task SetTagsAsync(NpgsqlConnection conn, DbTransaction tx, Guid itemId, List<string> tags, CancellationToken ct)
     {
         var names = tags.Select(t => t.Trim())
             .Where(t => t.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        var namesJson = JsonSerializer.Serialize(names);
+            .ToArray();
+
+        var sql = names.Length == 0
+            ? "DELETE FROM public.ItemTag WHERE ItemId = @itemId;"
+            : @"DELETE FROM public.ItemTag WHERE ItemId = @itemId;
+
+              INSERT INTO public.Tag (Id, Name)
+              SELECT gen_random_uuid(), n FROM unnest(@names) AS n
+              ON CONFLICT ((lower(Name))) DO NOTHING;
+
+              INSERT INTO public.ItemTag (ItemId, TagId)
+              SELECT @itemId, t.Id
+              FROM public.Tag t
+              WHERE lower(t.Name) IN (SELECT lower(n) FROM unnest(@names) AS n);";
 
         await conn.ExecuteAsync(new CommandDefinition(
-            @"DELETE FROM inv.ItemTag WHERE ItemId = @itemId;
-
-              IF @namesJson <> '[]'
-              BEGIN
-                  MERGE inv.Tag WITH (UPDLOCK, HOLDLOCK) AS tgt
-                  USING (SELECT DISTINCT LTRIM(RTRIM(value)) AS Name FROM OPENJSON(@namesJson)) AS src
-                        ON tgt.Name = src.Name
-                  WHEN NOT MATCHED THEN INSERT (Id, Name) VALUES (NEWID(), src.Name);
-
-                  INSERT INTO inv.ItemTag (ItemId, TagId)
-                  SELECT @itemId, t.Id
-                  FROM inv.Tag t
-                  WHERE t.Name IN (SELECT DISTINCT LTRIM(RTRIM(value)) FROM OPENJSON(@namesJson));
-              END",
-            new { itemId, namesJson }, transaction: tx, cancellationToken: ct));
+            sql, new { itemId, names }, transaction: tx, cancellationToken: ct));
     }
 
     // ---- Managed lookup lists (owners / locations / categories) ----
 
     private static string LookupTable(string kind) => kind switch
     {
-        "owners" => "inv.Owner",
-        "locations" => "inv.Location",
-        "categories" => "inv.Category",
+        "owners" => "public.Owner",
+        "locations" => "public.Location",
+        "categories" => "public.Category",
         _ => throw new ArgumentException($"Unknown lookup kind '{kind}'.", nameof(kind)),
     };
 
@@ -561,7 +555,7 @@ public sealed class InventoryRepository
         var table = LookupTable(kind);
         await using var conn = await _db.OpenAsync(ct);
         return (await conn.QueryAsync<Lookup>(
-            $"SELECT Id, Name FROM {table} ORDER BY Name;")).AsList();
+            $"SELECT Id, Name FROM {table} ORDER BY lower(Name), Name;")).AsList();
     }
 
     public async Task<Lookup?> CreateLookupAsync(string kind, string name, CancellationToken ct)
@@ -571,7 +565,7 @@ public sealed class InventoryRepository
         if (name.Length == 0) return null;
         await using var conn = await _db.OpenAsync(ct);
         var existing = await conn.QuerySingleOrDefaultAsync<Lookup>(
-            $"SELECT Id, Name FROM {table} WHERE Name = @name;", new { name });
+            $"SELECT Id, Name FROM {table} WHERE lower(Name) = lower(@name);", new { name });
         if (existing is not null) return existing;
         var id = Guid.NewGuid();
         await conn.ExecuteAsync($"INSERT INTO {table} (Id, Name) VALUES (@id, @name);", new { id, name });
@@ -596,9 +590,9 @@ public sealed class InventoryRepository
         // Null out references first so the foreign keys don't block the delete.
         var detach = kind switch
         {
-            "owners" => "UPDATE inv.Container SET OwnerId = NULL WHERE OwnerId = @id;",
-            "locations" => "UPDATE inv.Container SET LocationId = NULL WHERE LocationId = @id;",
-            "categories" => "UPDATE inv.Item SET CategoryId = NULL WHERE CategoryId = @id;",
+            "owners" => "UPDATE public.Container SET OwnerId = NULL WHERE OwnerId = @id;",
+            "locations" => "UPDATE public.Container SET LocationId = NULL WHERE LocationId = @id;",
+            "categories" => "UPDATE public.Item SET CategoryId = NULL WHERE CategoryId = @id;",
             _ => throw new ArgumentException($"Unknown lookup kind '{kind}'.", nameof(kind)),
         };
         var affected = await conn.ExecuteAsync(
