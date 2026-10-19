@@ -6,6 +6,7 @@
         <!-- iOS ignores an SVG favicon when adding to the home screen and needs this PNG. -->
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-title" content="Web Inventory" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
         <!-- No apple-mobile-web-app-status-bar-style: iOS then reserves the status bar instead of
              drawing under it, and paints that strip from theme-color, which the script below and
@@ -27,6 +28,7 @@
                     var t = localStorage.getItem('theme');
                     if (t === 'light' || t === 'dark') {
                         document.documentElement.setAttribute('data-theme', t);
+                        document.documentElement.style.colorScheme = t;
                         var meta = document.querySelector('meta[name="theme-color"]');
                         if (meta) meta.setAttribute('content', t === 'light' ? '#f6f8fa' : '#020617');
                     }

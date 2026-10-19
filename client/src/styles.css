@@ -1,19 +1,19 @@
 :root {
     /* ---------- Dark (default) — slate neutrals, Tokyo Night accents ----------
        Neutrals match ferry_tracker and webportfolio so the three apps share one
-       dark surface; the accent hues stay on this app's blue/purple. */
+       dark surface. --accent is the standard Steel Blue highlight. */
     --bg: #020617;
     --card: #0f172a;
     --card2: #172033;
     --border: #293548;
     --text: #f8fafc;
     --muted: #a8b4c6;
-    --accent: #7aa2f7;
+    --accent: #6b8cae;
     --green: #9ece6a;
     --red: #f7768e;
     --amber: #e0af68;
     --proj: #bb9af7;
-    --on-accent: #020617;
+    --on-accent: #0f172a;
     --shadow: 0 10px 28px rgb(0 0 0 / 36%);
     --scrollbar-track: #080f20;
     --scrollbar-thumb: #3b4962;
@@ -32,12 +32,12 @@
     --l-border: #d0d7de;
     --l-text: #1f2328;
     --l-muted: #3d444d;
-    --l-accent: #1e3a8a;
+    --l-accent: #2f477b;
     --l-green: #1a7f37;
     --l-red: #cf222e;
     --l-amber: #9a6700;
     --l-proj: #8250df;
-    --l-on-accent: #ffffff;
+    --l-on-accent: #f8fafc;
     --l-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 8px 24px rgba(0, 0, 0, 0.2);
     --l-scrollbar-track: #eef0f3;
     --l-scrollbar-thumb: #9ca3af;
