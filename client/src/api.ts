@@ -86,7 +86,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 export class ApiError extends Error {
     constructor(
         public status: number,
-        message: string,
+        message: string
     ) {
         super(message);
         this.name = 'ApiError';
@@ -157,7 +157,7 @@ export const api = {
     searchItems: (
         q: string,
         filters?: { tag?: string; locationId?: string; ownerId?: string; categoryId?: string },
-        paging?: { skip?: number; take?: number },
+        paging?: { skip?: number; take?: number }
     ) => {
         const params = new URLSearchParams();
         if (q) params.set('q', q);
@@ -191,7 +191,7 @@ export const api = {
         containerId: string,
         blob: Blob,
         analyze = true,
-        clientMutationId?: string,
+        clientMutationId?: string
     ): Promise<{ photoId: string; detected: DetectedItem[] }> => {
         const qs = analyze ? '' : '?analyze=false';
         const headers: Record<string, string> = { 'Content-Type': 'image/jpeg' };

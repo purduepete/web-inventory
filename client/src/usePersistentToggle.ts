@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 // `key`, falling back to `defaultValue` when nothing is stored yet.
 export function usePersistentToggle(
     key: string,
-    defaultValue: boolean,
+    defaultValue: boolean
 ): [boolean, React.Dispatch<React.SetStateAction<boolean>>] {
     const [value, setValue] = useState<boolean>(() => {
         try {

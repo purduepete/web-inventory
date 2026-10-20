@@ -20,15 +20,14 @@ test('header Theme uses the custom Select and its choices update persisted runti
     find(ast);
     assert.ok(header, 'app header exists');
     assert.doesNotMatch(header.getText(ast), /<(?:select|datalist)\b/);
-    const custom = header.children.find(node =>
-        ts.isJsxElement(node) && node.openingElement.tagName.getText(ast) === 'div',
-    ).children.find(node => ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === 'Select');
+    const custom = header.children
+        .find((node) => ts.isJsxElement(node) && node.openingElement.tagName.getText(ast) === 'div')
+        .children.find((node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === 'Select');
     assert.ok(custom, 'Theme uses Select');
-    const componentJS = ts.transpileModule(
-        readFileSync(new URL('../src/Select.tsx', import.meta.url), 'utf8'),
-        { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } },
-    ).outputText;
-    const context = { exports: {}, require: name => name === './Icon' ? { Icon: () => null } : require(name) };
+    const componentJS = ts.transpileModule(readFileSync(new URL('../src/Select.tsx', import.meta.url), 'utf8'), {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+    }).outputText;
+    const context = { exports: {}, require: (name) => (name === './Icon' ? { Icon: () => null } : require(name)) };
     runInNewContext(componentJS, context);
     const env = environment(null);
     let preference = env.context.exports.readTheme();
@@ -37,11 +36,17 @@ test('header Theme uses the custom Select and its choices update persisted runti
         compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
     }).outputText;
     function control() {
-        const scope = { exports: {}, require, Select: context.exports.Select, theme: preference, setTheme: value => {
-            stop();
-            preference = value;
-            stop = env.context.exports.trackTheme(value, () => {});
-        } };
+        const scope = {
+            exports: {},
+            require,
+            Select: context.exports.Select,
+            theme: preference,
+            setTheme: (value) => {
+                stop();
+                preference = value;
+                stop = env.context.exports.trackTheme(value, () => {});
+            },
+        };
         runInNewContext(expression, scope);
         return scope.exports.element;
     }
@@ -50,7 +55,10 @@ test('header Theme uses the custom Select and its choices update persisted runti
     assert.match(markup, /role="combobox"/);
     assert.match(markup, /aria-label="Theme"/);
     assert.match(markup, />Midnight</);
-    assert.deepEqual(Array.from(control().props.options, option => option.value), ['system', 'light', 'midnight']);
+    assert.deepEqual(
+        Array.from(control().props.options, (option) => option.value),
+        ['system', 'light', 'midnight']
+    );
     for (const value of ['light', 'midnight', 'system']) {
         control().props.onChange(value);
         assert.equal(env.values.get('theme'), value);
@@ -58,7 +66,7 @@ test('header Theme uses the custom Select and its choices update persisted runti
         assert.match(renderToStaticMarkup(control()), new RegExp(`>${value[0].toUpperCase() + value.slice(1)}<`));
     }
     env.media.matches = true;
-    env.listeners.forEach(fn => fn());
+    env.listeners.forEach((fn) => fn());
     expectTheme(env, true);
     assert.equal(env.context.exports.readTheme(), 'system');
     stop();
@@ -71,20 +79,37 @@ function environment(saved, dark = false) {
     const values = new Map(saved === null ? [] : [['theme', saved]]);
     const classes = new Set();
     const root = {
-        dataset: {}, style: {},
-        setAttribute(key, value) { if (key === 'data-theme') this.dataset.theme = value; },
-        classList: { toggle(key, enabled) { if (enabled) classes.add(key); else classes.delete(key); } },
+        dataset: {},
+        style: {},
+        setAttribute(key, value) {
+            if (key === 'data-theme') this.dataset.theme = value;
+        },
+        classList: {
+            toggle(key, enabled) {
+                if (enabled) classes.add(key);
+                else classes.delete(key);
+            },
+        },
     };
-    const meta = { content: '', setAttribute(key, value) { this[key] = value; } };
+    const meta = {
+        content: '',
+        setAttribute(key, value) {
+            this[key] = value;
+        },
+    };
     const listeners = new Set();
     const media = {
         matches: dark,
-        addEventListener(_, fn) { listeners.add(fn); },
-        removeEventListener(_, fn) { listeners.delete(fn); },
+        addEventListener(_, fn) {
+            listeners.add(fn);
+        },
+        removeEventListener(_, fn) {
+            listeners.delete(fn);
+        },
     };
     const context = {
         exports: {},
-        localStorage: { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) },
+        localStorage: { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) },
         document: { documentElement: root, querySelector: () => meta },
         window: { matchMedia: () => media },
     };
@@ -121,16 +146,23 @@ for (const saved of [null, 'dark', 'midnight', 'light', 'system', 'invalid']) {
 test('system tracks OS live, can be reselected, and fixed choices ignore OS', () => {
     const env = environment(null);
     const { trackTheme } = env.context.exports;
-    const changeOS = dark => { env.media.matches = dark; env.listeners.forEach(fn => fn()); };
+    const changeOS = (dark) => {
+        env.media.matches = dark;
+        env.listeners.forEach((fn) => fn());
+    };
     let stop = trackTheme('system', () => {});
     expectTheme(env, false);
-    changeOS(true); expectTheme(env, true);
+    changeOS(true);
+    expectTheme(env, true);
     stop();
     stop = trackTheme('light', () => {});
-    changeOS(false); changeOS(true); expectTheme(env, false);
+    changeOS(false);
+    changeOS(true);
+    expectTheme(env, false);
     stop();
     stop = trackTheme('midnight', () => {});
-    changeOS(false); expectTheme(env, true);
+    changeOS(false);
+    expectTheme(env, true);
     env.values.set('theme', 'system'); // another tab picked System
     changeOS(true);
     assert.equal(env.values.get('theme'), 'system', 'OS change must not overwrite the saved choice');
@@ -139,7 +171,8 @@ test('system tracks OS live, can be reselected, and fixed choices ignore OS', ()
     stop = trackTheme('system', () => {});
     expectTheme(env, false);
     assert.equal(env.values.get('theme'), 'system');
-    stop(); assert.equal(env.listeners.size, 0);
+    stop();
+    assert.equal(env.listeners.size, 0);
 });
 
 for (const folder of ['public', ...(process.env.CHECK_DIST ? ['dist'] : [])]) {
@@ -148,7 +181,9 @@ for (const folder of ['public', ...(process.env.CHECK_DIST ? ['dist'] : [])]) {
         const inline = served.match(/<script>([\s\S]*?)<\/script>/)[1];
         assert.ok(!inline.includes('\r'), 'CSP-sensitive script must have LF line endings');
         const hash = createHash('sha256').update(inline).digest('base64');
-        const config = JSON.parse(readFileSync(new URL(`../${folder}/staticwebapp.config.json`, import.meta.url), 'utf8'));
+        const config = JSON.parse(
+            readFileSync(new URL(`../${folder}/staticwebapp.config.json`, import.meta.url), 'utf8')
+        );
         assert.ok(config.globalHeaders['Content-Security-Policy'].includes(`'sha256-${hash}'`), hash);
     });
 }

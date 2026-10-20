@@ -38,7 +38,7 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
             new Promise<boolean>((resolve) => {
                 setState({ kind: 'confirm', ...opts, resolve });
             }),
-        [],
+        []
     );
 
     const prompt = useCallback(
@@ -46,7 +46,7 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
             new Promise<string | null>((resolve) => {
                 setState({ kind: 'prompt', ...opts, resolve });
             }),
-        [],
+        []
     );
 
     const close = useCallback((result: boolean | string | null) => {

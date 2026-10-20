@@ -150,7 +150,8 @@ export function HelpDialog({
                         </h3>
                         <p>
                             This app is protected by an access key. <strong>Signing out</strong> forgets the key on this
-                            device — you’ll need to enter it again to get back in. Make sure everything has synced first.
+                            device — you’ll need to enter it again to get back in. Make sure everything has synced
+                            first.
                         </p>
                         {confirmingSignOut ? (
                             <div className="signout-confirm">

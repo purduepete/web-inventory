@@ -111,8 +111,12 @@ export async function enqueue(mutation: QueuedMutation): Promise<void> {
     // These offline mutations change the container set or item counts, so drop the
     // in-memory container-list cache (D1) — otherwise a temp container created
     // offline could stay hidden behind an already-resolved list.
-    if (mutation.kind === 'createContainer' || mutation.kind === 'addItem'
-        || mutation.kind === 'deleteItem' || mutation.kind === 'moveItem')
+    if (
+        mutation.kind === 'createContainer' ||
+        mutation.kind === 'addItem' ||
+        mutation.kind === 'deleteItem' ||
+        mutation.kind === 'moveItem'
+    )
         invalidateContainers();
     notifyPending();
 }
@@ -121,7 +125,7 @@ export async function enqueuePhoto(
     containerId: string,
     blob: Blob,
     analyze = true,
-    clientMutationId: string = crypto.randomUUID(),
+    clientMutationId: string = crypto.randomUUID()
 ): Promise<void> {
     await db.pendingPhotos.add({ containerId, blob, createdAt: Date.now(), analyze, clientMutationId });
     notifyPending();
@@ -217,7 +221,7 @@ export async function removePendingSuggestion(containerId: string, item: Detecte
     if (!row) return;
     const idx = row.items.findIndex(
         (x) =>
-            x.name === item.name && (x.description ?? '') === (item.description ?? '') && x.quantity === item.quantity,
+            x.name === item.name && (x.description ?? '') === (item.description ?? '') && x.quantity === item.quantity
     );
     if (idx < 0) return;
     const items = row.items.slice();

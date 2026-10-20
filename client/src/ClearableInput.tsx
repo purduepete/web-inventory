@@ -17,5 +17,5 @@ export const ClearableInput = forwardRef<HTMLInputElement, Props>(
                 </button>
             ) : null}
         </span>
-    ),
+    )
 );

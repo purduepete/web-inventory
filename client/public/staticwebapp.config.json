@@ -1,29 +1,29 @@
 {
-    "$schema": "https://json.schemas.azureedge.net/static-web-apps/swa.config.schema.json",
-    "navigationFallback": {
-        "rewrite": "/index.html",
-        "exclude": ["/assets/*", "/*.{png,jpg,svg,webmanifest,ico}"]
+  "$schema": "https://json.schemas.azureedge.net/static-web-apps/swa.config.schema.json",
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/assets/*", "/*.{png,jpg,svg,webmanifest,ico}"]
+  },
+  "routes": [
+    {
+      "route": "/sw.js",
+      "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
     },
-    "routes": [
-        {
-            "route": "/sw.js",
-            "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
-        },
-        {
-            "route": "/index.html",
-            "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
-        },
-        {
-            "route": "/manifest.webmanifest",
-            "headers": { "Cache-Control": "no-cache, must-revalidate" }
-        }
-    ],
-    "globalHeaders": {
-        "X-Content-Type-Options": "nosniff",
-        "Referrer-Policy": "strict-origin-when-cross-origin",
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'sha256-r3aYnj35qcWGjN4c4K5zP2LOUrzUF+TAoxsHeYlavEA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.blob.core.windows.net; connect-src 'self' https://webinv-api-xkedjb.azurewebsites.net; font-src 'self' https://fonts.gstatic.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+    {
+      "route": "/index.html",
+      "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
     },
-    "mimeTypes": {
-        ".webmanifest": "application/manifest+json"
+    {
+      "route": "/manifest.webmanifest",
+      "headers": { "Cache-Control": "no-cache, must-revalidate" }
     }
+  ],
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'sha256-r3aYnj35qcWGjN4c4K5zP2LOUrzUF+TAoxsHeYlavEA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.blob.core.windows.net; connect-src 'self' https://webinv-api-xkedjb.azurewebsites.net; font-src 'self' https://fonts.gstatic.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+  },
+  "mimeTypes": {
+    ".webmanifest": "application/manifest+json"
+  }
 }

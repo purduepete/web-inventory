@@ -16,9 +16,7 @@ const ContainerPage = lazy(() => import('./pages/ContainerPage'));
 const ScanPage = lazy(() => import('./pages/ScanPage'));
 const ManagePage = lazy(() => import('./pages/ManagePage'));
 
-const page = (element: React.ReactNode) => (
-    <Suspense fallback={<Spinner />}>{element}</Suspense>
-);
+const page = (element: React.ReactNode) => <Suspense fallback={<Spinner />}>{element}</Suspense>;
 
 const router = createBrowserRouter([
     {
@@ -41,5 +39,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <DialogProvider>
             <RouterProvider router={router} />
         </DialogProvider>
-    </React.StrictMode>,
+    </React.StrictMode>
 );

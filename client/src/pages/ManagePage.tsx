@@ -29,8 +29,8 @@ export default function ManagePage() {
                 api
                     .listLookup(s.kind)
                     .then((items) => ({ kind: s.kind, items }))
-                    .catch(() => ({ kind: s.kind, items: [] as Lookup[] })),
-            ),
+                    .catch(() => ({ kind: s.kind, items: [] as Lookup[] }))
+            )
         ).then((res) => {
             if (!active) return;
             const next: Record<LookupKind, Lookup[]> = { locations: [], owners: [], categories: [] };

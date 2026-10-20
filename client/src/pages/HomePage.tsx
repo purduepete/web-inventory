@@ -44,7 +44,7 @@ export default function HomePage() {
     // The chosen state is then persisted so it sticks across navigation/reloads.
     const [filtersOpen, setFiltersOpen] = usePersistentToggle(
         'webinv.search.filtersOpen',
-        typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches,
+        typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
     );
 
     useEffect(() => {
@@ -236,7 +236,11 @@ export default function HomePage() {
             )}
 
             <h2>
-                {loading ? 'Searching…' : searched ? `${results.length}${hasMore ? '+' : ''} result${results.length === 1 ? '' : 's'}` : ''}
+                {loading
+                    ? 'Searching…'
+                    : searched
+                      ? `${results.length}${hasMore ? '+' : ''} result${results.length === 1 ? '' : 's'}`
+                      : ''}
             </h2>
             {searched && !loading && hasMore && (
                 <div className="muted" style={{ marginBottom: 8 }}>

@@ -45,7 +45,7 @@ export default function ScanPage() {
                         void stop();
                         routeTo(decoded);
                     },
-                    () => undefined,
+                    () => undefined
                 )
                 .catch(() => setError('Camera unavailable. Grant camera permission and retry.'));
         })();
