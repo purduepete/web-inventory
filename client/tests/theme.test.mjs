@@ -131,6 +131,10 @@ test('system tracks OS live, can be reselected, and fixed choices ignore OS', ()
     stop();
     stop = trackTheme('midnight', () => {});
     changeOS(false); expectTheme(env, true);
+    env.values.set('theme', 'system'); // another tab picked System
+    changeOS(true);
+    assert.equal(env.values.get('theme'), 'system', 'OS change must not overwrite the saved choice');
+    changeOS(false);
     stop();
     stop = trackTheme('system', () => {});
     expectTheme(env, false);

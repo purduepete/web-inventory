@@ -18,11 +18,12 @@ export function applyTheme(preference: ThemePreference, systemDark: boolean) {
     root.style.colorScheme = theme;
     root.style.backgroundColor = theme === 'light' ? '#ffffff' : '#020617';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#ffffff' : '#020617');
-    try { localStorage.setItem('theme', preference); } catch { /* Keep the theme usable without storage. */ }
     return theme;
 }
 
 export function trackTheme(preference: ThemePreference, onChange: (theme: 'light' | 'dark') => void) {
+    // Save once per choice. Saving on OS changes would let an open tab overwrite another tab's choice.
+    try { localStorage.setItem('theme', preference); } catch { /* Keep the theme usable without storage. */ }
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const update = () => onChange(applyTheme(preference, media.matches));
     update();
