@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dev-dist/
+coverage/
+package-lock.json
+*.min.*
+# staticwebapp.config.json pins a CSP hash of the inline script's exact bytes.
+index.html

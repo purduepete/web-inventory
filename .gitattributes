@@ -1,1 +1,6 @@
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.jpg binary
+
 client/index.html text eol=lf

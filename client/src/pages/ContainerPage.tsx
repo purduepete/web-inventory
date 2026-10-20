@@ -94,7 +94,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
     // In-place edits to a detected item's name/description before it's added,
     // keyed by the suggestion's object reference.
     const [suggestionEdits, setSuggestionEdits] = useState<Map<DetectedItem, { name?: string; description?: string }>>(
-        new Map(),
+        new Map()
     );
     const [busy, setBusy] = useState(false);
     const [pendingWork, setPendingWork] = useState(0);
@@ -144,7 +144,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 if (!silent) setLoading(false);
             }
         },
-        [byToken, key],
+        [byToken, key]
     );
 
     useEffect(() => {
@@ -219,7 +219,6 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             return additions.length ? [...existing, ...additions] : existing;
         });
         if (announce && added) flash('AI found items in a synced photo — review below.');
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Pull stored suggestions once the container id is known, and react to fresh
@@ -287,7 +286,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 flash(
                     analyze
                         ? 'Photo saved — will analyze when back online.'
-                        : 'Photo saved — will upload when back online.',
+                        : 'Photo saved — will upload when back online.'
                 );
                 return;
             }
@@ -310,7 +309,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
             flash(
                 e instanceof ApiError
                     ? `Upload failed (${e.status}). Photo saved and will retry.`
-                    : 'Photo queued for upload.',
+                    : 'Photo queued for upload.'
             );
         } finally {
             setBusy(false);
@@ -493,11 +492,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                 >
                                     <Icon name="arrow-left" size={16} />
                                 </button>
-                                <button
-                                    className="ghost small icon-btn"
-                                    onClick={() => setEditing(true)}
-                                    title="Edit"
-                                >
+                                <button className="ghost small icon-btn" onClick={() => setEditing(true)} title="Edit">
                                     <Icon name="pencil" size={16} />
                                 </button>
                                 <button
@@ -728,7 +723,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                         className="ghost small"
                         onClick={() =>
                             void syncNow().then((r) =>
-                                flash(r.failed > 0 ? 'Sync incomplete — will retry.' : 'Synced.'),
+                                flash(r.failed > 0 ? 'Sync incomplete — will retry.' : 'Synced.')
                             )
                         }
                     >
@@ -886,7 +881,7 @@ function AddItemModal({
         () => () => {
             if (photoUrl) URL.revokeObjectURL(photoUrl);
         },
-        [photoUrl],
+        [photoUrl]
     );
 
     function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {

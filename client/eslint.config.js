@@ -20,11 +20,20 @@ export default tseslint.config(
         rules: {
             ...reactHooks.configs.recommended.rules,
             'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-            '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+            '@typescript-eslint/no-explicit-any': 'error',
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' },
+            ],
+            'no-console': ['warn', { allow: ['warn', 'error'] }],
         },
     },
     {
         files: ['*.config.{js,ts}', 'vite.config.ts'],
         languageOptions: { globals: globals.node },
     },
+    {
+        files: ['src/Dialog.tsx'],
+        rules: { 'react-refresh/only-export-components': 'off' },
+    }
 );

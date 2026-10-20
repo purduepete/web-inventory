@@ -1,36 +1,53 @@
 {
-    "name": "webinventory-client",
-    "private": true,
-    "version": "0.1.0",
-    "type": "module",
-    "scripts": {
-        "dev": "vite",
-        "build": "tsc && vite build",
-        "preview": "vite preview",
-        "lint": "eslint .",
-        "test": "node --test tests/theme.test.mjs tests/container-page.test.mjs"
-    },
-    "dependencies": {
-        "dexie": "^4.0.8",
-        "html5-qrcode": "^2.3.8",
-        "qrcode": "^1.5.4",
-        "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "react-router-dom": "^6.26.2"
-    },
-    "devDependencies": {
-        "@eslint/js": "^9.39.4",
-        "@types/qrcode": "^1.5.5",
-        "@types/react": "^18.3.5",
-        "@types/react-dom": "^18.3.0",
-        "@vitejs/plugin-react": "^4.3.1",
-        "eslint": "^9.39.4",
-        "eslint-plugin-react-hooks": "^5.2.0",
-        "eslint-plugin-react-refresh": "^0.4.26",
-        "globals": "^15.15.0",
-        "typescript": "^5.5.4",
-        "typescript-eslint": "^8.62.1",
-        "vite": "^5.4.3",
-        "vite-plugin-pwa": "^0.20.5"
-    }
+  "name": "webinventory-client",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/theme.test.mjs tests/container-page.test.mjs",
+    "prepare": "cd .. && husky"
+  },
+  "dependencies": {
+    "dexie": "^4.0.8",
+    "html5-qrcode": "^2.3.8",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^15.15.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.62.1",
+    "vite": "^5.4.3",
+    "vite-plugin-pwa": "^0.20.5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs}": [
+      "prettier --write",
+      "eslint --max-warnings 0 --no-warn-ignored"
+    ],
+    "*.{json,css,md,html}": [
+      "prettier --write"
+    ]
+  }
 }
