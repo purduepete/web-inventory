@@ -874,7 +874,8 @@ function AddItemModal({
 
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
-            if (e.key === 'Escape') onClose(false);
+            // Open dropdowns consume Escape first; only an unhandled Escape closes the modal.
+            if (e.key === 'Escape' && !e.defaultPrevented) onClose(false);
         }
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);

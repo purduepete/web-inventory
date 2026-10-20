@@ -1828,7 +1828,8 @@ button.icon-btn.ok:focus,
 .head-grid {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr;
+    /* minmax(0, ...) lets the long title ellipsize instead of widening the page. */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
         'title'
         'meta'
