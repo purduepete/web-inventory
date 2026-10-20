@@ -26,6 +26,8 @@ export default defineConfig({
             // periodic update checks; disable the auto-injected registration to
             // avoid registering twice.
             injectRegister: null,
+            // Cloudflare Access needs the session cookie on the manifest request.
+            useCredentials: true,
             includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
             manifest: {
                 name: 'Web Inventory',

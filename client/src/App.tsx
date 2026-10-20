@@ -30,19 +30,10 @@ export default function App() {
     const [reloading, setReloading] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
     const [theme, setTheme] = useState<ThemePreference>(readTheme);
-    const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(() =>
-        theme === 'light' || (theme === 'system' && !window.matchMedia('(prefers-color-scheme: dark)').matches)
-            ? 'light'
-            : 'dark'
-    );
 
     useEffect(() => {
-        return trackTheme(theme, setEffectiveTheme);
+        return trackTheme(theme, () => {});
     }, [theme]);
-
-    function toggleTheme() {
-        setTheme(effectiveTheme === 'dark' ? 'light' : 'midnight');
-    }
 
     function reloadData() {
         if (reloading) return;
@@ -243,14 +234,6 @@ export default function App() {
                             { value: 'midnight', label: 'Midnight' },
                         ]}
                     />
-                    <button
-                        className="theme-toggle"
-                        onClick={toggleTheme}
-                        title={effectiveTheme === 'dark' ? 'Switch to light theme' : 'Switch to midnight theme'}
-                        aria-label="Toggle color theme"
-                    >
-                        <Icon name={effectiveTheme === 'dark' ? 'sun' : 'moon'} size={18} />
-                    </button>
                 </div>
             </header>
 

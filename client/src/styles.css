@@ -183,6 +183,14 @@ body {
     margin-top: 0;
     padding: 6px;
 }
+.topbar-actions .select {
+    margin-top: 0;
+}
+/* Header dropdowns match the 36px icon buttons beside them. */
+.topbar-actions .select-trigger {
+    height: 36px;
+    padding: 0 12px;
+}
 .theme-toggle {
     background: var(--surface-2);
     color: var(--text);
