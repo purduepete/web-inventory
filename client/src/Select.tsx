@@ -20,6 +20,7 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
     const [active, setActive] = useState(0);
     const [panelLeft, setPanelLeft] = useState<number | null>(null);
     const rootRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const listId = useId();
 
@@ -96,6 +97,7 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
         if (!opt || opt.disabled) return;
         onChange(opt.value);
         setOpen(false);
+        triggerRef.current?.focus();
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -148,13 +150,20 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
             ref={rootRef}
             className={`select${open ? ' open' : ''}${auto ? ' auto' : ''}${className ? ' ' + className : ''}`}
             style={style}
+            onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false);
+            }}
         >
             <button
+                ref={triggerRef}
                 type="button"
+                role="combobox"
                 className="select-trigger"
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 aria-label={ariaLabel}
+                aria-controls={open ? listId : undefined}
+                aria-activedescendant={open ? `${listId}-option-${active}` : undefined}
                 onClick={() => setOpen((o) => !o)}
                 onKeyDown={onKeyDown}
             >
@@ -166,6 +175,7 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
                     ref={listRef}
                     className="select-panel"
                     role="listbox"
+                    aria-label={ariaLabel}
                     id={listId}
                     tabIndex={-1}
                     style={panelLeft != null ? { left: `${panelLeft}px` } : undefined}
@@ -173,12 +183,15 @@ export function Select({ value, onChange, options, placeholder, ariaLabel, class
                     {options.map((opt, i) => (
                         <button
                             type="button"
+                            id={`${listId}-option-${i}`}
+                            tabIndex={-1}
                             key={opt.value || `opt-${i}`}
                             className={`select-option${i === active ? ' active' : ''}`}
                             role="option"
                             aria-selected={opt.value === value}
                             disabled={opt.disabled}
                             onMouseEnter={() => !opt.disabled && setActive(i)}
+                            onMouseDown={(e) => e.preventDefault()}
                             // iOS Safari emulates mouse events and can swallow the click that
                             // would select + close the dropdown. Commit on touchend and
                             // preventDefault so the emulated click doesn't double-fire.

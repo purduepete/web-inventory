@@ -4,6 +4,65 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
+import { createRequire } from 'node:module';
+import { renderToStaticMarkup } from 'react-dom/server';
+
+const require = createRequire(import.meta.url);
+
+test('header Theme uses the custom Select and its choices update persisted runtime theme', () => {
+    const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+    const ast = ts.createSourceFile('App.tsx', app, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    let header;
+    function find(node) {
+        if (ts.isJsxElement(node) && node.openingElement.tagName.getText(ast) === 'header') header = node;
+        ts.forEachChild(node, find);
+    }
+    find(ast);
+    assert.ok(header, 'app header exists');
+    assert.doesNotMatch(header.getText(ast), /<(?:select|datalist)\b/);
+    const custom = header.children.find(node =>
+        ts.isJsxElement(node) && node.openingElement.tagName.getText(ast) === 'div',
+    ).children.find(node => ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === 'Select');
+    assert.ok(custom, 'Theme uses Select');
+    const componentJS = ts.transpileModule(
+        readFileSync(new URL('../src/Select.tsx', import.meta.url), 'utf8'),
+        { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } },
+    ).outputText;
+    const context = { exports: {}, require: name => name === './Icon' ? { Icon: () => null } : require(name) };
+    runInNewContext(componentJS, context);
+    const env = environment(null);
+    let preference = env.context.exports.readTheme();
+    let stop = () => {};
+    const expression = ts.transpileModule(`const element = (${custom.getText(ast)}); exports.element = element;`, {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+    }).outputText;
+    function control() {
+        const scope = { exports: {}, require, Select: context.exports.Select, theme: preference, setTheme: value => {
+            stop();
+            preference = value;
+            stop = env.context.exports.trackTheme(value, () => {});
+        } };
+        runInNewContext(expression, scope);
+        return scope.exports.element;
+    }
+    const markup = renderToStaticMarkup(control());
+    assert.doesNotMatch(markup, /<(?:select|datalist)\b/);
+    assert.match(markup, /role="combobox"/);
+    assert.match(markup, /aria-label="Theme"/);
+    assert.match(markup, />Midnight</);
+    assert.deepEqual(Array.from(control().props.options, option => option.value), ['system', 'light', 'midnight']);
+    for (const value of ['light', 'midnight', 'system']) {
+        control().props.onChange(value);
+        assert.equal(env.values.get('theme'), value);
+        expectTheme(env, value === 'midnight');
+        assert.match(renderToStaticMarkup(control()), new RegExp(`>${value[0].toUpperCase() + value.slice(1)}<`));
+    }
+    env.media.matches = true;
+    env.listeners.forEach(fn => fn());
+    expectTheme(env, true);
+    assert.equal(env.context.exports.readTheme(), 'system');
+    stop();
+});
 
 const source = readFileSync(new URL('../src/theme.ts', import.meta.url), 'utf8');
 const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
