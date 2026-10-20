@@ -5,6 +5,7 @@ import { Icon } from './Icon';
 import { HelpDialog } from './HelpDialog';
 import { KeyGate } from './KeyGate';
 import { clearKey, getKey, validateKey, KEY_INVALID_EVENT, platformAuth } from './api';
+import { readTheme, trackTheme, type ThemePreference } from './theme';
 
 export default function App() {
     const [online, setOnline] = useState(navigator.onLine);
@@ -27,25 +28,17 @@ export default function App() {
     const [reloadKey, setReloadKey] = useState(0);
     const [reloading, setReloading] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
-    const [theme, setTheme] = useState<'light' | 'dark' | null>(
-        () => (localStorage.getItem('theme') as 'light' | 'dark' | null) ?? null,
+    const [theme, setTheme] = useState<ThemePreference>(readTheme);
+    const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(() =>
+        theme === 'light' || (theme === 'system' && !window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'light' : 'dark',
     );
 
     useEffect(() => {
-        const root = document.documentElement;
-        if (theme) root.setAttribute('data-theme', theme);
-        else root.removeAttribute('data-theme');
-        const effective = theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document
-            .querySelector('meta[name="theme-color"]')
-            ?.setAttribute('content', effective === 'light' ? '#f6f8fa' : '#020617');
+        return trackTheme(theme, setEffectiveTheme);
     }, [theme]);
 
     function toggleTheme() {
-        const effective = theme ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        const next = effective === 'dark' ? 'light' : 'dark';
-        localStorage.setItem('theme', next);
-        setTheme(next);
+        setTheme(effectiveTheme === 'dark' ? 'light' : 'midnight');
     }
 
     function reloadData() {
@@ -55,10 +48,6 @@ export default function App() {
         setReloadKey((k) => k + 1);
         setTimeout(() => setReloading(false), 1000);
     }
-
-    const effectiveTheme =
-        theme ??
-        (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
     useEffect(() => {
         // Only surface a loader card if the key check is slow. The delay is long
@@ -233,10 +222,15 @@ export default function App() {
                     >
                         <Icon name="help" size={18} />
                     </button>
+                    <select aria-label="Theme" value={theme} onChange={(event) => setTheme(event.target.value as ThemePreference)}>
+                        <option value="system">System</option>
+                        <option value="light">Light</option>
+                        <option value="midnight">Midnight</option>
+                    </select>
                     <button
                         className="theme-toggle"
                         onClick={toggleTheme}
-                        title={effectiveTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                        title={effectiveTheme === 'dark' ? 'Switch to light theme' : 'Switch to midnight theme'}
                         aria-label="Toggle color theme"
                     >
                         <Icon name={effectiveTheme === 'dark' ? 'sun' : 'moon'} size={18} />

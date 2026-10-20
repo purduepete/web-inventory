@@ -4,7 +4,7 @@
        dark surface. --accent is the standard Steel Blue highlight. */
     --bg: #020617;
     --card: #0f172a;
-    --card2: #172033;
+    --card2: #1e293b;
     --border: #293548;
     --text: #f8fafc;
     --muted: #a8b4c6;
@@ -18,15 +18,13 @@
     --scrollbar-track: #080f20;
     --scrollbar-thumb: #3b4962;
     --scrollbar-thumb-hover: #64748b;
-    --font: 'Roboto Flex', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font: 'Roboto Flex', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
 }
 
 /* ---------- Light — Paper palette (single source of truth) ----------
-   The colour values live here once as --l-* tokens; the two selectors below
-   (explicit toggle + OS preference) only remap the active palette to them, so
-   the hex values never need to be kept in sync in two places. */
+   The explicit resolved theme remaps the active palette to these tokens. */
 :root {
-    --l-bg: #f6f8fa;
+    --l-bg: #ffffff;
     --l-card: #ffffff;
     --l-card2: #eef1f5;
     --l-border: #d0d7de;
@@ -63,30 +61,6 @@
     --scrollbar-thumb-hover: var(--l-scrollbar-thumb-hover);
     --tab-active-bg: color-mix(in srgb, var(--accent) 12%, var(--card));
     color-scheme: light;
-}
-
-/* Follow the OS when the user hasn't explicitly chosen a theme. */
-@media (prefers-color-scheme: light) {
-    :root:not([data-theme='dark']) {
-        --bg: var(--l-bg);
-        --card: var(--l-card);
-        --card2: var(--l-card2);
-        --border: var(--l-border);
-        --text: var(--l-text);
-        --muted: var(--l-muted);
-        --accent: var(--l-accent);
-        --green: var(--l-green);
-        --red: var(--l-red);
-        --amber: var(--l-amber);
-        --proj: var(--l-proj);
-        --on-accent: var(--l-on-accent);
-        --shadow: var(--l-shadow);
-        --scrollbar-track: var(--l-scrollbar-track);
-        --scrollbar-thumb: var(--l-scrollbar-thumb);
-        --scrollbar-thumb-hover: var(--l-scrollbar-thumb-hover);
-        --tab-active-bg: color-mix(in srgb, var(--accent) 12%, var(--card));
-        color-scheme: light;
-    }
 }
 
 /* ---------- Semantic tokens derived from the active palette ---------- */
@@ -150,6 +124,7 @@
 body {
     margin: 0;
     font-family: var(--font);
+    font-weight: 400;
     background: var(--bg);
     background-image: var(--bg-grad);
     background-attachment: fixed;
@@ -168,12 +143,11 @@ body {
 /* ---------- Top bar ---------- */
 .topbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
     padding: calc(env(safe-area-inset-top) + 12px) 18px 12px;
-    background: var(--glass);
-    backdrop-filter: saturate(180%) blur(16px);
-    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    background: var(--bg);
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
@@ -195,9 +169,17 @@ body {
 
 .topbar-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     margin-left: auto;
+}
+.topbar-actions select {
+    width: auto;
+    max-width: 110px;
+    min-height: 36px;
+    margin-top: 0;
+    padding: 6px;
 }
 .theme-toggle {
     background: var(--surface-2);
@@ -382,7 +364,7 @@ body {
     width: 100%;
     margin: 0;
     padding: 8px 10px;
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--danger-soft);
     color: var(--danger-text);
     border: 1px solid var(--danger-soft);

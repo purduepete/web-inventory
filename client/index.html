@@ -15,7 +15,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap"
             rel="stylesheet"
         />
         <title>Web Inventory</title>
@@ -24,15 +24,19 @@
         <script>
             // Apply saved theme before paint to avoid a flash of the wrong theme.
             (function () {
-                try {
-                    var t = localStorage.getItem('theme');
-                    if (t === 'light' || t === 'dark') {
-                        document.documentElement.setAttribute('data-theme', t);
-                        document.documentElement.style.colorScheme = t;
-                        var meta = document.querySelector('meta[name="theme-color"]');
-                        if (meta) meta.setAttribute('content', t === 'light' ? '#f6f8fa' : '#020617');
-                    }
-                } catch (e) {}
+                var choice = 'midnight';
+                try { choice = localStorage.getItem('theme') || 'midnight'; } catch (e) {}
+                var t = choice === 'light' || (choice === 'system' && !window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'light' : 'dark';
+                var root = document.documentElement;
+                root.setAttribute('data-theme', t);
+                root.classList.toggle('light', t === 'light');
+                root.classList.toggle('dark', t === 'dark');
+                root.classList.toggle('theme-midnight', t === 'dark');
+                root.style.colorScheme = t;
+                var bg = t === 'light' ? '#ffffff' : '#020617';
+                root.style.backgroundColor = bg;
+                var meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute('content', bg);
             })();
         </script>
     </head>

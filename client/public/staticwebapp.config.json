@@ -21,7 +21,7 @@
     "globalHeaders": {
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "strict-origin-when-cross-origin",
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'sha256-UnqfL/QJEfggv1zuSYdH/Ku1aFIqaWaoQPY7gchyrh4='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.blob.core.windows.net; connect-src 'self' https://webinv-api-xkedjb.azurewebsites.net; font-src 'self' https://fonts.gstatic.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'sha256-r3aYnj35qcWGjN4c4K5zP2LOUrzUF+TAoxsHeYlavEA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.blob.core.windows.net; connect-src 'self' https://webinv-api-xkedjb.azurewebsites.net; font-src 'self' https://fonts.gstatic.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
     },
     "mimeTypes": {
         ".webmanifest": "application/manifest+json"

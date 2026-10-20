@@ -195,3 +195,11 @@ curl -i -H "x-api-key: <key>" https://<func-host>/api/containers  # -> 200
 - Photos are downscaled client-side (max 1024px) before upload + AI.
 - Vision calls use `gpt-5-mini` at `low` image detail.
 - Function App runs on Consumption; Static Web App on Standard (linked backends require it).
+## Theme preferences
+
+The header theme selector offers System, Light and Midnight, with Midnight as the default.
+System follows OS changes live. The `theme` storage key accepts `system`, `light` and `midnight`;
+legacy `dark` values migrate to Midnight. The icon button switches between Light and Midnight.
+
+Run `npm test` in `client` for theme regressions. After building, set `CHECK_DIST=1` and run it again
+to verify the built pre-paint script against the CSP hash. Keep `client/index.html` LF-only.
