@@ -28,6 +28,12 @@ test('header exposes refresh information and one accessible theme popover', () =
         assert.match(headerText, new RegExp(`setTheme\\('${preference}'\\)`));
         assert.match(headerText, new RegExp(`aria-pressed={theme === '${preference}'}`));
     }
+    assert.ok(
+        headerText.indexOf("setTheme('light')") < headerText.indexOf("setTheme('midnight')") &&
+            headerText.indexOf("setTheme('midnight')") < headerText.indexOf("setTheme('system')"),
+        'theme options are ordered Light, Midnight, System'
+    );
+    assert.match(headerText, /'--theme-index': \['light', 'midnight', 'system'\]\.indexOf\(theme\)/);
     assert.equal((headerText.match(/aria-haspopup="dialog"/g) || []).length, 2);
     assert.doesNotMatch(headerText, /\btitle=/);
     assert.ok(

@@ -333,19 +333,10 @@ export default function App() {
                                 role="group"
                                 aria-label="Theme"
                                 style={
-                                    { '--theme-index': ['system', 'light', 'midnight'].indexOf(theme) } as CSSProperties
+                                    { '--theme-index': ['light', 'midnight', 'system'].indexOf(theme) } as CSSProperties
                                 }
                             >
                                 <span className="header-theme-selection" aria-hidden="true" />
-                                <button
-                                    type="button"
-                                    className="header-theme-option"
-                                    onClick={() => setTheme('system')}
-                                    aria-pressed={theme === 'system'}
-                                >
-                                    <Monitor size={15} aria-hidden="true" />
-                                    <span>System</span>
-                                </button>
                                 <button
                                     type="button"
                                     className="header-theme-option"
@@ -363,6 +354,15 @@ export default function App() {
                                 >
                                     <Moon size={15} aria-hidden="true" />
                                     <span>Midnight</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="header-theme-option"
+                                    onClick={() => setTheme('system')}
+                                    aria-pressed={theme === 'system'}
+                                >
+                                    <Monitor size={15} aria-hidden="true" />
+                                    <span>System</span>
                                 </button>
                             </div>
                         </div>

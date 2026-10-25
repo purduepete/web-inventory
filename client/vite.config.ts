@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { execSync } from 'node:child_process';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -13,12 +13,58 @@ function buildSha(): string {
     }
 }
 
-// Development requests use the same ASP.NET API as production.
-export default defineConfig({
+const reviewApi = 'https://jimbrownhome1.tail8ad282.ts.net:8795';
+
+export default defineConfig(({ isPreview, mode }) => ({
     define: {
         __BUILD_SHA__: JSON.stringify(buildSha()),
     },
     plugins: [
+        ...(isPreview && mode === 'review'
+            ? [
+                  {
+                      name: 'read-only-review',
+                      async configurePreviewServer(server) {
+                          try {
+                              const response = await fetch(`${reviewApi}/api/auth/check`, {
+                                  signal: AbortSignal.timeout(10000),
+                              });
+                              if (response.status !== 204) {
+                                  throw new Error(`API access check returned HTTP ${response.status}.`);
+                              }
+                          } catch (cause) {
+                              throw new Error(
+                                  `Read-only preview cannot reach ${reviewApi}. Connect Tailscale and check the private API.`,
+                                  { cause }
+                              );
+                          }
+                          server.middlewares.use((request, response, next) => {
+                              const origin = request.headers.origin;
+                              if (origin && origin !== `http://${request.headers.host}`) {
+                                  response.writeHead(403, { 'Content-Type': 'application/json' });
+                                  response.end(
+                                      JSON.stringify({ error: 'Preview requests must use the local origin.' })
+                                  );
+                                  return;
+                              }
+                              if (request.method !== 'GET' && request.method !== 'HEAD') {
+                                  response.writeHead(405, {
+                                      Allow: 'GET, HEAD',
+                                      'Content-Type': 'application/json',
+                                  });
+                                  response.end(
+                                      JSON.stringify({
+                                          error: 'Read-only preview: live inventory changes are blocked.',
+                                      })
+                                  );
+                                  return;
+                              }
+                              next();
+                          });
+                      },
+                  } satisfies Plugin,
+              ]
+            : []),
         react(),
         VitePWA({
             registerType: 'autoUpdate',
@@ -77,4 +123,23 @@ export default defineConfig({
             },
         },
     },
-});
+    preview:
+        isPreview && mode === 'review'
+            ? {
+                  host: '127.0.0.1',
+                  port: 4173,
+                  strictPort: true,
+                  allowedHosts: ['localhost', '127.0.0.1'],
+                  proxy: Object.fromEntries(
+                      ['/api', '/images'].map((path) => [
+                          path,
+                          {
+                              target: reviewApi,
+                              changeOrigin: true,
+                              headers: { Origin: reviewApi },
+                          },
+                      ])
+                  ),
+              }
+            : undefined,
+}));

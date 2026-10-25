@@ -42,6 +42,10 @@ For local development, set `ImageDirectory`, `PostgresConnectionString` and
 `ASPNETCORE_ENVIRONMENT=Development`, then run `dotnet run --project api`.
 Run `npm run dev` in `client` in another terminal; Vite proxies `/api` to 18795.
 Only development mode accepts the two loopback Vite origins on port 5173.
+For UI-only review without a local API, use `npm run build` then `npm run preview`
+in `client`. That loopback-only server reads live data and images through the
+private Tailscale API and blocks all write methods. See the root README's
+read-only UI review instructions. Production API access rules are unchanged.
 
 `shared\secrets\settings.json` requires `PostgresConnectionString`,
 `ImageDirectory`, `OpenAiEndpoint`, `OpenAiDeployment`, and `OpenAiKey`.

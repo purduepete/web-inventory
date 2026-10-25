@@ -61,6 +61,40 @@ sql/      Schema scripts for the inv schema
 
 ## Local development
 
+### Read-only UI review
+
+To inspect local UI changes with live inventory data, connect Tailscale and run:
+
+```powershell
+cd client
+npm run build
+npm run preview
+```
+
+Open http://127.0.0.1:4173/. This serves the local build and proxies API reads and
+images to https://jimbrownhome1.tail8ad282.ts.net:8795/. It checks private API access
+at startup and reports an error if Tailscale or the API is unavailable.
+No separate local API, database credentials or application access key is needed.
+
+The review server binds loopback only, rejects cross-origin requests, and blocks
+every method except GET and HEAD before proxying. Editing, uploads and queued
+writes cannot change the live inventory. Local offline edits can still appear in
+this browser's cache; they aren't saved to production. Use the deployed site when
+you intend to change real data. Production builds and authentication are unchanged.
+`npm run preview` reviews the last build, so rebuild after making changes.
+
+For an agent-owned preview, use `Manage-Preview.ps1` with the current session ID:
+run Status first, then Start with working directory `client`, executable `node.exe`,
+arguments `node_modules\vite\bin\vite.js`, `preview`, `--mode`, `review`, and URL
+`http://127.0.0.1:4173/`. Reuse the browser page and stop the preview after review.
+
+### Local API development
+
+Run the current PostgreSQL-backed API as described in [deploy/README.md](deploy/README.md).
+Vite's development server proxies `/api` to the local API on port 18795.
+
+### Previous Azure setup (historical reference)
+
 ```powershell
 # API (terminal 1)
 cd api
