@@ -1,4 +1,5 @@
 :root {
+    --header-control-height: 36px;
     /* ---------- Dark (default) — slate neutrals, Tokyo Night accents ----------
        Neutrals match ferry_tracker and webportfolio so the three apps share one
        dark surface. --accent is the standard Steel Blue highlight. */
@@ -188,25 +189,137 @@ body {
 }
 /* Header dropdowns match the 36px icon buttons beside them. */
 .topbar-actions .select-trigger {
-    height: 36px;
+    height: var(--header-control-height);
     padding: 0 12px;
 }
 .theme-toggle {
-    background: var(--surface-2);
-    color: var(--text);
-    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    border: 0;
     box-shadow: none;
-    padding: 8px;
-    width: 36px;
-    height: 36px;
+    padding: 0;
+    width: var(--header-control-height);
+    height: var(--header-control-height);
     border-radius: var(--radius);
 }
 .theme-toggle:hover {
-    background: var(--surface-3);
+    background: var(--surface-2);
+    color: var(--text);
     filter: none;
 }
 .reload-btn.spinning svg {
     animation: spin 1.2s linear infinite;
+}
+.header-popover-anchor {
+    position: relative;
+    flex: none;
+}
+.header-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 40;
+    box-sizing: border-box;
+    width: min(320px, calc(100vw - 32px));
+    padding: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+}
+.header-popover[hidden] {
+    display: none;
+}
+@media (max-width: 639px) {
+    .header-popover {
+        position: fixed;
+        top: calc(env(safe-area-inset-top) + 68px);
+        right: max(16px, env(safe-area-inset-right));
+        width: min(
+            320px,
+            calc(100vw - max(16px, env(safe-area-inset-left)) - max(16px, env(safe-area-inset-right)) - 16px)
+        );
+    }
+}
+.header-popover h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.3;
+}
+.header-popover p {
+    margin: 8px 0 12px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+.header-popover-label {
+    display: block;
+    margin-bottom: 9px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 650;
+    text-transform: uppercase;
+}
+.header-theme-picker {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    height: var(--header-control-height);
+    box-sizing: border-box;
+    padding: 2px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+.header-theme-selection {
+    position: absolute;
+    inset: 2px auto 2px 2px;
+    width: calc((100% - 4px) / 3);
+    background: var(--accent);
+    transform: translateX(calc(var(--theme-index, 0) * 100%));
+    transition: transform 0.25s ease-out;
+    pointer-events: none;
+}
+.header-theme-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 0 6px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.header-theme-option[aria-pressed='true'] {
+    color: var(--on-accent);
+}
+.header-theme-option svg {
+    flex: none;
+}
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+    .header-theme-selection {
+        transition: none;
+    }
+    .reload-btn.spinning svg {
+        animation: none;
+    }
 }
 
 .badge {
@@ -923,7 +1036,7 @@ button.danger:hover {
 :root[data-theme='light']
     button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(
         .group-toggle
-    ):not(.theme-toggle):not(.menu-item) {
+    ):not(.theme-toggle):not(.header-theme-option):not(.menu-item) {
     background: var(--accent-grad);
     color: var(--on-accent);
     border: none;
@@ -932,7 +1045,7 @@ button.danger:hover {
 :root[data-theme='light']
     button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(
         .group-toggle
-    ):not(.theme-toggle):not(.menu-item):hover {
+    ):not(.theme-toggle):not(.header-theme-option):not(.menu-item):hover {
     background: var(--accent-grad);
     border-color: transparent;
     filter: brightness(1.06);
@@ -952,7 +1065,7 @@ button.danger:hover {
     :root:not([data-theme='dark'])
         button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(
             .group-toggle
-        ):not(.theme-toggle):not(.menu-item) {
+        ):not(.theme-toggle):not(.header-theme-option):not(.menu-item) {
         background: var(--accent-grad);
         color: var(--on-accent);
         border: none;
@@ -961,7 +1074,7 @@ button.danger:hover {
     :root:not([data-theme='dark'])
         button:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(.collapse-toggle):not(
             .group-toggle
-        ):not(.theme-toggle):not(.menu-item):hover {
+        ):not(.theme-toggle):not(.header-theme-option):not(.menu-item):hover {
         background: var(--accent-grad);
         border-color: transparent;
         filter: brightness(1.06);

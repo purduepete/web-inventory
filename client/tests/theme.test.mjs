@@ -4,12 +4,8 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
-import { createRequire } from 'node:module';
-import { renderToStaticMarkup } from 'react-dom/server';
 
-const require = createRequire(import.meta.url);
-
-test('header Theme uses the custom Select and its choices update persisted runtime theme', () => {
+test('header exposes refresh information and one accessible theme popover', () => {
     const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
     const ast = ts.createSourceFile('App.tsx', app, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     let header;
@@ -19,57 +15,35 @@ test('header Theme uses the custom Select and its choices update persisted runti
     }
     find(ast);
     assert.ok(header, 'app header exists');
-    assert.doesNotMatch(header.getText(ast), /<(?:select|datalist)\b/);
-    const custom = header.children
-        .find((node) => ts.isJsxElement(node) && node.openingElement.tagName.getText(ast) === 'div')
-        .children.find((node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === 'Select');
-    assert.ok(custom, 'Theme uses Select');
-    const componentJS = ts.transpileModule(readFileSync(new URL('../src/Select.tsx', import.meta.url), 'utf8'), {
-        compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
-    }).outputText;
-    const context = { exports: {}, require: (name) => (name === './Icon' ? { Icon: () => null } : require(name)) };
-    runInNewContext(componentJS, context);
-    const env = environment(null);
-    let preference = env.context.exports.readTheme();
-    let stop = () => {};
-    const expression = ts.transpileModule(`const element = (${custom.getText(ast)}); exports.element = element;`, {
-        compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
-    }).outputText;
-    function control() {
-        const scope = {
-            exports: {},
-            require,
-            Select: context.exports.Select,
-            theme: preference,
-            setTheme: (value) => {
-                stop();
-                preference = value;
-                stop = env.context.exports.trackTheme(value, () => {});
-            },
-        };
-        runInNewContext(expression, scope);
-        return scope.exports.element;
+    const headerText = header.getText(ast);
+    assert.doesNotMatch(headerText, /<(?:select|datalist)\b/);
+    assert.match(headerText, /aria-label="Refresh and sync information"/);
+    assert.match(headerText, /aria-describedby="refresh-sync-description"/);
+    assert.match(headerText, /id="refresh-sync-popover"/);
+    assert.match(headerText, /aria-expanded={headerPanel === 'info'}/);
+    assert.match(headerText, /aria-busy={reloading}/);
+    assert.match(headerText, /aria-controls="theme-popover"/);
+    assert.match(headerText, /aria-label={`Theme: \$\{THEME_LABELS\[theme\]\}`}/);
+    for (const preference of ['system', 'light', 'midnight']) {
+        assert.match(headerText, new RegExp(`setTheme\\('${preference}'\\)`));
+        assert.match(headerText, new RegExp(`aria-pressed={theme === '${preference}'}`));
     }
-    const markup = renderToStaticMarkup(control());
-    assert.doesNotMatch(markup, /<(?:select|datalist)\b/);
-    assert.match(markup, /role="combobox"/);
-    assert.match(markup, /aria-label="Theme"/);
-    assert.match(markup, />Midnight</);
-    assert.deepEqual(
-        Array.from(control().props.options, (option) => option.value),
-        ['system', 'light', 'midnight']
+    assert.equal((headerText.match(/aria-haspopup="dialog"/g) || []).length, 2);
+    assert.doesNotMatch(headerText, /\btitle=/);
+    assert.ok(
+        headerText.indexOf('aria-label="Refresh and sync information"') <
+            headerText.indexOf('aria-label="Reload data"') &&
+            headerText.indexOf('aria-label="Reload data"') < headerText.indexOf('aria-label={`Theme:'),
+        'refresh action sits between the information and theme controls'
     );
-    for (const value of ['light', 'midnight', 'system']) {
-        control().props.onChange(value);
-        assert.equal(env.values.get('theme'), value);
-        expectTheme(env, value === 'midnight');
-        assert.match(renderToStaticMarkup(control()), new RegExp(`>${value[0].toUpperCase() + value.slice(1)}<`));
-    }
-    env.media.matches = true;
-    env.listeners.forEach((fn) => fn());
-    expectTheme(env, true);
-    assert.equal(env.context.exports.readTheme(), 'system');
-    stop();
+    const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8');
+    const themeToggleStyles = styles.match(/\.theme-toggle\s*\{([^}]*)\}/)?.[1];
+    assert.ok(themeToggleStyles, 'header icon controls have a shared style');
+    assert.match(themeToggleStyles, /border:\s*0;/, 'header icon controls have no border');
+    const narrowPopoverStyles = styles.match(/@media \(max-width: 639px\)\s*\{([\s\S]*?)\n\}/)?.[1];
+    assert.match(narrowPopoverStyles, /\.header-popover\s*\{[\s\S]*?position:\s*fixed;/);
+    assert.match(narrowPopoverStyles, /right:\s*max\(16px,\s*env\(safe-area-inset-right\)\);/);
+    assert.match(narrowPopoverStyles, /width:\s*min\(/);
 });
 
 const source = readFileSync(new URL('../src/theme.ts', import.meta.url), 'utf8');
