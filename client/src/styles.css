@@ -458,6 +458,18 @@ body {
     display: none;
 }
 
+@media (min-width: 1024px) {
+    .app:not(.app-gate) > .topbar {
+        padding-left: max(20px, calc((100% - 1400px) / 2), env(safe-area-inset-left));
+        padding-right: max(20px, calc((100% - 1400px) / 2), env(safe-area-inset-right));
+    }
+    .app:not(.app-gate) > .content {
+        max-width: 1440px;
+        padding-left: max(20px, env(safe-area-inset-left));
+        padding-right: max(20px, env(safe-area-inset-right));
+    }
+}
+
 /* ---------- Large screens (desktop only): left sidebar rail ----------
    Kept above every iPad width — portrait (≤1024px) and landscape (up to the
    13" iPad's 1366px) — so all iPads use the centered, bottom-tab mobile layout
@@ -532,8 +544,8 @@ body {
 
     /* Wider, roomier content column */
     .content {
-        max-width: 1080px;
-        padding: 28px 32px;
+        padding-top: 28px;
+        padding-bottom: 28px;
     }
 
     /* Card lists flow into multiple columns of a uniform, fixed width
