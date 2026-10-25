@@ -572,6 +572,13 @@ body {
 }
 
 @media (min-width: 1024px) {
+    html {
+        scrollbar-gutter: stable;
+        scrollbar-width: auto;
+    }
+    html::-webkit-scrollbar {
+        width: auto;
+    }
     .app:not(.app-gate) > .topbar {
         padding-left: max(20px, calc((100% - 1400px) / 2), env(safe-area-inset-left));
         padding-right: max(20px, calc((100% - 1400px) / 2), env(safe-area-inset-right));
