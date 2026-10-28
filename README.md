@@ -61,6 +61,14 @@ sql/      Schema scripts for the inv schema
 
 ## Local development
 
+### App icons
+
+The icons in `client/public` keep the inventory box symbol with Team Scoreboard's
+midnight card (`#0f172a`) and steel-blue strokes (`#6b8cae`). `favicon.svg` has the
+rounded browser card; `apple-touch-icon.svg` is the full-bleed source for the
+180px `apple-touch-icon.png`, 192px `pwa-192.png` and 512px `pwa-512.png`.
+Re-render all 3 PNGs when that SVG changes.
+
 ### Read-only UI review
 
 To inspect local UI changes with live inventory data, connect Tailscale and run:
