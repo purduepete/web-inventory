@@ -17,7 +17,9 @@ const ContainerPage = lazy(() => import('./pages/ContainerPage'));
 const ScanPage = lazy(() => import('./pages/ScanPage'));
 const ManagePage = lazy(() => import('./pages/ManagePage'));
 
-const page = (element: React.ReactNode) => <Suspense fallback={<Spinner />}>{element}</Suspense>;
+const page = (element: React.ReactNode) => (
+    <Suspense fallback={<Spinner page label="Loading page" />}>{element}</Suspense>
+);
 
 const router = createBrowserRouter([
     {

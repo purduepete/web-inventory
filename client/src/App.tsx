@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Info, Monitor, Moon, Palette, RefreshCw, Sun } from 'lucide-react';
 import { pendingCount, syncNow } from './db';
 import { Icon } from './Icon';
@@ -7,6 +7,7 @@ import { HelpDialog } from './HelpDialog';
 import { KeyGate } from './KeyGate';
 import { clearKey, getKey, validateKey, KEY_INVALID_EVENT, platformAuth } from './api';
 import { readTheme, trackTheme, type ThemePreference } from './theme';
+import { RouteFade } from './RouteFade';
 
 const THEME_LABELS: Record<ThemePreference, string> = {
     system: 'System',
@@ -33,6 +34,7 @@ export default function App() {
     const [slowCheck, setSlowCheck] = useState(false);
     const location = useLocation();
     const [reloadKey, setReloadKey] = useState(0);
+    const [reloadedLocation, setReloadedLocation] = useState<string | null>(null);
     const [reloading, setReloading] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
     const [theme, setTheme] = useState<ThemePreference>(readTheme);
@@ -71,6 +73,7 @@ export default function App() {
         if (reloading) return;
         setReloading(true);
         // Remount the current route so its data-loading effects re-run.
+        setReloadedLocation(location.key);
         setReloadKey((k) => k + 1);
         setTimeout(() => setReloading(false), 1000);
     }
@@ -371,9 +374,7 @@ export default function App() {
             </header>
 
             <main className="content">
-                <div className="page" key={`${location.pathname}#${reloadKey}`}>
-                    <Outlet />
-                </div>
+                <RouteFade refreshKey={reloadKey} refreshed={reloadedLocation === location.key} />
             </main>
             {syncMsg && (
                 <div className="toast" role="status" onClick={() => setSyncMsg(null)}>

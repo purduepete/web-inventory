@@ -462,7 +462,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
         setPhotosEditing(false);
     }
 
-    if (loading) return <Spinner />;
+    if (loading) return <Spinner page label="Loading container" />;
     if (!container) return <div className="center">Container not found.</div>;
 
     return (

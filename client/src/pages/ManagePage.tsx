@@ -43,7 +43,7 @@ export default function ManagePage() {
         };
     }, []);
 
-    if (!ready) return <Spinner />;
+    if (!ready) return <Spinner page label="Loading tags" />;
 
     return (
         <div>

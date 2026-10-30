@@ -79,7 +79,7 @@ export default function ContainersPage() {
         });
     }
 
-    if (loading) return <Spinner />;
+    if (loading) return <Spinner page label="Loading containers" />;
 
     return (
         <div>

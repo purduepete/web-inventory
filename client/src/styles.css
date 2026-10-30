@@ -154,6 +154,9 @@
     outline-offset: 2px;
 }
 
+html {
+    scrollbar-gutter: stable;
+}
 body {
     margin: 0;
     font-family: var(--font);
@@ -525,22 +528,40 @@ body {
     text-align: center;
 }
 
-/* ---------- Page transitions ---------- */
-.page {
-    animation: page-in 0.26s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+/* ---------- Page transitions ----------
+   RouteFade fades the outgoing view out over 250ms, then the new view fades in
+   over 600ms. Content that replaces a loading ring fades in once on arrival. */
+.route-fade {
+    opacity: 1;
+    transition: opacity 600ms ease-out;
 }
-@keyframes page-in {
+.route-fade[data-leaving] {
+    opacity: 0;
+    transition: opacity 250ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.page > :not(.page-loading) {
+    animation: fade-in 0.6s ease-out both;
+}
+/* The header reload remounts the route; keep refreshed content steady. */
+.page[data-refreshed] > * {
+    animation: none;
+}
+@keyframes fade-in {
     from {
         opacity: 0;
-        transform: translateY(8px);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
     }
 }
 @media (prefers-reduced-motion: reduce) {
-    .page {
+    .route-fade,
+    .route-fade[data-leaving] {
+        transition: none;
+    }
+    .page > :not(.page-loading),
+    .spinner-wrap,
+    .spinner {
         animation: none;
     }
 }
@@ -2255,25 +2276,42 @@ button.icon-btn.ok:focus,
     color: var(--muted);
     line-height: 1.6;
 }
-.spinner-wrap {
+/* Shared loading ring (Spinner.tsx). The wrapper fades in; the ring rotates separately. */
+.page-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 14px;
-    padding: 64px 16px;
-    color: var(--muted);
+    background: var(--bg);
+}
+.spinner-inline {
+    display: inline-flex;
+    vertical-align: middle;
+}
+.spinner-wrap {
+    display: inline-flex;
+    animation: fade-in 0.6s ease-out both;
 }
 .spinner {
-    width: 34px;
-    height: 34px;
+    display: block;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    border: 3px solid var(--accent-soft);
+    border: 3px solid var(--border);
     border-top-color: var(--accent);
-    animation: spin 0.7s linear infinite;
+    animation: spin 1s linear infinite;
 }
-.spinner-label {
-    font-size: 14px;
+.spinner.spinner-sm {
+    width: 18px;
+    height: 18px;
+    border-width: 2px;
+}
+@media (min-width: 1440px) {
+    .page-loading {
+        left: 240px;
+    }
 }
 @keyframes spin {
     to {

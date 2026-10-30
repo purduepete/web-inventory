@@ -144,7 +144,7 @@ export default function HomePage() {
         };
     }, [q, tag, filters, hasFilter]);
 
-    if (!ready) return <Spinner />;
+    if (!ready) return <Spinner page label="Loading search" />;
 
     return (
         <div>
@@ -236,11 +236,13 @@ export default function HomePage() {
             )}
 
             <h2>
-                {loading
-                    ? 'Searching…'
-                    : searched
-                      ? `${results.length}${hasMore ? '+' : ''} result${results.length === 1 ? '' : 's'}`
-                      : ''}
+                {loading ? (
+                    <Spinner size="sm" label="Searching" />
+                ) : searched ? (
+                    `${results.length}${hasMore ? '+' : ''} result${results.length === 1 ? '' : 's'}`
+                ) : (
+                    ''
+                )}
             </h2>
             {searched && !loading && hasMore && (
                 <div className="muted" style={{ marginBottom: 8 }}>
