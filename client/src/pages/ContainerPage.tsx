@@ -68,10 +68,22 @@ function NewCategoryInput({ onConfirm, onCancel }: { onConfirm: (name: string) =
                     }
                 }}
             />
-            <button type="button" className="small icon-btn" onClick={() => onConfirm(value)} title="Add category">
+            <button
+                type="button"
+                className="small icon-btn"
+                onClick={() => onConfirm(value)}
+                data-tip="Add category"
+                aria-label="Add category"
+            >
                 <Icon name="check" size={16} />
             </button>
-            <button type="button" className="ghost small icon-btn" onClick={onCancel} title="Cancel">
+            <button
+                type="button"
+                className="ghost small icon-btn"
+                onClick={onCancel}
+                data-tip="Cancel"
+                aria-label="Cancel"
+            >
                 <Icon name="close" size={16} />
             </button>
         </span>
@@ -479,35 +491,56 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                 #{container.number} · {container.name}
                             </h1>
                             <div className="title-nav">
-                                <button
-                                    className="ghost small icon-btn nav-arrow"
-                                    onClick={() => siblings.prev && nav(`/containers/${siblings.prev.id}`)}
-                                    disabled={!siblings.prev}
-                                    title={
-                                        siblings.prev
-                                            ? `#${siblings.prev.number} ${siblings.prev.name}`
-                                            : 'No earlier container'
-                                    }
-                                    aria-label="Previous container"
+                                <span
+                                    className="tooltip-trigger"
+                                    tabIndex={!siblings.prev ? 0 : undefined}
+                                    role="group"
+                                    aria-label={!siblings.prev ? 'Previous container' : undefined}
+                                    data-tip={!siblings.prev ? 'No earlier container' : undefined}
                                 >
-                                    <Icon name="arrow-left" size={16} />
-                                </button>
-                                <button className="ghost small icon-btn" onClick={() => setEditing(true)} title="Edit">
+                                    <button
+                                        className="ghost small icon-btn nav-arrow"
+                                        onClick={() => siblings.prev && nav(`/containers/${siblings.prev.id}`)}
+                                        disabled={!siblings.prev}
+                                        data-tip={
+                                            siblings.prev
+                                                ? `#${siblings.prev.number} ${siblings.prev.name}`
+                                                : 'No earlier container'
+                                        }
+                                        aria-label="Previous container"
+                                    >
+                                        <Icon name="arrow-left" size={16} />
+                                    </button>
+                                </span>
+                                <button
+                                    className="ghost small icon-btn"
+                                    onClick={() => setEditing(true)}
+                                    data-tip="Edit"
+                                    aria-label="Edit"
+                                >
                                     <Icon name="pencil" size={16} />
                                 </button>
-                                <button
-                                    className="ghost small icon-btn nav-arrow"
-                                    onClick={() => siblings.next && nav(`/containers/${siblings.next.id}`)}
-                                    disabled={!siblings.next}
-                                    title={
-                                        siblings.next
-                                            ? `#${siblings.next.number} ${siblings.next.name}`
-                                            : 'No later container'
-                                    }
-                                    aria-label="Next container"
+                                <span
+                                    className="tooltip-trigger"
+                                    tabIndex={!siblings.next ? 0 : undefined}
+                                    role="group"
+                                    aria-label={!siblings.next ? 'Next container' : undefined}
+                                    data-tip={!siblings.next ? 'No later container' : undefined}
                                 >
-                                    <Icon name="arrow-right" size={16} />
-                                </button>
+                                    <button
+                                        className="ghost small icon-btn nav-arrow"
+                                        onClick={() => siblings.next && nav(`/containers/${siblings.next.id}`)}
+                                        disabled={!siblings.next}
+                                        data-tip={
+                                            siblings.next
+                                                ? `#${siblings.next.number} ${siblings.next.name}`
+                                                : 'No later container'
+                                        }
+                                        aria-label="Next container"
+                                    >
+                                        <Icon name="arrow-right" size={16} />
+                                    </button>
+                                </span>
                             </div>
                         </div>
                         {(container.location || container.owner) && (
@@ -625,7 +658,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                 <button
                                     className="ghost small icon-btn"
                                     onClick={cancelPhotoEdits}
-                                    title="Cancel"
+                                    data-tip="Cancel"
                                     aria-label="Cancel"
                                 >
                                     <Icon name="close" size={14} />
@@ -634,7 +667,8 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                             <button
                                 className={`ghost small icon-btn${photosEditing ? ' ok' : ''}`}
                                 onClick={() => (photosEditing ? void savePhotoEdits() : startPhotosEditing())}
-                                title={photosEditing ? 'Done' : 'Edit photos'}
+                                data-tip={photosEditing ? 'Done' : 'Edit photos'}
+                                aria-label={photosEditing ? 'Done' : 'Edit photos'}
                             >
                                 <Icon name={photosEditing ? 'check' : 'pencil'} size={14} />
                             </button>
@@ -660,7 +694,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                         <button
                                             className="ghost small thumb-rotate"
                                             onClick={() => stageRotate(p.id)}
-                                            title="Rotate 90°"
+                                            data-tip="Rotate 90°"
                                             aria-label="Rotate photo 90 degrees"
                                         >
                                             <Icon name="rotate-cw" size={15} />
@@ -681,7 +715,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                                         <button
                                             className="danger small thumb-del"
                                             onClick={() => toggleDelete(p.id)}
-                                            title={photoDeletes.has(p.id) ? 'Undo delete' : 'Delete photo'}
+                                            data-tip={photoDeletes.has(p.id) ? 'Undo delete' : 'Delete photo'}
                                             aria-label={photoDeletes.has(p.id) ? 'Undo delete' : 'Delete photo'}
                                         >
                                             <Icon name={photoDeletes.has(p.id) ? 'rotate-cw' : 'trash'} size={15} />
@@ -1264,7 +1298,7 @@ function ItemRow({
             )}
             <span className="item-actions">
                 {editing && (
-                    <button className="danger small icon-btn" onClick={remove} title="Delete" aria-label="Delete">
+                    <button className="danger small icon-btn" onClick={remove} data-tip="Delete" aria-label="Delete">
                         <Icon name="trash" size={16} />
                     </button>
                 )}
@@ -1275,7 +1309,7 @@ function ItemRow({
                             resetEdits();
                             setEditing(false);
                         }}
-                        title="Cancel"
+                        data-tip="Cancel"
                         aria-label="Cancel"
                     >
                         <Icon name="close" size={16} />
@@ -1292,7 +1326,8 @@ function ItemRow({
                             onEdit();
                         }
                     }}
-                    title={editing ? 'Done' : 'Edit'}
+                    data-tip={editing ? 'Done' : 'Edit'}
+                    aria-label={editing ? 'Done' : 'Edit'}
                 >
                     <Icon name={editing ? 'check' : 'pencil'} size={16} />
                 </button>
@@ -1374,24 +1409,40 @@ function HeaderEditor({
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
             </label>
             <div className="row header-editor-actions">
-                <button
-                    className="ghost small icon-btn"
-                    onClick={() => void onDone(false)}
-                    disabled={saving}
-                    title="Cancel"
-                    aria-label="Cancel"
+                <span
+                    className="tooltip-trigger"
+                    role="group"
+                    aria-label={saving ? 'Cancel' : undefined}
+                    data-tip={saving ? 'Cancel' : undefined}
+                    tabIndex={saving ? 0 : undefined}
                 >
-                    <Icon name="close" size={16} />
-                </button>
-                <button
-                    className="ghost small icon-btn ok"
-                    onClick={save}
-                    disabled={saving || !name.trim()}
-                    title={saving ? 'Saving…' : 'Save'}
-                    aria-label="Save"
+                    <button
+                        className="ghost small icon-btn"
+                        onClick={() => void onDone(false)}
+                        disabled={saving}
+                        data-tip="Cancel"
+                        aria-label="Cancel"
+                    >
+                        <Icon name="close" size={16} />
+                    </button>
+                </span>
+                <span
+                    className="tooltip-trigger"
+                    role="group"
+                    aria-label={saving || !name.trim() ? 'Save' : undefined}
+                    data-tip={saving || !name.trim() ? (saving ? 'Saving…' : 'Save') : undefined}
+                    tabIndex={saving || !name.trim() ? 0 : undefined}
                 >
-                    <Icon name="check" size={16} />
-                </button>
+                    <button
+                        className="ghost small icon-btn ok"
+                        onClick={save}
+                        disabled={saving || !name.trim()}
+                        data-tip={saving ? 'Saving…' : 'Save'}
+                        aria-label="Save"
+                    >
+                        <Icon name="check" size={16} />
+                    </button>
+                </span>
             </div>
         </div>
     );

@@ -151,7 +151,7 @@ function DialogHost({ state, onClose }: { state: DialogState; onClose: (result: 
                                             setValue('');
                                             inputRef.current?.focus();
                                         }}
-                                        title="Clear"
+                                        data-tip="Clear"
                                         aria-label="Clear"
                                     >
                                         <Icon name="close" size={16} />

@@ -91,6 +91,12 @@ this browser's cache; they aren't saved to production. Use the deployed site whe
 you intend to change real data. Production builds and authentication are unchanged.
 `npm run preview` reviews the last build, so rebuild after making changes.
 
+Hover hints use the shared `Tooltip` host and `data-tip` attributes, with the
+current theme's colors. Icon buttons keep an `aria-label`. Disabled buttons keep
+their native disabled behavior inside a keyboard-focusable `.tooltip-trigger`
+wrapper. Hints open on hover or focus and close on Escape, scroll or click.
+Use `data-tip` for future hints rather than a native `title` attribute.
+
 For an agent-owned preview, use `Manage-Preview.ps1` with the current session ID:
 run Status first, then Start with working directory `client`, executable `node.exe`,
 arguments `node_modules\vite\bin\vite.js`, `preview`, `--mode`, `review`, and URL

@@ -4,6 +4,7 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import App from './App';
 import { Spinner } from './Spinner';
 import { DialogProvider } from './Dialog';
+import { Tooltip } from './Tooltip';
 import './pwa';
 import './styles.css';
 
@@ -38,6 +39,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
         <DialogProvider>
             <RouterProvider router={router} />
+            <Tooltip />
         </DialogProvider>
     </React.StrictMode>
 );

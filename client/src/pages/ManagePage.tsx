@@ -170,22 +170,30 @@ function LookupSection({
                                     type="button"
                                     className="input-clear-btn"
                                     onClick={() => setDraft('')}
-                                    title="Clear"
+                                    data-tip="Clear"
                                     aria-label="Clear"
                                 >
                                     <Icon name="close" size={16} />
                                 </button>
                             )}
                         </div>
-                        <button
-                            className="small icon-btn"
-                            onClick={add}
-                            disabled={busy || !draft.trim()}
-                            title="Add"
-                            aria-label="Add"
+                        <span
+                            className="tooltip-trigger"
+                            role="group"
+                            aria-label={busy || !draft.trim() ? 'Add' : undefined}
+                            data-tip={busy || !draft.trim() ? 'Add' : undefined}
+                            tabIndex={busy || !draft.trim() ? 0 : undefined}
                         >
-                            <Icon name="plus" size={16} />
-                        </button>
+                            <button
+                                className="small icon-btn"
+                                onClick={add}
+                                disabled={busy || !draft.trim()}
+                                data-tip="Add"
+                                aria-label="Add"
+                            >
+                                <Icon name="plus" size={16} />
+                            </button>
+                        </span>
                     </div>
                     {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
                     {items.length === 0 ? (
@@ -200,7 +208,7 @@ function LookupSection({
                                     <button
                                         className="danger small icon-btn"
                                         onClick={() => remove(item)}
-                                        title="Delete"
+                                        data-tip="Delete"
                                         aria-label="Delete"
                                     >
                                         <Icon name="trash" size={15} />
@@ -208,7 +216,7 @@ function LookupSection({
                                     <button
                                         className="small ghost icon-btn"
                                         onClick={() => rename(item)}
-                                        title="Rename"
+                                        data-tip="Rename"
                                         aria-label="Rename"
                                     >
                                         <Icon name="pencil" size={15} />
