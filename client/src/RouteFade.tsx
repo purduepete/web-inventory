@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useOutlet } from 'react-router-dom';
 
 const LEAVE_MS = 250;
@@ -13,12 +13,10 @@ export function RouteFade({ refreshKey, refreshed }: { refreshKey: number; refre
     const outlet = useOutlet();
     const [shownPath, setShownPath] = useState(pathname);
     const [leaving, setLeaving] = useState(false);
-    const [shownOutlet, setShownOutlet] = useState<ReactNode>(outlet);
     const current = shownPath === pathname;
-
-    useEffect(() => {
-        if (current) setShownOutlet(outlet);
-    }, [current, outlet]);
+    // useOutlet returns a new element every render, so state here would loop forever.
+    const shownOutlet = useRef<ReactNode>(outlet);
+    if (current) shownOutlet.current = outlet;
 
     useEffect(() => {
         if (pathname === shownPath) return;
@@ -37,7 +35,7 @@ export function RouteFade({ refreshKey, refreshed }: { refreshKey: number; refre
     return (
         <div className="route-fade" data-leaving={leaving || undefined}>
             <div className="page" key={shownPath} data-refreshed={(current && refreshed) || undefined}>
-                <Fragment key={refreshKey}>{current ? outlet : shownOutlet}</Fragment>
+                <Fragment key={refreshKey}>{shownOutlet.current}</Fragment>
             </div>
         </div>
     );
