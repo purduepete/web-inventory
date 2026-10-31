@@ -107,6 +107,11 @@ function expectTheme(env, dark) {
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+test('applies the theme before requesting the font stylesheet', () => {
+    const theme = html.indexOf('<script>');
+    const font = html.indexOf('https://fonts.googleapis.com/css2');
+    assert.ok(theme >= 0 && font > theme);
+});
 for (const saved of [null, 'dark', 'midnight', 'light', 'system', 'invalid']) {
     for (const dark of [false, true]) {
         test(`prepaint/runtime agree: ${saved}, OS dark=${dark}`, () => {
