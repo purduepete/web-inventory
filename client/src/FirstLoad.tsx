@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { Spinner } from './Spinner';
 
-const ReadyContext = createContext<(failed: boolean) => void>(() => {});
+const ReadyContext = createContext<(failed: boolean, refreshReady: boolean) => void>(() => {});
 
 export function FirstLoad({ children }: { children: ReactNode }) {
     const [state, setState] = useState('pending');
@@ -25,9 +25,9 @@ export function FirstLoad({ children }: { children: ReactNode }) {
 export function PageLoad({ children, onReady }: { children: ReactNode; onReady: () => void }) {
     const reveal = useContext(ReadyContext);
     const ready = useCallback(
-        (failed: boolean) => {
-            reveal(failed);
-            onReady();
+        (failed: boolean, refreshReady: boolean) => {
+            reveal(failed, refreshReady);
+            if (refreshReady || failed) onReady();
         },
         [reveal, onReady]
     );
@@ -35,9 +35,9 @@ export function PageLoad({ children, onReady }: { children: ReactNode; onReady: 
 }
 
 // eslint-disable-next-line react-refresh/only-export-components -- Readiness hook shares the shell context.
-export function useFirstLoad(ready: boolean, failed = false) {
+export function useFirstLoad(ready: boolean, failed = false, refreshReady = ready) {
     const reveal = useContext(ReadyContext);
     useLayoutEffect(() => {
-        if (ready || failed) reveal(failed);
-    }, [ready, failed, reveal]);
+        if (ready || failed) reveal(failed, refreshReady);
+    }, [ready, failed, refreshReady, reveal]);
 }

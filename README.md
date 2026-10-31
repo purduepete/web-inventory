@@ -2,7 +2,7 @@
 
 First entry keeps the mounted header and navigation hidden until the active route's initial data-backed controls and content are ready, then reveals everything together over 600ms. Reduced motion skips the fade. Later refreshes and navigation keep the shell visible.
 
-The header refresh button uses the theme accent while the current page reloads, then returns to its normal appearance when the page is ready or reports an error. The theme button uses the same active colors while its popover is open.
+The header refresh button uses the theme accent while the current page reloads, even when cached data is visible, then returns to its normal appearance when loading finishes or reports an error. The theme button uses the same active colors while its popover is open.
 
 ## Current deployment
 

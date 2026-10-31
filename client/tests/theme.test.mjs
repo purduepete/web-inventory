@@ -95,11 +95,28 @@ test('page readiness clears refresh on success or error and preserves initial sh
     current = boundary.props.value;
     context.exports.useFirstLoad(false);
     assert.deepEqual(calls, []);
+    context.exports.useFirstLoad(true, false, false);
+    assert.deepEqual(calls, [['shell', false]]);
+    calls.length = 0;
+    context.exports.useFirstLoad(true, false, true);
+    assert.deepEqual(calls, [['shell', false], ['refresh']]);
+    calls.length = 0;
     context.exports.useFirstLoad(true);
     assert.deepEqual(calls, [['shell', false], ['refresh']]);
     calls.length = 0;
     context.exports.useFirstLoad(false, true);
     assert.deepEqual(calls, [['shell', true], ['refresh']]);
+});
+
+test('cached home data does not finish refresh before its requests settle', () => {
+    const home = readFileSync(new URL('../src/pages/HomePage.tsx', import.meta.url), 'utf8');
+    const cacheStart = home.indexOf('void Promise.all([');
+    const requestStart = home.indexOf('Promise.allSettled([', cacheStart);
+    const requestEnd = home.indexOf('return () =>', requestStart);
+    assert.ok(cacheStart >= 0 && requestStart > cacheStart && requestEnd > requestStart);
+    assert.match(home, /useFirstLoad\(ready && filtersReady, Boolean\(error\), loadSettled && filtersReady\)/);
+    assert.doesNotMatch(home.slice(cacheStart, requestStart), /setLoadSettled\(true\)/);
+    assert.match(home.slice(requestStart, requestEnd), /setLoadSettled\(true\)/);
 });
 
 const source = readFileSync(new URL('../src/theme.ts', import.meta.url), 'utf8');

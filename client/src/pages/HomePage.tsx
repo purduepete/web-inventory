@@ -40,11 +40,10 @@ export default function HomePage() {
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
     const [ready, setReady] = useState(false);
+    const [loadSettled, setLoadSettled] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    useFirstLoad(
-        ready && ((!filters.locationId && !filters.ownerId && !filters.categoryId) || searched),
-        Boolean(error)
-    );
+    const filtersReady = (!filters.locationId && !filters.ownerId && !filters.categoryId) || searched;
+    useFirstLoad(ready && filtersReady, Boolean(error), loadSettled && filtersReady);
     // Filters start expanded on tablets and larger (iPad and up); on phones
     // (iPhone) they stay collapsed behind the toggle to save vertical space.
     // The chosen state is then persisted so it sticks across navigation/reloads.
@@ -101,6 +100,7 @@ export default function HomePage() {
             if (!active) return;
             if (responses.some((r) => r.status === 'rejected')) setError('Unable to load search filters.');
             setReady(true);
+            setLoadSettled(true);
         });
         return () => {
             active = false;
