@@ -13,6 +13,7 @@ export function RouteFade({ refreshKey, refreshed }: { refreshKey: number; refre
     const outlet = useOutlet();
     const [shownPath, setShownPath] = useState(pathname);
     const [leaving, setLeaving] = useState(false);
+    const firstPage = useRef(true);
     const current = shownPath === pathname;
     // useOutlet returns a new element every render, so state here would loop forever.
     const shownOutlet = useRef<ReactNode>(outlet);
@@ -21,11 +22,13 @@ export function RouteFade({ refreshKey, refreshed }: { refreshKey: number; refre
     useEffect(() => {
         if (pathname === shownPath) return;
         if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+            firstPage.current = false;
             setShownPath(pathname);
             return;
         }
         setLeaving(true);
         const timer = setTimeout(() => {
+            firstPage.current = false;
             setLeaving(false);
             setShownPath(pathname);
         }, LEAVE_MS);
@@ -34,7 +37,12 @@ export function RouteFade({ refreshKey, refreshed }: { refreshKey: number; refre
 
     return (
         <div className="route-fade" data-leaving={leaving || undefined}>
-            <div className="page" key={shownPath} data-refreshed={(current && refreshed) || undefined}>
+            <div
+                className="page"
+                key={shownPath}
+                data-first-entry={firstPage.current || undefined}
+                data-refreshed={(current && refreshed) || undefined}
+            >
                 <Fragment key={refreshKey}>{shownOutlet.current}</Fragment>
             </div>
         </div>

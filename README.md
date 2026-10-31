@@ -1,5 +1,7 @@
 # Web Inventory
 
+First entry keeps the mounted header and navigation hidden until the active route's initial data-backed controls and content are ready, then reveals everything together over 600ms. Reduced motion skips the fade. Later refreshes and navigation keep the shell visible.
+
 ## Current deployment
 
 Migrated to jimbrownhome1 on October 18, 2026:

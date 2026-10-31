@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useFirstLoad } from '../FirstLoad';
 import { useNavigate } from 'react-router-dom';
 import type { Html5Qrcode } from 'html5-qrcode';
 
@@ -7,6 +8,7 @@ export default function ScanPage() {
     const ref = useRef<HTMLDivElement>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const [error, setError] = useState<string | null>(null);
+    useFirstLoad(true, Boolean(error));
 
     useEffect(() => {
         let stopped = false;

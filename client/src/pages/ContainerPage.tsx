@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFirstLoad } from '../FirstLoad';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { getContainersCached } from '../containersCache';
@@ -98,6 +99,9 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
 
     const [container, setContainer] = useState<ContainerWithContents | null>(null);
     const [loading, setLoading] = useState(true);
+    const [initialSectionsReady, setInitialSectionsReady] = useState(false);
+    const [initialError, setInitialError] = useState<string | null>(null);
+    useFirstLoad(!loading && initialSectionsReady, Boolean(initialError) || (!loading && !container));
     const [qr, setQr] = useState<string>('');
     const [toast, setToast] = useState<string | null>(null);
     const [suggestions, setSuggestions] = useState<DetectedItem[] | null>(null);
@@ -145,6 +149,25 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                 const c = byToken ? await api.getContainerByToken(key) : await api.getContainer(key);
                 setContainer(c);
                 setQr(await makeQrDataUrl(c.qrToken));
+                const sections = await Promise.allSettled([
+                    getLookup('locations').then(setLocations),
+                    getLookup('owners').then(setOwners),
+                    getLookup('categories').then(setCategories),
+                    getContainersCached().then((cs) => {
+                        setOtherContainers(cs.filter((entry) => entry.id !== c.id));
+                        const sameOwner = cs
+                            .filter((entry) => (entry.ownerId ?? '') === (c.ownerId ?? ''))
+                            .sort((a, b) => a.number - b.number);
+                        const index = sameOwner.findIndex((entry) => entry.id === c.id);
+                        setSiblings({ prev: sameOwner[index - 1] ?? null, next: sameOwner[index + 1] ?? null });
+                    }),
+                    getPendingSuggestions(c.id).then((suggestions) => {
+                        if (suggestions.length) setSuggestions(suggestions);
+                    }),
+                ]);
+                if (sections.some((section) => section.status === 'rejected')) {
+                    setInitialError('Some container choices could not be loaded.');
+                }
             } catch {
                 // Offline fallback: show the cached container (e.g. one just created
                 // offline) with whatever it has so far; items/photos sync later.
@@ -154,6 +177,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
                     setQr(await makeQrDataUrl(cached.qrToken));
                 } else if (!silent) setContainer(null);
             } finally {
+                setInitialSectionsReady(true);
                 if (!silent) setLoading(false);
             }
         },
@@ -468,6 +492,7 @@ export default function ContainerPage({ byToken = false }: { byToken?: boolean }
 
     return (
         <div>
+            {initialError && <p role="alert">{initialError}</p>}
             {pendingWork > 0 && (
                 <span className="card-pill sync pending-pill">
                     <Icon name="cloud" size={13} /> {pendingWork} change{pendingWork === 1 ? '' : 's'} pending sync

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useFirstLoad } from '../FirstLoad';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { createContainerOffline } from '../db';
@@ -19,6 +20,8 @@ export default function NewContainerPage() {
     const [owners, setOwners] = useState<Lookup[]>([]);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [ready, setReady] = useState(false);
+    useFirstLoad(ready, Boolean(error));
 
     // Autofocus the name field only with a fine pointer (desktop). On touch
     // devices (iPad/iPhone) autofocus pops the on-screen keyboard the moment you
@@ -41,12 +44,9 @@ export default function NewContainerPage() {
     }
 
     useEffect(() => {
-        void getLookup('locations')
-            .then(setLocations)
-            .catch(() => {});
-        void getLookup('owners')
-            .then(setOwners)
-            .catch(() => {});
+        void Promise.all([getLookup('locations').then(setLocations), getLookup('owners').then(setOwners)])
+            .catch(() => setError('Unable to load container choices.'))
+            .finally(() => setReady(true));
     }, []);
 
     async function save() {

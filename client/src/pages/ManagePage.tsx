@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useFirstLoad } from '../FirstLoad';
 import { api } from '../api';
 import { Icon } from '../Icon';
 import { Spinner } from '../Spinner';
@@ -16,6 +17,8 @@ const SECTIONS: { kind: LookupKind; title: string; icon: 'pin' | 'user' | 'tag';
 
 export default function ManagePage() {
     const [ready, setReady] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    useFirstLoad(ready, Boolean(error));
     const [initial, setInitial] = useState<Record<LookupKind, Lookup[]>>({
         locations: [],
         owners: [],
@@ -29,7 +32,10 @@ export default function ManagePage() {
                 api
                     .listLookup(s.kind)
                     .then((items) => ({ kind: s.kind, items }))
-                    .catch(() => ({ kind: s.kind, items: [] as Lookup[] }))
+                    .catch(() => {
+                        if (active) setError('Unable to load tags.');
+                        return { kind: s.kind, items: [] as Lookup[] };
+                    })
             )
         ).then((res) => {
             if (!active) return;
@@ -43,6 +49,7 @@ export default function ManagePage() {
         };
     }, []);
 
+    if (error) return <p role="alert">{error}</p>;
     if (!ready) return <Spinner page label="Loading tags" />;
 
     return (

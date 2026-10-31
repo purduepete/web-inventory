@@ -8,6 +8,7 @@ import { KeyGate } from './KeyGate';
 import { clearKey, getKey, validateKey, KEY_INVALID_EVENT, platformAuth } from './api';
 import { readTheme, trackTheme, type ThemePreference } from './theme';
 import { RouteFade } from './RouteFade';
+import { FirstLoad } from './FirstLoad';
 
 const THEME_LABELS: Record<ThemePreference, string> = {
     system: 'System',
@@ -211,206 +212,212 @@ export default function App() {
     }
 
     return (
-        <div className="app">
-            <header className="topbar">
-                <span className="brand">
-                    <span className="brand-mark">
-                        <Icon name="box" size={18} />
-                    </span>
-                    Web Inventory
-                </span>
-                <div className="topbar-actions">
-                    {(!online || pending > 0 || syncing) && (
-                        <button
-                            type="button"
-                            className={`sync-pill ${syncing ? 'syncing' : !online ? 'offline' : 'idle'}`}
-                            onClick={manualSync}
-                            aria-label={
-                                syncing
-                                    ? `Syncing, ${pending} remaining`
-                                    : !online
-                                      ? `Offline, ${pending} to sync`
-                                      : `${pending} to sync, tap to sync`
-                            }
-                        >
-                            <Icon
-                                name={syncing ? 'sync' : !online ? 'cloud-off' : 'cloud'}
-                                size={15}
-                                className={syncing ? 'spinning' : undefined}
-                            />
-                            <span>{pending}</span>
-                        </button>
-                    )}
-                    <div
-                        className="header-popover-anchor"
-                        ref={infoAnchorRef}
-                        onMouseEnter={() => setHeaderPanel('info')}
-                        onMouseLeave={() => {
-                            if (!infoAnchorRef.current?.contains(document.activeElement)) setHeaderPanel(null);
-                        }}
-                        onBlur={(event) => {
-                            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                                setHeaderPanel((current) => (current === 'info' ? null : current));
-                            }
-                        }}
-                    >
-                        <span id="refresh-sync-description" className="sr-only">
-                            Reload fetches the current view again. Sync sends queued changes to the cloud.
+        <>
+            <FirstLoad>
+                <header className="topbar">
+                    <span className="brand">
+                        <span className="brand-mark">
+                            <Icon name="box" size={18} />
                         </span>
-                        <button
-                            ref={infoTriggerRef}
-                            type="button"
-                            className="theme-toggle"
-                            onClick={() => setHeaderPanel('info')}
-                            onFocus={() => setHeaderPanel('info')}
-                            aria-label="Refresh and sync information"
-                            aria-describedby="refresh-sync-description"
-                            aria-haspopup="dialog"
-                            aria-expanded={headerPanel === 'info'}
-                            aria-controls="refresh-sync-popover"
-                        >
-                            <Info size={18} aria-hidden="true" />
-                        </button>
-                        <div
-                            id="refresh-sync-popover"
-                            className="header-popover"
-                            role="dialog"
-                            aria-labelledby="refresh-sync-title"
-                            hidden={headerPanel !== 'info'}
-                        >
-                            <h2 id="refresh-sync-title">Refresh and sync</h2>
-                            <p>Reload fetches the current view again. Sync sends your queued changes to the cloud.</p>
+                        Web Inventory
+                    </span>
+                    <div className="topbar-actions">
+                        {(!online || pending > 0 || syncing) && (
                             <button
                                 type="button"
-                                className="ghost small"
-                                onClick={() => {
-                                    setHeaderPanel(null);
-                                    setHelpOpen(true);
-                                }}
-                            >
-                                Help and key concepts
-                            </button>
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        className={`theme-toggle reload-btn${reloading ? ' spinning' : ''}`}
-                        onClick={reloadData}
-                        aria-label="Reload data"
-                        aria-busy={reloading}
-                        disabled={reloading}
-                    >
-                        <RefreshCw size={18} aria-hidden="true" />
-                    </button>
-                    <div
-                        className="header-popover-anchor"
-                        ref={themeAnchorRef}
-                        onBlur={(event) => {
-                            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                                setHeaderPanel((current) => (current === 'theme' ? null : current));
-                            }
-                        }}
-                    >
-                        <button
-                            ref={themeTriggerRef}
-                            type="button"
-                            className="theme-toggle"
-                            onClick={() => setHeaderPanel((current) => (current === 'theme' ? null : 'theme'))}
-                            aria-label={`Theme: ${THEME_LABELS[theme]}`}
-                            aria-haspopup="dialog"
-                            aria-expanded={headerPanel === 'theme'}
-                            aria-controls="theme-popover"
-                        >
-                            <Palette size={18} aria-hidden="true" />
-                        </button>
-                        <div
-                            id="theme-popover"
-                            className="header-popover"
-                            role="dialog"
-                            aria-label="Appearance settings"
-                            hidden={headerPanel !== 'theme'}
-                        >
-                            <span className="header-popover-label">Theme</span>
-                            <div
-                                className="header-theme-picker"
-                                role="group"
-                                aria-label="Theme"
-                                style={
-                                    { '--theme-index': ['light', 'midnight', 'system'].indexOf(theme) } as CSSProperties
+                                className={`sync-pill ${syncing ? 'syncing' : !online ? 'offline' : 'idle'}`}
+                                onClick={manualSync}
+                                aria-label={
+                                    syncing
+                                        ? `Syncing, ${pending} remaining`
+                                        : !online
+                                          ? `Offline, ${pending} to sync`
+                                          : `${pending} to sync, tap to sync`
                                 }
                             >
-                                <span className="header-theme-selection" aria-hidden="true" />
+                                <Icon
+                                    name={syncing ? 'sync' : !online ? 'cloud-off' : 'cloud'}
+                                    size={15}
+                                    className={syncing ? 'spinning' : undefined}
+                                />
+                                <span>{pending}</span>
+                            </button>
+                        )}
+                        <div
+                            className="header-popover-anchor"
+                            ref={infoAnchorRef}
+                            onMouseEnter={() => setHeaderPanel('info')}
+                            onMouseLeave={() => {
+                                if (!infoAnchorRef.current?.contains(document.activeElement)) setHeaderPanel(null);
+                            }}
+                            onBlur={(event) => {
+                                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                                    setHeaderPanel((current) => (current === 'info' ? null : current));
+                                }
+                            }}
+                        >
+                            <span id="refresh-sync-description" className="sr-only">
+                                Reload fetches the current view again. Sync sends queued changes to the cloud.
+                            </span>
+                            <button
+                                ref={infoTriggerRef}
+                                type="button"
+                                className="theme-toggle"
+                                onClick={() => setHeaderPanel('info')}
+                                onFocus={() => setHeaderPanel('info')}
+                                aria-label="Refresh and sync information"
+                                aria-describedby="refresh-sync-description"
+                                aria-haspopup="dialog"
+                                aria-expanded={headerPanel === 'info'}
+                                aria-controls="refresh-sync-popover"
+                            >
+                                <Info size={18} aria-hidden="true" />
+                            </button>
+                            <div
+                                id="refresh-sync-popover"
+                                className="header-popover"
+                                role="dialog"
+                                aria-labelledby="refresh-sync-title"
+                                hidden={headerPanel !== 'info'}
+                            >
+                                <h2 id="refresh-sync-title">Refresh and sync</h2>
+                                <p>
+                                    Reload fetches the current view again. Sync sends your queued changes to the cloud.
+                                </p>
                                 <button
                                     type="button"
-                                    className="header-theme-option"
-                                    onClick={() => setTheme('light')}
-                                    aria-pressed={theme === 'light'}
+                                    className="ghost small"
+                                    onClick={() => {
+                                        setHeaderPanel(null);
+                                        setHelpOpen(true);
+                                    }}
                                 >
-                                    <Sun size={15} aria-hidden="true" />
-                                    <span>Light</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    className="header-theme-option"
-                                    onClick={() => setTheme('midnight')}
-                                    aria-pressed={theme === 'midnight'}
-                                >
-                                    <Moon size={15} aria-hidden="true" />
-                                    <span>Midnight</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    className="header-theme-option"
-                                    onClick={() => setTheme('system')}
-                                    aria-pressed={theme === 'system'}
-                                >
-                                    <Monitor size={15} aria-hidden="true" />
-                                    <span>System</span>
+                                    Help and key concepts
                                 </button>
                             </div>
                         </div>
+                        <button
+                            type="button"
+                            className={`theme-toggle reload-btn${reloading ? ' spinning' : ''}`}
+                            onClick={reloadData}
+                            aria-label="Reload data"
+                            aria-busy={reloading}
+                            disabled={reloading}
+                        >
+                            <RefreshCw size={18} aria-hidden="true" />
+                        </button>
+                        <div
+                            className="header-popover-anchor"
+                            ref={themeAnchorRef}
+                            onBlur={(event) => {
+                                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                                    setHeaderPanel((current) => (current === 'theme' ? null : current));
+                                }
+                            }}
+                        >
+                            <button
+                                ref={themeTriggerRef}
+                                type="button"
+                                className="theme-toggle"
+                                onClick={() => setHeaderPanel((current) => (current === 'theme' ? null : 'theme'))}
+                                aria-label={`Theme: ${THEME_LABELS[theme]}`}
+                                aria-haspopup="dialog"
+                                aria-expanded={headerPanel === 'theme'}
+                                aria-controls="theme-popover"
+                            >
+                                <Palette size={18} aria-hidden="true" />
+                            </button>
+                            <div
+                                id="theme-popover"
+                                className="header-popover"
+                                role="dialog"
+                                aria-label="Appearance settings"
+                                hidden={headerPanel !== 'theme'}
+                            >
+                                <span className="header-popover-label">Theme</span>
+                                <div
+                                    className="header-theme-picker"
+                                    role="group"
+                                    aria-label="Theme"
+                                    style={
+                                        {
+                                            '--theme-index': ['light', 'midnight', 'system'].indexOf(theme),
+                                        } as CSSProperties
+                                    }
+                                >
+                                    <span className="header-theme-selection" aria-hidden="true" />
+                                    <button
+                                        type="button"
+                                        className="header-theme-option"
+                                        onClick={() => setTheme('light')}
+                                        aria-pressed={theme === 'light'}
+                                    >
+                                        <Sun size={15} aria-hidden="true" />
+                                        <span>Light</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="header-theme-option"
+                                        onClick={() => setTheme('midnight')}
+                                        aria-pressed={theme === 'midnight'}
+                                    >
+                                        <Moon size={15} aria-hidden="true" />
+                                        <span>Midnight</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="header-theme-option"
+                                        onClick={() => setTheme('system')}
+                                        aria-pressed={theme === 'system'}
+                                    >
+                                        <Monitor size={15} aria-hidden="true" />
+                                        <span>System</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </header>
+                </header>
 
-            <main className="content">
-                <RouteFade refreshKey={reloadKey} refreshed={reloadedLocation === location.key} />
-            </main>
-            {syncMsg && (
-                <div className="toast" role="status" onClick={() => setSyncMsg(null)}>
-                    {syncMsg}
-                </div>
-            )}
-            <nav className="tabbar">
-                <NavLink to="/" end className="tab">
-                    <Icon name="search" />
-                    Search
-                </NavLink>
-                <div className="tab-group">
-                    <div className="tab-group-title">
-                        <Icon name="boxes" />
-                        Containers
+                <main className="content">
+                    <RouteFade refreshKey={reloadKey} refreshed={reloadedLocation === location.key} />
+                </main>
+                {syncMsg && (
+                    <div className="toast" role="status" onClick={() => setSyncMsg(null)}>
+                        {syncMsg}
                     </div>
-                    <NavLink to="/containers" end className="tab subtab">
-                        <Icon name="box" />
-                        Inventory
+                )}
+                <nav className="tabbar">
+                    <NavLink to="/" end className="tab">
+                        <Icon name="search" />
+                        Search
                     </NavLink>
-                    <NavLink to="/containers/new" className="tab subtab">
-                        <Icon name="plus" />
-                        Add
+                    <div className="tab-group">
+                        <div className="tab-group-title">
+                            <Icon name="boxes" />
+                            Containers
+                        </div>
+                        <NavLink to="/containers" end className="tab subtab">
+                            <Icon name="box" />
+                            Inventory
+                        </NavLink>
+                        <NavLink to="/containers/new" className="tab subtab">
+                            <Icon name="plus" />
+                            Add
+                        </NavLink>
+                    </div>
+                    <NavLink to="/scan" className="tab">
+                        <Icon name="scan" />
+                        Scan
                     </NavLink>
-                </div>
-                <NavLink to="/scan" className="tab">
-                    <Icon name="scan" />
-                    Scan
-                </NavLink>
-                <NavLink to="/manage" className="tab">
-                    <Icon name="tag" />
-                    Tags
-                </NavLink>
-            </nav>
+                    <NavLink to="/manage" className="tab">
+                        <Icon name="tag" />
+                        Tags
+                    </NavLink>
+                </nav>
 
-            <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} onSignOut={signOut} />
-        </div>
+                <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} onSignOut={signOut} />
+            </FirstLoad>
+        </>
     );
 }

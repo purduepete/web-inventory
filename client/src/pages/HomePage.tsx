@@ -7,6 +7,7 @@ import { Spinner } from '../Spinner';
 import { getCachedLookupFast, getCachedTagsFast, getLookup, getTags } from '../lookups';
 import { usePersistentToggle } from '../usePersistentToggle';
 import type { Facet, Item, Lookup } from '../types';
+import { useFirstLoad } from '../FirstLoad';
 
 const FILTER_KEY = 'webinv.search.filters';
 
@@ -39,6 +40,11 @@ export default function HomePage() {
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
     const [ready, setReady] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    useFirstLoad(
+        ready && ((!filters.locationId && !filters.ownerId && !filters.categoryId) || searched),
+        Boolean(error)
+    );
     // Filters start expanded on tablets and larger (iPad and up); on phones
     // (iPhone) they stay collapsed behind the toggle to save vertical space.
     // The chosen state is then persisted so it sticks across navigation/reloads.
@@ -48,21 +54,57 @@ export default function HomePage() {
     );
 
     useEffect(() => {
-        // Paint instantly from cached lists so a cold-started API doesn't block
-        // the page; the network fetches below then refresh them.
-        Promise.allSettled([
-            getCachedTagsFast().then((t) => t && setTags(t)),
-            getCachedLookupFast('locations').then((l) => l && setLocations(l)),
-            getCachedLookupFast('owners').then((l) => l && setOwners(l)),
-            getCachedLookupFast('categories').then((l) => l && setCategories(l)),
-        ]).finally(() => setReady(true)); // render from cache; don't wait on cold API
+        let active = true;
+        let cachedFacets: Facet[] | undefined;
+        try {
+            const cached: unknown = JSON.parse(localStorage.getItem('webinv.search.facets') ?? 'null');
+            if (Array.isArray(cached)) cachedFacets = cached as Facet[];
+        } catch {
+            /* Storage may be unavailable. */
+        }
+        void Promise.all([
+            getCachedTagsFast(),
+            getCachedLookupFast('locations'),
+            getCachedLookupFast('owners'),
+            getCachedLookupFast('categories'),
+        ])
+            .then(([tags, locations, owners, categories]) => {
+                if (!active || !tags || !locations || !owners || !categories || !cachedFacets) return;
+                setTags(tags);
+                setLocations(locations);
+                setOwners(owners);
+                setCategories(categories);
+                setFacets(cachedFacets);
+                setReady(true);
+            })
+            .catch(() => {});
         Promise.allSettled([
             getTags().then(setTags),
             getLookup('locations').then(setLocations),
             getLookup('owners').then(setOwners),
             getLookup('categories').then(setCategories),
-            api.listFacets().then(setFacets),
-        ]).finally(() => setReady(true));
+            api
+                .listFacets()
+                .then((facets) => {
+                    if (!active) return;
+                    setFacets(facets);
+                    try {
+                        localStorage.setItem('webinv.search.facets', JSON.stringify(facets));
+                    } catch {
+                        /* Storage may be unavailable. */
+                    }
+                })
+                .catch((error: unknown) => {
+                    if (!cachedFacets) throw error;
+                }),
+        ]).then((responses) => {
+            if (!active) return;
+            if (responses.some((r) => r.status === 'rejected')) setError('Unable to load search filters.');
+            setReady(true);
+        });
+        return () => {
+            active = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -133,7 +175,7 @@ export default function HomePage() {
                     setHasMore(r.hasMore);
                     setSearched(true);
                 })
-                .catch(() => undefined)
+                .catch(() => setError('Unable to load search results.'))
                 .finally(() => {
                     if (!cancelled) setLoading(false);
                 });
@@ -144,6 +186,7 @@ export default function HomePage() {
         };
     }, [q, tag, filters, hasFilter]);
 
+    if (error) return <p role="alert">{error}</p>;
     if (!ready) return <Spinner page label="Loading search" />;
 
     return (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useFirstLoad } from '../FirstLoad';
 import { Link } from 'react-router-dom';
 import { getContainersCached } from '../containersCache';
 import { replaceCachedContainers, db, pendingContainerIds, suggestionContainerIds } from '../db';
@@ -13,6 +14,9 @@ const GROUPS_KEY = 'containerGroupsOpen';
 export default function ContainersPage() {
     const [containers, setContainers] = useState<Container[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [badgesReady, setBadgesReady] = useState(false);
+    useFirstLoad(!loading && badgesReady, Boolean(error));
     const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
     const [reviewIds, setReviewIds] = useState<Set<string>>(new Set());
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
@@ -34,7 +38,10 @@ export default function ContainersPage() {
             .catch(async () => {
                 // Offline fallback: show cached containers.
                 const cached = await db.containers.orderBy('number').toArray();
-                if (active) setContainers(cached);
+                if (active) {
+                    setContainers(cached);
+                    if (!cached.length) setError('Unable to load containers.');
+                }
             })
             .finally(() => active && setLoading(false));
         return () => {
@@ -44,8 +51,10 @@ export default function ContainersPage() {
 
     useEffect(() => {
         const refresh = () => {
-            void pendingContainerIds().then(setPendingIds);
-            void suggestionContainerIds().then(setReviewIds);
+            void Promise.all([
+                pendingContainerIds().then(setPendingIds),
+                suggestionContainerIds().then(setReviewIds),
+            ]).finally(() => setBadgesReady(true));
         };
         refresh();
         window.addEventListener('pending-changed', refresh);
@@ -79,6 +88,7 @@ export default function ContainersPage() {
         });
     }
 
+    if (error) return <p role="alert">{error}</p>;
     if (loading) return <Spinner page label="Loading containers" />;
 
     return (
