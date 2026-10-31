@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Info, Monitor, Moon, Palette, RefreshCw, Sun } from 'lucide-react';
 import { pendingCount, syncNow } from './db';
@@ -37,6 +37,7 @@ export default function App() {
     const [reloadKey, setReloadKey] = useState(0);
     const [reloadedLocation, setReloadedLocation] = useState<string | null>(null);
     const [reloading, setReloading] = useState(false);
+    const finishReload = useCallback(() => setReloading(false), []);
     const [helpOpen, setHelpOpen] = useState(false);
     const [theme, setTheme] = useState<ThemePreference>(readTheme);
     const [headerPanel, setHeaderPanel] = useState<'info' | 'theme' | null>(null);
@@ -76,7 +77,6 @@ export default function App() {
         // Remount the current route so its data-loading effects re-run.
         setReloadedLocation(location.key);
         setReloadKey((k) => k + 1);
-        setTimeout(() => setReloading(false), 1000);
     }
 
     useEffect(() => {
@@ -380,7 +380,11 @@ export default function App() {
                 </header>
 
                 <main className="content">
-                    <RouteFade refreshKey={reloadKey} refreshed={reloadedLocation === location.key} />
+                    <RouteFade
+                        refreshKey={reloadKey}
+                        refreshed={reloadedLocation === location.key}
+                        onReady={finishReload}
+                    />
                 </main>
                 {syncMsg && (
                     <div className="toast" role="status" onClick={() => setSyncMsg(null)}>

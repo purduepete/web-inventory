@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useOutlet } from 'react-router-dom';
+import { PageLoad } from './FirstLoad';
 
 const LEAVE_MS = 250;
 
@@ -8,7 +9,15 @@ const LEAVE_MS = 250;
  * in over 600ms (see `.route-fade` in styles.css). Query-string changes update in
  * place. `refreshKey` remounts the current route without replaying the fade.
  */
-export function RouteFade({ refreshKey, refreshed }: { refreshKey: number; refreshed: boolean }) {
+export function RouteFade({
+    refreshKey,
+    refreshed,
+    onReady,
+}: {
+    refreshKey: number;
+    refreshed: boolean;
+    onReady: () => void;
+}) {
     const { pathname } = useLocation();
     const outlet = useOutlet();
     const [shownPath, setShownPath] = useState(pathname);
@@ -43,7 +52,9 @@ export function RouteFade({ refreshKey, refreshed }: { refreshKey: number; refre
                 data-first-entry={firstPage.current || undefined}
                 data-refreshed={(current && refreshed) || undefined}
             >
-                <Fragment key={refreshKey}>{shownOutlet.current}</Fragment>
+                <Fragment key={refreshKey}>
+                    <PageLoad onReady={onReady}>{shownOutlet.current}</PageLoad>
+                </Fragment>
             </div>
         </div>
     );

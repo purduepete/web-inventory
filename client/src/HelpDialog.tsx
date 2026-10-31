@@ -189,12 +189,6 @@ export function HelpDialog({
                     </section>
                     <p className="build-tag">Build {__BUILD_SHA__}</p>
                 </div>
-
-                <div className="modal-actions">
-                    <button type="button" onClick={onClose}>
-                        Got it
-                    </button>
-                </div>
             </div>
         </div>
     );

@@ -2,6 +2,8 @@
 
 First entry keeps the mounted header and navigation hidden until the active route's initial data-backed controls and content are ready, then reveals everything together over 600ms. Reduced motion skips the fade. Later refreshes and navigation keep the shell visible.
 
+The header refresh button uses the theme accent while the current page reloads, then returns to its normal appearance when the page is ready or reports an error. The theme button uses the same active colors while its popover is open.
+
 ## Current deployment
 
 Migrated to jimbrownhome1 on October 18, 2026:
@@ -41,15 +43,15 @@ Re-install from the URL above after any such move.
 
 ## Stack
 
-| Layer   | Tech                                                                                      |
-| ------- | ----------------------------------------------------------------------------------------- |
-| Client  | React + TypeScript + Vite, PWA (`vite-plugin-pwa`), Dexie (offline), html5-qrcode, qrcode |
-| API     | C# .NET 8 isolated Azure Functions, Dapper                                                |
+| Layer   | Tech                                                                                                                  |
+| ------- | --------------------------------------------------------------------------------------------------------------------- |
+| Client  | React + TypeScript + Vite, PWA (`vite-plugin-pwa`), Dexie (offline), html5-qrcode, qrcode                             |
+| API     | C# .NET 8 isolated Azure Functions, Dapper                                                                            |
 | Hosting | Azure Static Web Apps (Free, no linked backend) + Function App (Consumption), called cross-origin via `VITE_API_BASE` |
-| Auth    | Access keys — DB-backed, SHA-256 hashed (`inv.AccessKey`); `x-api-key` header enforced by `KeyAuthMiddleware` |
-| Data    | Existing Azure SQL `webportfolio` DB, new `inv` schema                                    |
-| Images  | New Azure Storage account (Blob), managed identity                                        |
-| AI      | New Azure OpenAI resource, `gpt-5-mini` deployment                                        |
+| Auth    | Access keys — DB-backed, SHA-256 hashed (`inv.AccessKey`); `x-api-key` header enforced by `KeyAuthMiddleware`         |
+| Data    | Existing Azure SQL `webportfolio` DB, new `inv` schema                                                                |
+| Images  | New Azure Storage account (Blob), managed identity                                                                    |
+| AI      | New Azure OpenAI resource, `gpt-5-mini` deployment                                                                    |
 
 ## Layout
 
@@ -216,12 +218,12 @@ HTTP-triggered function and returns **401** otherwise. Functions stay at
 Because keys are the gate, the linked Function App's App Service Authentication
 ("Easy Auth") is set to **allow unauthenticated requests**
 (`unauthenticatedClientAction = AllowAnonymous`) so requests reach the worker where
-the middleware runs. Do **not** delete the *Azure Static Web Apps (Linked)* identity
+the middleware runs. Do **not** delete the _Azure Static Web Apps (Linked)_ identity
 provider; just leave it in allow-anonymous mode. The Bicep intentionally does **not**
 declare `authsettingsV2`.
 
 **Consequence:** the direct Function URL is reachable by anyone, so the middleware is
-the *sole* protection — it is deliberately **fail-closed** (missing/invalid key → 401)
+the _sole_ protection — it is deliberately **fail-closed** (missing/invalid key → 401)
 and must never be removed or bypassed. A short-lived `IMemoryCache` fronts the DB key
 lookup to blunt brute-force/DoS against the shared SQL database.
 
@@ -247,6 +249,7 @@ curl -i -H "x-api-key: <key>" https://<func-host>/api/containers  # -> 200
 - Photos are downscaled client-side (max 1024px) before upload + AI.
 - Vision calls use `gpt-5-mini` at `low` image detail.
 - Function App runs on Consumption; Static Web App on Standard (linked backends require it).
+
 ## Theme preferences
 
 The header theme selector offers System, Light and Midnight, with Midnight as the default.

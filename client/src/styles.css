@@ -240,6 +240,13 @@ body {
     color: var(--text);
     filter: none;
 }
+.theme-toggle[aria-busy='true'],
+.theme-toggle[aria-expanded='true'] {
+    background: var(--accent);
+    color: var(--on-accent);
+    opacity: 1;
+    filter: none;
+}
 .reload-btn.spinning svg {
     animation: spin 1.2s linear infinite;
 }
@@ -1177,9 +1184,15 @@ button.icon-btn {
     height: 36px;
     border-radius: var(--radius);
 }
-button:disabled,
-:root[data-theme='light'] button:disabled:not(.ghost):not(.danger):not(.select-trigger):not(.select-option),
-:root:not([data-theme='dark']) button:disabled:not(.ghost):not(.danger):not(.select-trigger):not(.select-option) {
+button:disabled:not(.reload-btn[aria-busy='true']),
+:root[data-theme='light']
+    button:disabled:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(
+        .reload-btn[aria-busy='true']
+    ),
+:root:not([data-theme='dark'])
+    button:disabled:not(.ghost):not(.danger):not(.select-trigger):not(.select-option):not(
+        .reload-btn[aria-busy='true']
+    ) {
     opacity: 0.5;
     background: var(--surface-2);
     color: var(--muted);

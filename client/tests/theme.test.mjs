@@ -52,6 +52,56 @@ test('header exposes refresh information and one accessible theme popover', () =
     assert.match(narrowPopoverStyles, /width:\s*min\(/);
 });
 
+test('active header controls use paired theme colors until their state clears', () => {
+    const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8');
+    const active = styles.match(
+        /\.theme-toggle\[aria-busy='true'\],\s*\.theme-toggle\[aria-expanded='true'\]\s*\{([^}]*)\}/
+    )?.[1];
+    assert.ok(active);
+    assert.match(active, /background:\s*var\(--accent\);/);
+    assert.match(active, /color:\s*var\(--on-accent\);/);
+    assert.match(active, /opacity:\s*1;/);
+    assert.match(styles, /button:disabled:not\(\.reload-btn\[aria-busy='true'\]\)/);
+    const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+    assert.doesNotMatch(app, /setTimeout\(\(\) => setReloading\(false\)/);
+    assert.match(app, /onReady={finishReload}/);
+});
+
+test('page readiness clears refresh on success or error and preserves initial shell readiness', () => {
+    const source = readFileSync(new URL('../src/FirstLoad.tsx', import.meta.url), 'utf8');
+    const js = ts.transpileModule(source, {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+    }).outputText;
+    const calls = [];
+    let current = (failed) => calls.push(['shell', failed]);
+    const context = {
+        exports: {},
+        require: (name) => {
+            if (name === 'react') {
+                return {
+                    createContext: () => ({ Provider: 'provider' }),
+                    useContext: () => current,
+                    useCallback: (callback) => callback,
+                    useLayoutEffect: (effect) => effect(),
+                };
+            }
+            if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }) };
+            if (name === './Spinner') return {};
+            throw new Error(`Unexpected import: ${name}`);
+        },
+    };
+    runInNewContext(js, context);
+    const boundary = context.exports.PageLoad({ children: 'page', onReady: () => calls.push(['refresh']) });
+    current = boundary.props.value;
+    context.exports.useFirstLoad(false);
+    assert.deepEqual(calls, []);
+    context.exports.useFirstLoad(true);
+    assert.deepEqual(calls, [['shell', false], ['refresh']]);
+    calls.length = 0;
+    context.exports.useFirstLoad(false, true);
+    assert.deepEqual(calls, [['shell', true], ['refresh']]);
+});
+
 const source = readFileSync(new URL('../src/theme.ts', import.meta.url), 'utf8');
 const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 

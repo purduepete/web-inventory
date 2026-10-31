@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { Spinner } from './Spinner';
 
 const ReadyContext = createContext<(failed: boolean) => void>(() => {});
@@ -20,6 +20,18 @@ export function FirstLoad({ children }: { children: ReactNode }) {
             {state === 'pending' && <Spinner page label="Loading inventory" />}
         </ReadyContext.Provider>
     );
+}
+
+export function PageLoad({ children, onReady }: { children: ReactNode; onReady: () => void }) {
+    const reveal = useContext(ReadyContext);
+    const ready = useCallback(
+        (failed: boolean) => {
+            reveal(failed);
+            onReady();
+        },
+        [reveal, onReady]
+    );
+    return <ReadyContext.Provider value={ready}>{children}</ReadyContext.Provider>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components -- Readiness hook shares the shell context.

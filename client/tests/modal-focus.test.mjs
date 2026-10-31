@@ -61,3 +61,11 @@ test('Add item modal focuses Close on iPhone and iPad and the name field on desk
     );
     assert.doesNotMatch(name, /readOnly|tabIndex|autoFocus/);
 });
+
+test('Help and key concepts modal has no Got it button and keeps its close controls', () => {
+    const dialog = source('HelpDialog.tsx');
+    assert.doesNotMatch(dialog, />\s*Got it\s*</);
+    assert.match(dialog, /aria-label="Close" onClick=\{onClose\}/);
+    assert.match(dialog, /if \(e\.key === 'Escape'\) onClose\(\)/);
+    assert.match(dialog, /className="modal-backdrop" onMouseDown=\{onClose\}/);
+});
