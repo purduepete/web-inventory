@@ -12,7 +12,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/theme.test.mjs tests/container-page.test.mjs tests/preview.test.mjs tests/tooltip.test.mjs",
+    "test": "node --test tests/theme.test.mjs tests/container-page.test.mjs tests/preview.test.mjs tests/tooltip.test.mjs tests/modal-focus.test.mjs",
     "prepare": "cd .. && husky"
   },
   "dependencies": {

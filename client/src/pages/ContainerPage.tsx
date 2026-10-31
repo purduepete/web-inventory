@@ -14,6 +14,7 @@ import {
 import { downscaleImage } from '../image';
 import { makeQrDataUrl, printLabel } from '../qr';
 import { Icon } from '../Icon';
+import { isAppleTouchDevice } from '../device';
 import { ClearableInput } from '../ClearableInput';
 import { Select } from '../Select';
 import { Menu } from '../Menu';
@@ -896,9 +897,11 @@ function AddItemModal({
     const [saving, setSaving] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
     const nameRef = useRef<HTMLInputElement>(null);
+    const closeRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
-        nameRef.current?.focus();
+        // On iPhone and iPad, focusing the name field would open the software keyboard.
+        (isAppleTouchDevice() ? closeRef : nameRef).current?.focus();
     }, []);
 
     useEffect(() => {
@@ -1001,6 +1004,7 @@ function AddItemModal({
                     <h2 className="modal-title">Add item</h2>
                     <button
                         type="button"
+                        ref={closeRef}
                         className="ghost small icon-btn"
                         aria-label="Close"
                         onClick={() => onClose(false)}

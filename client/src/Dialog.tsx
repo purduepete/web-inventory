@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
+import { isAppleTouchDevice } from './device';
 
 interface ConfirmOptions {
     title?: string;
@@ -71,10 +72,12 @@ function DialogHost({ state, onClose }: { state: DialogState; onClose: (result: 
     const [value, setValue] = useState(state.kind === 'prompt' ? (state.defaultValue ?? '') : '');
     const inputRef = useRef<HTMLInputElement>(null);
     const confirmRef = useRef<HTMLButtonElement>(null);
+    const closeRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
         if (state.kind === 'prompt') {
-            inputRef.current?.focus();
+            // On iPhone and iPad, focusing the input would open the software keyboard.
+            (isAppleTouchDevice() ? closeRef : inputRef).current?.focus();
         } else {
             confirmRef.current?.focus();
         }
@@ -111,6 +114,7 @@ function DialogHost({ state, onClose }: { state: DialogState; onClose: (result: 
                     <h2 className="modal-title">{title}</h2>
                     <button
                         type="button"
+                        ref={closeRef}
                         className="ghost small icon-btn"
                         aria-label="Close"
                         onClick={() => onClose(state.kind === 'confirm' ? false : null)}

@@ -97,6 +97,8 @@ their native disabled behavior inside a keyboard-focusable `.tooltip-trigger`
 wrapper. Hints open on hover or focus and close on Escape, scroll or click.
 Use `data-tip` for future hints rather than a native `title` attribute.
 
+On iPhone and iPad, name prompts and the Add item modal open with focus on Close so the software keyboard stays closed; desktop browsers still focus the first field, and tapping a field edits it as usual.
+
 For an agent-owned preview, use `Manage-Preview.ps1` with the current session ID:
 run Status first, then Start with working directory `client`, executable `node.exe`,
 arguments `node_modules\vite\bin\vite.js`, `preview`, `--mode`, `review`, and URL
