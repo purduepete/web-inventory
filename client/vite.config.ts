@@ -99,11 +99,8 @@ export default defineConfig(({ isPreview, mode }) => ({
                 skipWaiting: true,
                 clientsClaim: true,
                 cleanupOutdatedCaches: true,
-                // Let the network/platform handle anything that isn't an app route:
-                // - /api/* is queued offline via Dexie and uses platform access.
-                // Without this, the service worker's navigation fallback would serve
-                // the cached app shell for API requests.
-                navigateFallbackDenylist: [/^\/api/],
+                // API and image navigations must reach the server rather than the app shell.
+                navigateFallbackDenylist: [/^\/api/, /^\/images(?:[/?]|$)/],
                 runtimeCaching: [
                     {
                         urlPattern: ({ url }) => url.pathname.startsWith('/api'),

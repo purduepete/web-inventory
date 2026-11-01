@@ -18,6 +18,9 @@ Migrated to jimbrownhome1 on October 18, 2026:
 - Azure OpenAI remains an outbound integration with credentials in the protected
   runtime settings file.
 
+The service worker leaves image URLs out of its navigation fallback, so opening
+a full-size photo loads the image instead of the app shell.
+
 All 88 database rows were compared before import commit. All 12 original image
 files matched the final Azure downloads by SHA-256. Original IDs and QR tokens
 remain unchanged. Reinstall the PWA from the new public hostname; browser-local
