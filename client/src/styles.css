@@ -19,6 +19,11 @@
     --scrollbar-track: #080f20;
     --scrollbar-thumb: #3b4962;
     --scrollbar-thumb-hover: #64748b;
+    /* Site icon colors (public/favicon.svg); the light set matches apple-touch-icon-light.svg. */
+    --brand-amber: #fbbf24;
+    --brand-orange: #fb923c;
+    --brand-steel: #6b8cae;
+    --brand-sky: #38bdf8;
     --font:
         'Roboto Flex', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial,
         'Noto Sans', sans-serif;
@@ -63,6 +68,10 @@
     --scrollbar-thumb: var(--l-scrollbar-thumb);
     --scrollbar-thumb-hover: var(--l-scrollbar-thumb-hover);
     --tab-active-bg: color-mix(in srgb, var(--accent) 12%, var(--card));
+    --brand-amber: #d97706;
+    --brand-orange: #ea580c;
+    --brand-steel: #2f477b;
+    --brand-sky: #0284c7;
     color-scheme: light;
 }
 

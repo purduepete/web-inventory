@@ -1,5 +1,11 @@
 export type ThemePreference = 'system' | 'light' | 'midnight';
 
+// iOS saves whichever site icon is linked when the app is added to the home screen.
+export const SITE_ICONS = {
+    light: '/apple-touch-icon-light.png?v=2',
+    dark: '/apple-touch-icon.png?v=2',
+} as const;
+
 export function readTheme(): ThemePreference {
     try {
         const saved = localStorage.getItem('theme');
@@ -23,6 +29,7 @@ export function applyTheme(preference: ThemePreference, systemDark: boolean) {
     document
         .querySelector('meta[name="theme-color"]')
         ?.setAttribute('content', theme === 'light' ? '#ffffff' : '#020617');
+    document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', SITE_ICONS[theme]);
     return theme;
 }
 

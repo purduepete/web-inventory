@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { Info, Monitor, Moon, Palette, RefreshCw, Sun } from 'lucide-react';
 import { pendingCount, syncNow } from './db';
 import { Icon } from './Icon';
+import { BrandMark } from './BrandMark';
 import { HelpDialog } from './HelpDialog';
 import { KeyGate } from './KeyGate';
 import { clearKey, getKey, validateKey, KEY_INVALID_EVENT, platformAuth } from './api';
@@ -217,7 +218,7 @@ export default function App() {
                 <header className="topbar">
                     <span className="brand">
                         <span className="brand-mark">
-                            <Icon name="box" size={18} />
+                            <BrandMark />
                         </span>
                         Web Inventory
                     </span>

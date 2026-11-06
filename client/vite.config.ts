@@ -74,7 +74,7 @@ export default defineConfig(({ isPreview, mode }) => ({
             injectRegister: null,
             // Cloudflare Access needs the session cookie on the manifest request.
             useCredentials: true,
-            includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+            includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'apple-touch-icon-light.png'],
             manifest: {
                 name: 'Web Inventory',
                 short_name: 'Web Inventory',

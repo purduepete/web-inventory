@@ -154,14 +154,23 @@ function environment(saved, dark = false) {
             listeners.delete(fn);
         },
     };
+    const link = {
+        href: '/apple-touch-icon.png?v=2',
+        setAttribute(key, value) {
+            this[key] = value;
+        },
+    };
     const context = {
         exports: {},
         localStorage: { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) },
-        document: { documentElement: root, querySelector: () => meta },
+        document: {
+            documentElement: root,
+            querySelector: (selector) => (selector === 'link[rel="apple-touch-icon"]' ? link : meta),
+        },
         window: { matchMedia: () => media },
     };
     runInNewContext(js, context);
-    return { context, root, meta, media, listeners, values, classes };
+    return { context, root, meta, link, media, listeners, values, classes };
 }
 
 function expectTheme(env, dark) {
@@ -195,6 +204,52 @@ for (const saved of [null, 'dark', 'midnight', 'light', 'system', 'invalid']) {
     }
 }
 
+test('the site icon follows the active theme and the favicon stays dark', () => {
+    const env = environment(null);
+    const { applyTheme, SITE_ICONS } = env.context.exports;
+    applyTheme('light', true);
+    assert.equal(env.link.href, '/apple-touch-icon-light.png?v=2');
+    applyTheme('midnight', false);
+    assert.equal(env.link.href, '/apple-touch-icon.png?v=2');
+    applyTheme('system', false);
+    assert.equal(env.link.href, SITE_ICONS.light);
+    applyTheme('system', true);
+    assert.equal(env.link.href, SITE_ICONS.dark);
+    assert.match(html, /<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg\?v=2" \/>/);
+    assert.match(html, /<link rel="apple-touch-icon" sizes="180x180" href="\/apple-touch-icon\.png\?v=2" \/>/);
+    const favicon = readFileSync(new URL('../public/favicon.svg', import.meta.url), 'utf8');
+    assert.match(favicon, /<rect x="2" y="2" width="60" height="60" rx="10" fill="#020617"\/>/);
+    assert.match(readFileSync(new URL('../public/apple-touch-icon.svg', import.meta.url), 'utf8'), /fill="#020617"/);
+    assert.match(
+        readFileSync(new URL('../public/apple-touch-icon-light.svg', import.meta.url), 'utf8'),
+        /fill="#fff7ed"/
+    );
+    for (const [name, size] of [
+        ['apple-touch-icon.png', 180],
+        ['apple-touch-icon-light.png', 180],
+        ['pwa-192.png', 192],
+        ['pwa-512.png', 512],
+    ]) {
+        const png = readFileSync(new URL(`../public/${name}`, import.meta.url));
+        assert.equal(png.readUInt32BE(16), size, name);
+        assert.equal(png.readUInt32BE(20), size, name);
+    }
+    const vite = readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8');
+    assert.match(vite, /includeAssets: \['favicon\.svg', 'apple-touch-icon\.png', 'apple-touch-icon-light\.png'\]/);
+    const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+    assert.match(app, /<span className="brand-mark">\s*<BrandMark \/>/);
+    const mark = readFileSync(new URL('../src/BrandMark.tsx', import.meta.url), 'utf8');
+    for (const d of [
+        'M32 11 51 20.5 32 30 13 20.5Z',
+        'M13 20.5v21L32 51l19-9.5v-21M32 30v21',
+        'M36 35.5 46.5 30.3v6.4L36 42Z',
+    ]) {
+        assert.ok(favicon.includes(`d="${d}"`) && mark.includes(`d="${d}"`), d);
+    }
+    const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8');
+    assert.match(styles, /--brand-amber: #fbbf24;[\s\S]*--brand-sky: #38bdf8;/);
+    assert.match(styles, /:root\[data-theme='light'\] \{[\s\S]*?--brand-amber: #d97706;[\s\S]*?--brand-sky: #0284c7;/);
+});
 test('system tracks OS live, can be reselected, and fixed choices ignore OS', () => {
     const env = environment(null);
     const { trackTheme } = env.context.exports;
